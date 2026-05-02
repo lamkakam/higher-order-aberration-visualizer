@@ -1,9 +1,9 @@
 ---
-name: hoa-tech-stack
+name: tech-stack
 description: Use when working on React, TypeScript, Vite, Tailwind, Pyodide, Comlink, ECharts, React Testing Library, Playwright, or prysm in this repo.
 ---
 
-# HOA Tech Stack
+# Tech Stack
 
 - Keep the application client-only unless the user explicitly changes the architecture.
 - Run heavy optics computation in `src/workers`; do not block React render paths with numeric work.

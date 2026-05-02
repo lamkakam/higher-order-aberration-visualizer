@@ -1,9 +1,9 @@
 ---
-name: hoa-project-structure
+name: project-structure
 description: Use when adding, moving, or reorganizing files in this repo.
 ---
 
-# HOA Project Structure
+# Project Structure
 
 - Place reusable React UI in `src/components`.
 - Place worker entry points, worker clients, and worker API types in `src/workers`.
