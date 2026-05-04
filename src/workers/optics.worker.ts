@@ -2,6 +2,17 @@
 
 import { expose } from 'comlink';
 import type { PyodideInterface } from 'pyodide';
+import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
+import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
+import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
+import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
+import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw';
+import simulationInitSource from '../hoa_visualizer_utils/simulation/__init__.py?raw';
+import computeSource from '../hoa_visualizer_utils/simulation/compute.py?raw';
+import modelsSource from '../hoa_visualizer_utils/simulation/models.py?raw';
+import targetsSource from '../hoa_visualizer_utils/simulation/targets.py?raw';
+import utilsInitSource from '../hoa_visualizer_utils/utils/__init__.py?raw';
+import figuresSource from '../hoa_visualizer_utils/utils/figures.py?raw';
 import type {
   ConvolvedImageInput,
   ConvolvedImageResult,
@@ -9,11 +20,24 @@ import type {
   WorkerDiagnostics
 } from './types';
 
-const wheelUrl = '/pyodide/hoa_visualizer_utils-0.1.0-py3-none-any.whl';
-const prysmWheelUrl = '/pyodide/prysm-0.21.1-py2.py3-none-any.whl';
 const pyodideIndexUrl = '/node_modules/pyodide/';
 const pyodidePackageBaseUrl = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/';
+const prysmWheelUrl = '/pyodide/prysm-0.21.1-py2.py3-none-any.whl';
 const effectiveFocalLengthMm = 17;
+const pythonPackageRoot = '/home/pyodide';
+const pythonSources = [
+  ['hoa_visualizer_utils/__init__.py', packageInitSource],
+  ['hoa_visualizer_utils/rendering/__init__.py', renderingInitSource],
+  ['hoa_visualizer_utils/rendering/convolved_image.py', convolvedImageSource],
+  ['hoa_visualizer_utils/rendering/psf.py', psfSource],
+  ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
+  ['hoa_visualizer_utils/simulation/__init__.py', simulationInitSource],
+  ['hoa_visualizer_utils/simulation/compute.py', computeSource],
+  ['hoa_visualizer_utils/simulation/models.py', modelsSource],
+  ['hoa_visualizer_utils/simulation/targets.py', targetsSource],
+  ['hoa_visualizer_utils/utils/__init__.py', utilsInitSource],
+  ['hoa_visualizer_utils/utils/figures.py', figuresSource]
+] as const;
 
 let pyodide: PyodideInterface | undefined;
 let diagnostics: WorkerDiagnostics = {
@@ -52,16 +76,20 @@ async function initializePyodide(): Promise<void> {
       'matplotlib',
       'setuptools'
     ]);
+    loadPythonSources(nextPyodide);
     const installGlobals = nextPyodide.toPy({
       prysm_wheel_url: prysmWheelUrl,
-      wheel_url: wheelUrl
+      python_package_root: pythonPackageRoot
     });
     await nextPyodide.runPythonAsync(
       `
+import sys
 import micropip
 
+if python_package_root not in sys.path:
+    sys.path.insert(0, python_package_root)
+
 await micropip.install(prysm_wheel_url, deps=False)
-await micropip.install(wheel_url, deps=False)
 `,
       { globals: installGlobals }
     );
@@ -153,4 +181,21 @@ function bytesToBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(bytes[index]);
   }
   return btoa(binary);
+}
+
+function loadPythonSources(nextPyodide: PyodideInterface): void {
+  const directories = new Set<string>();
+
+  for (const [relativePath] of pythonSources) {
+    const directory = relativePath.split('/').slice(0, -1).join('/');
+    directories.add(`${pythonPackageRoot}/${directory}`);
+  }
+
+  for (const directory of directories) {
+    nextPyodide.FS.mkdirTree(directory);
+  }
+
+  for (const [relativePath, source] of pythonSources) {
+    nextPyodide.FS.writeFile(`${pythonPackageRoot}/${relativePath}`, source);
+  }
 }
