@@ -14,6 +14,7 @@ from hoa_visualizer_utils.simulation.models import (
 )
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS, _make_target
 
+# Angular equivalent of 0.5625 um image sampling at 17 mm effective focal length.
 DEFAULT_IMAGE_DX_ARCMIN = 0.11374897399181322
 LEGACY_DEFAULT_IMAGE_DX_UM = 0.5625
 SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION = 0.6
