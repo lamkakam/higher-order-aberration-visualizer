@@ -3,13 +3,11 @@ import math
 import numpy as np
 import pytest
 
-from hoa_visualizer_utils.prysm_simulation import (
-    SUPPORTED_TARGET_IDS,
-    compute_simulation,
-    render_convolved_image,
-    render_psf,
-    render_wavefront,
-)
+from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
+from hoa_visualizer_utils.rendering.psf import render_psf
+from hoa_visualizer_utils.rendering.wavefront import render_wavefront
+from hoa_visualizer_utils.simulation.compute import compute_simulation
+from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
 
 
 def test_compute_simulation_rejects_invalid_inputs() -> None:
