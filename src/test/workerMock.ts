@@ -1,7 +1,7 @@
 import type { WorkerClient } from '../workers/client';
 import type {
-  AberrationInput,
-  AberrationResult,
+  ConvolvedImageInput,
+  ConvolvedImageResult,
   OpticsWorkerApi,
   WorkerDiagnostics
 } from '../workers/types';
@@ -22,13 +22,12 @@ export function createMockWorkerClient(
     async getStatus() {
       return diagnostics;
     },
-    async computeAberration(input: AberrationInput): Promise<AberrationResult> {
-      const values = new Float32Array(input.gridSize * input.gridSize);
-      values.fill(Math.fround(input.defocus));
+    async computeConvolvedImage(
+      input: ConvolvedImageInput
+    ): Promise<ConvolvedImageResult> {
       return {
-        width: input.gridSize,
-        height: input.gridSize,
-        values
+        imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+        diagnostics
       };
     },
     ...overrides
