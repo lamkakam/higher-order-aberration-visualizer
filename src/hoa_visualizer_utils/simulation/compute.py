@@ -18,6 +18,8 @@ from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS, _make_
 DEFAULT_IMAGE_DX_ARCMIN = 0.11374897399181322
 LEGACY_DEFAULT_IMAGE_DX_UM = 0.5625
 SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION = 0.6
+LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION = 0.8
+LOGMAR_CHART_WIDEST_ROW_ARCMIN = 450
 _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 
@@ -206,12 +208,15 @@ def _resolve_image_dx_arcmin(
 
     if image_dx_arcmin is not _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL:
         return image_dx_arcmin
-    if target_id != "snellen_e_20_20":
-        return DEFAULT_IMAGE_DX_ARCMIN
-
-    target_height_px = round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION)
-    block_px = max(1, round(target_height_px / 5))
-    return 1 / block_px
+    if target_id == "snellen_e_20_20":
+        target_height_px = round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION)
+        block_px = max(1, round(target_height_px / 5))
+        return 1 / block_px
+    if target_id == "logmar_chart":
+        return LOGMAR_CHART_WIDEST_ROW_ARCMIN / (
+            image_samples * LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION
+        )
+    return DEFAULT_IMAGE_DX_ARCMIN
 
 
 def _uses_physical_image_sampling(

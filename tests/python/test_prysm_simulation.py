@@ -171,6 +171,153 @@ def test_snellen_e_20_20_legacy_default_physical_sampling_uses_angular_mode() ->
     )
 
 
+def test_logmar_chart_uses_supported_target_id() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    assert "logmar_chart" in SUPPORTED_TARGET_IDS
+    assert simulation.target_id == "logmar_chart"
+    assert simulation.target.shape == (512, 512)
+
+
+def test_logmar_chart_first_row_uses_fifty_arcminute_letter_height() -> None:
+    image_dx_arcmin = 1
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+    first_row_height_px, _ = _row_bbox_size_px(simulation.target < 0.5, row_index=0)
+
+    assert first_row_height_px * image_dx_arcmin == pytest.approx(50, abs=image_dx_arcmin)
+
+
+def test_logmar_chart_first_row_uses_ten_arcminute_stroke_width() -> None:
+    image_dx_arcmin = 1
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+    y_min, x_min, y_max, _ = _row_bbox(simulation.target < 0.5, row_index=0)
+    y_sample = y_min + (y_max - y_min + 1) // 4
+    stroke_width_px = _dark_run_length(simulation.target[y_sample, x_min:] < 0.5)
+
+    assert stroke_width_px * image_dx_arcmin == pytest.approx(10, abs=image_dx_arcmin)
+
+
+def test_logmar_chart_antialiases_letter_edges() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    assert np.any((simulation.target > 0) & (simulation.target < 1))
+
+
+def test_logmar_chart_diagonal_letters_are_not_block_stair_steps() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    v_mask = _letter_mask(simulation.target < 0.5, row_index=0, letter_index=1)
+    left_edge_by_row = [
+        int(np.flatnonzero(row)[0])
+        for row in v_mask
+        if np.any(row)
+    ]
+
+    assert len(set(left_edge_by_row)) >= 8
+
+
+def test_logmar_chart_row_heights_follow_logmar_values() -> None:
+    image_dx_arcmin = 0.25
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=2048,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+    row_heights_arcmin = [
+        _row_bbox_size_px(simulation.target < 0.5, row_index=index)[0]
+        * image_dx_arcmin
+        for index in range(6)
+    ]
+
+    assert row_heights_arcmin == sorted(row_heights_arcmin, reverse=True)
+    assert row_heights_arcmin == pytest.approx(
+        [5 * 10**logmar for logmar in (1.0, 0.9, 0.8, 0.7, 0.6, 0.5)],
+        abs=image_dx_arcmin * 2.5,
+    )
+
+
+def test_logmar_chart_keeps_pixel_size_with_fixed_angular_sampling() -> None:
+    simulations = [
+        compute_simulation(
+            10,
+            efl_mm,
+            {},
+            "logmar_chart",
+            pupil_samples=32,
+            image_samples=512,
+            image_dx_arcmin=1,
+        )
+        for efl_mm in (10, 17)
+    ]
+
+    sizes = [_target_size_px(simulation.target) for simulation in simulations]
+
+    assert sizes[0] == sizes[1]
+
+
+def test_logmar_chart_legacy_default_physical_sampling_uses_angular_mode() -> None:
+    simulation = compute_simulation(
+        300,
+        3000,
+        {},
+        "logmar_chart",
+        pupil_samples=64,
+        image_samples=512,
+        image_dx_um=0.5625,
+    )
+
+    assert simulation.sampling.image_dx_arcmin is not None
+    assert simulation.sampling.image_dx_um == pytest.approx(
+        3000
+        * math.tan(math.radians(simulation.sampling.image_dx_arcmin / 60))
+        * 1_000
+    )
+
+
 def test_non_snellen_target_uses_default_angular_sampling() -> None:
     simulation = compute_simulation(
         10,
@@ -265,6 +412,40 @@ def _target_size_px(target: np.ndarray) -> tuple[int, int]:
     y_min, x_min = dark_pixels.min(axis=0)
     y_max, x_max = dark_pixels.max(axis=0)
     return y_max - y_min + 1, x_max - x_min + 1
+
+
+def _row_bbox(mask: np.ndarray, *, row_index: int) -> tuple[int, int, int, int]:
+    occupied_rows = np.flatnonzero(mask.any(axis=1))
+    row_bands = np.split(occupied_rows, np.where(np.diff(occupied_rows) > 1)[0] + 1)
+    row_pixels = np.argwhere(mask[row_bands[row_index], :])
+    y_min = int(row_bands[row_index][row_pixels[:, 0].min()])
+    y_max = int(row_bands[row_index][row_pixels[:, 0].max()])
+    x_min = int(row_pixels[:, 1].min())
+    x_max = int(row_pixels[:, 1].max())
+    return y_min, x_min, y_max, x_max
+
+
+def _row_bbox_size_px(mask: np.ndarray, *, row_index: int) -> tuple[int, int]:
+    y_min, x_min, y_max, x_max = _row_bbox(mask, row_index=row_index)
+    return y_max - y_min + 1, x_max - x_min + 1
+
+
+def _letter_mask(mask: np.ndarray, *, row_index: int, letter_index: int) -> np.ndarray:
+    y_min, _, y_max, _ = _row_bbox(mask, row_index=row_index)
+    row_mask = mask[y_min : y_max + 1, :]
+    occupied_columns = np.flatnonzero(row_mask.any(axis=0))
+    column_bands = np.split(
+        occupied_columns,
+        np.where(np.diff(occupied_columns) > 1)[0] + 1,
+    )
+    return row_mask[:, column_bands[letter_index]]
+
+
+def _dark_run_length(mask: np.ndarray) -> int:
+    white_indices = np.flatnonzero(~mask)
+    if white_indices.size == 0:
+        return int(mask.size)
+    return int(white_indices[0])
 
 
 def _component_count(mask: np.ndarray) -> int:
