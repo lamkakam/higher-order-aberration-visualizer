@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Mapping
+from typing import Mapping, cast
 
 import numpy as np
 
@@ -16,6 +16,8 @@ from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS, _make_
 
 DEFAULT_IMAGE_DX_ARCMIN = 0.11374897399181322
 LEGACY_DEFAULT_IMAGE_DX_UM = 0.5625
+SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION = 0.6
+_DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 
 def compute_simulation(
@@ -28,10 +30,18 @@ def compute_simulation(
     pupil_samples: int = 1024,
     image_samples: int = 2048,
     image_dx_um: float | None = None,
-    image_dx_arcmin: float | None = DEFAULT_IMAGE_DX_ARCMIN,
+    image_dx_arcmin: float | None = cast(
+        float | None,
+        _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL,
+    ),
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
+    resolved_image_dx_arcmin = _resolve_image_dx_arcmin(
+        target_id,
+        image_samples,
+        image_dx_arcmin,
+    )
     coefficients = _validate_inputs(
         entrance_pupil_diameter_mm,
         effective_focal_length_mm,
@@ -41,18 +51,21 @@ def compute_simulation(
         pupil_samples,
         image_samples,
         image_dx_um,
-        image_dx_arcmin,
+        resolved_image_dx_arcmin,
     )
-    uses_physical_sampling = _uses_physical_image_sampling(image_dx_um, image_dx_arcmin)
+    uses_physical_sampling = _uses_physical_image_sampling(
+        image_dx_um,
+        resolved_image_dx_arcmin,
+    )
     prysm_image_dx_um = (
         image_dx_um
         if uses_physical_sampling
         else _angular_dx_to_image_dx_um(
             effective_focal_length_mm,
-            image_dx_arcmin,
+            resolved_image_dx_arcmin,
         )
     )
-    sampling_image_dx_arcmin = None if uses_physical_sampling else image_dx_arcmin
+    sampling_image_dx_arcmin = None if uses_physical_sampling else resolved_image_dx_arcmin
 
     from prysm import coordinates, convolution, geometry, polynomials, propagation
 
@@ -181,6 +194,23 @@ def _validate_inputs(
             raise ValueError("Zernike coefficient values must be finite")
         coefficients[key] = coefficient
     return coefficients
+
+
+def _resolve_image_dx_arcmin(
+    target_id: str,
+    image_samples: int,
+    image_dx_arcmin: float | None,
+) -> float | None:
+    """Resolve omitted angular sampling defaults."""
+
+    if image_dx_arcmin is not _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL:
+        return image_dx_arcmin
+    if target_id != "snellen_e_20_20":
+        return DEFAULT_IMAGE_DX_ARCMIN
+
+    target_height_px = round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION)
+    block_px = max(1, round(target_height_px / 5))
+    return 1 / block_px
 
 
 def _uses_physical_image_sampling(

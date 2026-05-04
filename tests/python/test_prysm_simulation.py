@@ -7,7 +7,11 @@ from scipy import ndimage
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
 from hoa_visualizer_utils.rendering.psf import render_psf
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
-from hoa_visualizer_utils.simulation.compute import compute_simulation
+from hoa_visualizer_utils.simulation.compute import (
+    DEFAULT_IMAGE_DX_ARCMIN,
+    SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
+    compute_simulation,
+)
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
 
 
@@ -113,6 +117,34 @@ def test_snellen_e_20_20_keeps_pixel_size_with_fixed_angular_sampling() -> None:
     assert sizes == [(20, 20), (20, 20)]
 
 
+@pytest.mark.parametrize("image_samples", [64, 128, 512])
+def test_snellen_e_20_20_default_height_tracks_image_samples(
+    image_samples: int,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "snellen_e_20_20",
+        pupil_samples=32,
+        image_samples=image_samples,
+    )
+
+    height_px, width_px = _target_size_px(simulation.target)
+    expected_block_px = max(
+        1,
+        round(round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION) / 5),
+    )
+
+    assert height_px == 5 * expected_block_px
+    assert width_px == height_px
+    assert height_px == pytest.approx(
+        image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
+        abs=3,
+    )
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
+
+
 def test_snellen_e_20_20_legacy_default_physical_sampling_uses_angular_mode() -> None:
     simulation = compute_simulation(
         300,
@@ -124,11 +156,32 @@ def test_snellen_e_20_20_legacy_default_physical_sampling_uses_angular_mode() ->
         image_dx_um=0.5625,
     )
 
-    assert _target_size_px(simulation.target) == (45, 45)
-    assert simulation.sampling.image_dx_arcmin == pytest.approx(0.11374897399181322)
-    assert simulation.sampling.image_dx_um == pytest.approx(
-        3000 * math.tan(math.radians(0.11374897399181322 / 60)) * 1_000
+    expected_block_px = max(
+        1,
+        round(round(128 * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION) / 5),
     )
+
+    assert _target_size_px(simulation.target) == (
+        5 * expected_block_px,
+        5 * expected_block_px,
+    )
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
+    assert simulation.sampling.image_dx_um == pytest.approx(
+        3000 * math.tan(math.radians((1 / expected_block_px) / 60)) * 1_000
+    )
+
+
+def test_non_snellen_target_uses_default_angular_sampling() -> None:
+    simulation = compute_simulation(
+        10,
+        100,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(DEFAULT_IMAGE_DX_ARCMIN)
 
 
 def test_snellen_e_20_20_suppresses_replicated_psf_without_growing_pupil_grid() -> None:
