@@ -14,6 +14,9 @@ from hoa_visualizer_utils.simulation.models import (
 )
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS, _make_target
 
+DEFAULT_IMAGE_DX_ARCMIN = 0.11374897399181322
+LEGACY_DEFAULT_IMAGE_DX_UM = 0.5625
+
 
 def compute_simulation(
     entrance_pupil_diameter_mm: float,
@@ -24,7 +27,8 @@ def compute_simulation(
     wavelength_nm: float = 550.0,
     pupil_samples: int = 1024,
     image_samples: int = 2048,
-    image_dx_um: float = 0.5625,
+    image_dx_um: float | None = None,
+    image_dx_arcmin: float | None = DEFAULT_IMAGE_DX_ARCMIN,
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
@@ -37,7 +41,18 @@ def compute_simulation(
         pupil_samples,
         image_samples,
         image_dx_um,
+        image_dx_arcmin,
     )
+    uses_physical_sampling = _uses_physical_image_sampling(image_dx_um, image_dx_arcmin)
+    prysm_image_dx_um = (
+        image_dx_um
+        if uses_physical_sampling
+        else _angular_dx_to_image_dx_um(
+            effective_focal_length_mm,
+            image_dx_arcmin,
+        )
+    )
+    sampling_image_dx_arcmin = None if uses_physical_sampling else image_dx_arcmin
 
     from prysm import coordinates, convolution, geometry, polynomials, propagation
 
@@ -66,11 +81,19 @@ def compute_simulation(
     )
     focused = pupil.focus_fixed_sampling(
         effective_focal_length_mm,
-        image_dx_um,
+        prysm_image_dx_um,
         image_samples,
         method="czt",
     )
     psf = np.asarray(focused.intensity.data, dtype=float)
+    if not uses_physical_sampling:
+        psf = _suppress_psf_replicas(
+            psf,
+            wavelength_nm=wavelength_nm,
+            effective_focal_length_mm=effective_focal_length_mm,
+            pupil_dx_mm=pupil_dx_mm,
+            image_dx_um=float(focused.dx),
+        )
     psf_sum = psf.sum()
     if not np.isfinite(psf_sum) or psf_sum <= 0:
         raise ValueError("PSF energy must be finite and positive")
@@ -82,6 +105,7 @@ def compute_simulation(
         x,
         y,
         image_dx_um=float(focused.dx),
+        image_dx_arcmin=sampling_image_dx_arcmin,
         effective_focal_length_mm=effective_focal_length_mm,
     )
     convolved_image = convolution.conv(target, psf)
@@ -99,6 +123,7 @@ def compute_simulation(
             pupil_samples=pupil_samples,
             image_samples=image_samples,
             image_dx_um=float(focused.dx),
+            image_dx_arcmin=sampling_image_dx_arcmin,
             pupil_dx_mm=pupil_dx_mm,
         ),
         inputs=SimulationInputs(
@@ -118,7 +143,8 @@ def _validate_inputs(
     wavelength_nm: float,
     pupil_samples: int,
     image_samples: int,
-    image_dx_um: float,
+    image_dx_um: float | None,
+    image_dx_arcmin: float | None,
 ) -> dict[tuple[int, int], float]:
     """Validate simulation inputs and normalize coefficient values."""
 
@@ -131,7 +157,12 @@ def _validate_inputs(
         "effective_focal_length_mm",
     )
     _validate_positive_finite(wavelength_nm, "wavelength_nm")
-    _validate_positive_finite(image_dx_um, "image_dx_um")
+    if _uses_physical_image_sampling(image_dx_um, image_dx_arcmin):
+        _validate_positive_finite(image_dx_um, "image_dx_um")
+    else:
+        if image_dx_arcmin is None:
+            raise ValueError("image_dx_arcmin must be positive and finite")
+        _validate_positive_finite(image_dx_arcmin, "image_dx_arcmin")
     _validate_positive_int(pupil_samples, "pupil_samples")
     _validate_positive_int(image_samples, "image_samples")
     if target_id not in SUPPORTED_TARGET_IDS:
@@ -150,6 +181,62 @@ def _validate_inputs(
             raise ValueError("Zernike coefficient values must be finite")
         coefficients[key] = coefficient
     return coefficients
+
+
+def _uses_physical_image_sampling(
+    image_dx_um: float | None,
+    image_dx_arcmin: float | None,
+) -> bool:
+    """Return whether the caller requested explicit focal-plane spacing."""
+
+    return image_dx_um is not None and (
+        image_dx_arcmin is None
+        or not math.isclose(float(image_dx_um), LEGACY_DEFAULT_IMAGE_DX_UM)
+    )
+
+
+def _angular_dx_to_image_dx_um(
+    effective_focal_length_mm: float,
+    image_dx_arcmin: float,
+) -> float:
+    """Convert angular image sampling to prysm focal-plane spacing."""
+
+    return effective_focal_length_mm * 1_000 * math.tan(math.radians(image_dx_arcmin / 60))
+
+
+def _suppress_psf_replicas(
+    psf: np.ndarray,
+    *,
+    wavelength_nm: float,
+    effective_focal_length_mm: float,
+    pupil_dx_mm: float,
+    image_dx_um: float,
+) -> np.ndarray:
+    """Remove off-axis PSF replicas caused by sampled pupil propagation."""
+
+    wavelength_mm = wavelength_nm / 1_000_000
+    replica_spacing_px = (
+        wavelength_mm
+        * effective_focal_length_mm
+        / pupil_dx_mm
+        / (image_dx_um / 1_000)
+    )
+    rows, columns = psf.shape
+    if replica_spacing_px >= min(rows, columns):
+        return psf
+
+    half_width = max(1, math.floor(replica_spacing_px / 2) - 1)
+    y_center = rows // 2
+    x_center = columns // 2
+    filtered = np.zeros_like(psf)
+    filtered[
+        y_center - half_width : y_center + half_width + 1,
+        x_center - half_width : x_center + half_width + 1,
+    ] = psf[
+        y_center - half_width : y_center + half_width + 1,
+        x_center - half_width : x_center + half_width + 1,
+    ]
+    return filtered
 
 
 def _validate_positive_finite(value: float, name: str) -> None:

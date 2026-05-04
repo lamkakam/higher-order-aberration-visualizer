@@ -23,6 +23,7 @@ def _make_target(
     y: NDArray[np.float64],
     *,
     image_dx_um: float,
+    image_dx_arcmin: float | None,
     effective_focal_length_mm: float,
 ) -> NDArray[np.float64]:
     """Build the requested target image on the provided image grid."""
@@ -45,6 +46,7 @@ def _make_target(
         return _make_snellen_e(
             x.shape,
             image_dx_um=image_dx_um,
+            image_dx_arcmin=image_dx_arcmin,
             effective_focal_length_mm=effective_focal_length_mm,
         )
 
@@ -55,12 +57,16 @@ def _make_snellen_e(
     shape: tuple[int, int],
     *,
     image_dx_um: float,
+    image_dx_arcmin: float | None,
     effective_focal_length_mm: float,
 ) -> NDArray[np.float64]:
     """Build a 20/20 Snellen E target with five-arcminute letter height."""
 
-    height_um = effective_focal_length_mm * math.tan(math.radians(5 / 60)) * 1_000
-    block_px = max(1, round(height_um / (5 * image_dx_um)))
+    if image_dx_arcmin is None:
+        height_um = effective_focal_length_mm * math.tan(math.radians(5 / 60)) * 1_000
+        block_px = max(1, round(height_um / (5 * image_dx_um)))
+    else:
+        block_px = max(1, round(1.0 / image_dx_arcmin))
     height_px = 5 * block_px
     rows, columns = shape
     if height_px > rows or height_px > columns:
