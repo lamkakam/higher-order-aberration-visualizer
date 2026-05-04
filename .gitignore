@@ -7,3 +7,5 @@ build/
 *.egg-info/
 .pytest_cache/
 __pycache__/
+public/pyodide/*.whl
+!public/pyodide/prysm-0.21.1-py2.py3-none-any.whl

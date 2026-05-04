@@ -19,7 +19,6 @@ def render_psf(
     psf_view = np.log10(simulation.psf / simulation.psf.max() + 1e-6)
     fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
     image = ax.imshow(psf_view, cmap="magma", vmin=-6, vmax=0)
-    ax.set_title("PSF, Log Normalized Intensity")
     ax.set_axis_off()
     fig.colorbar(image, ax=ax, label="log10(normalized intensity)")
     return _figure_to_bytes(fig, image_format)

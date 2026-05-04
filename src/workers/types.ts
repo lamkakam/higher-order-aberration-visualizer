@@ -6,19 +6,30 @@ export interface WorkerDiagnostics {
   pyodideVersion?: string;
 }
 
-export interface AberrationInput {
-  gridSize: number;
-  defocus: number;
+export const supportedTargetIds = [
+  'snellen_e_20_20',
+  'siemensstar',
+  'slantededge',
+  'tiltedsquare'
+] as const;
+
+export type SupportedTargetId = (typeof supportedTargetIds)[number];
+
+export type ZernikeCoefficientKey = `${number},${number}`;
+
+export interface ConvolvedImageInput {
+  apertureDiameterMm: number;
+  targetId: SupportedTargetId;
+  zernikeCoefficients: Record<ZernikeCoefficientKey, number>;
 }
 
-export interface AberrationResult {
-  width: number;
-  height: number;
-  values: Float32Array;
+export interface ConvolvedImageResult {
+  imageUrl: string;
+  diagnostics: WorkerDiagnostics;
 }
 
 export interface OpticsWorkerApi {
   initialize(): Promise<WorkerDiagnostics>;
   getStatus(): Promise<WorkerDiagnostics>;
-  computeAberration(input: AberrationInput): Promise<AberrationResult>;
+  computeConvolvedImage(input: ConvolvedImageInput): Promise<ConvolvedImageResult>;
 }

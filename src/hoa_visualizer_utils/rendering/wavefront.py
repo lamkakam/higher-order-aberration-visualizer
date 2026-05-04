@@ -19,7 +19,6 @@ def render_wavefront(
     masked_wavefront = np.where(simulation.pupil_mask, simulation.wavefront_nm, np.nan)
     fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
     image = ax.imshow(masked_wavefront, cmap="RdBu_r")
-    ax.set_title("Wavefront OPD")
     ax.set_axis_off()
     fig.colorbar(image, ax=ax, label="OPD (nm)")
     return _figure_to_bytes(fig, image_format)
