@@ -26,7 +26,7 @@ class SimulationSampling:
     pupil_samples: int
     image_samples: int
     image_dx_um: float
-    image_dx_arcmin: float | None
+    image_dx_arcmin: float
     pupil_dx_mm: float
 
 

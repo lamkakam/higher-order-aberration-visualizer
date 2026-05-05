@@ -8,6 +8,7 @@ from hoa_visualizer_utils.rendering.convolved_image import render_convolved_imag
 from hoa_visualizer_utils.rendering.psf import render_psf
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
 from hoa_visualizer_utils.simulation.compute import (
+    DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
     DEFAULT_IMAGE_DX_ARCMIN,
     JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION,
     JUPITER_502NM_DIAMETER_ARCMIN,
@@ -19,18 +20,24 @@ from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
 
 def test_compute_simulation_rejects_invalid_inputs() -> None:
     with pytest.raises(ValueError, match="entrance_pupil_diameter_mm"):
-        compute_simulation(0, 100, {}, "siemensstar", pupil_samples=32, image_samples=32)
+        compute_simulation(0, {}, "siemensstar", pupil_samples=32, image_samples=32)
 
-    with pytest.raises(ValueError, match="effective_focal_length_mm"):
-        compute_simulation(10, -1, {}, "siemensstar", pupil_samples=32, image_samples=32)
+    with pytest.raises(ValueError, match="image_dx_arcmin"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=32,
+            image_dx_arcmin=-1,
+        )
 
     with pytest.raises(ValueError, match="target_id"):
-        compute_simulation(10, 100, {}, "unknown", pupil_samples=32, image_samples=32)
+        compute_simulation(10, {}, "unknown", pupil_samples=32, image_samples=32)
 
     with pytest.raises(ValueError, match="Zernike coefficient key"):
         compute_simulation(
             10,
-            100,
             {(4,): 0.1},  # type: ignore[dict-item]
             "siemensstar",
             pupil_samples=32,
@@ -42,12 +49,10 @@ def test_compute_simulation_rejects_invalid_inputs() -> None:
 def test_compute_simulation_supports_declared_target_ids(target_id: str) -> None:
     simulation = compute_simulation(
         10,
-        10 if target_id == "snellen_e_20_20" else 100,
         {},
         target_id,
         pupil_samples=32,
         image_samples=64,
-        image_dx_um=1 if target_id == "snellen_e_20_20" else 0.5625,
     )
 
     assert simulation.target_id == target_id
@@ -58,14 +63,14 @@ def test_compute_simulation_supports_declared_target_ids(target_id: str) -> None
 
 
 def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
+    image_dx_arcmin = 0.25
     simulation = compute_simulation(
         10,
-        100,
         {(4, 0): 0.1},
         "siemensstar",
         pupil_samples=32,
         image_samples=64,
-        image_dx_um=1.25,
+        image_dx_arcmin=image_dx_arcmin,
     )
 
     assert np.isclose(simulation.psf.sum(), 1.0)
@@ -73,17 +78,21 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.convolved_image.min() >= 0
     assert simulation.convolved_image.max() <= 1
     assert simulation.inputs.zernike_coefficients == {(4, 0): 0.1}
+    assert simulation.inputs.effective_focal_length_mm == DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
     assert simulation.sampling.pupil_samples == 32
     assert simulation.sampling.image_samples == 64
-    assert simulation.sampling.image_dx_um == 1.25
-    assert simulation.sampling.image_dx_arcmin is None
+    assert simulation.sampling.image_dx_um == pytest.approx(
+        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
+        * math.tan(math.radians(image_dx_arcmin / 60))
+        * 1_000
+    )
+    assert simulation.sampling.image_dx_arcmin == image_dx_arcmin
     assert simulation.sampling.wavelength_nm == 550.0
 
 
 def test_snellen_e_20_20_uses_five_arcminute_height() -> None:
     image_dx_arcmin = 0.25
     simulation = compute_simulation(
-        10,
         10,
         {},
         "snellen_e_20_20",
@@ -101,22 +110,17 @@ def test_snellen_e_20_20_uses_five_arcminute_height() -> None:
 
 
 def test_snellen_e_20_20_keeps_pixel_size_with_fixed_angular_sampling() -> None:
-    simulations = [
-        compute_simulation(
-            10,
-            efl_mm,
-            {},
-            "snellen_e_20_20",
-            pupil_samples=32,
-            image_samples=64,
-            image_dx_arcmin=0.25,
-        )
-        for efl_mm in (10, 17)
-    ]
+    simulation = compute_simulation(
+        10,
+        {},
+        "snellen_e_20_20",
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=0.25,
+    )
 
-    sizes = [_target_size_px(simulation.target) for simulation in simulations]
-
-    assert sizes == [(20, 20), (20, 20)]
+    assert _target_size_px(simulation.target) == (20, 20)
+    assert simulation.inputs.effective_focal_length_mm == DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
 
 
 @pytest.mark.parametrize("image_samples", [64, 128, 512])
@@ -124,7 +128,6 @@ def test_snellen_e_20_20_default_height_tracks_image_samples(
     image_samples: int,
 ) -> None:
     simulation = compute_simulation(
-        10,
         10,
         {},
         "snellen_e_20_20",
@@ -147,15 +150,13 @@ def test_snellen_e_20_20_default_height_tracks_image_samples(
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
-def test_snellen_e_20_20_legacy_default_physical_sampling_uses_angular_mode() -> None:
+def test_snellen_e_20_20_default_sampling_records_physical_spacing() -> None:
     simulation = compute_simulation(
         300,
-        3000,
         {},
         "snellen_e_20_20",
         pupil_samples=64,
         image_samples=128,
-        image_dx_um=0.5625,
     )
 
     expected_block_px = max(
@@ -169,13 +170,14 @@ def test_snellen_e_20_20_legacy_default_physical_sampling_uses_angular_mode() ->
     )
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
     assert simulation.sampling.image_dx_um == pytest.approx(
-        3000 * math.tan(math.radians((1 / expected_block_px) / 60)) * 1_000
+        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
+        * math.tan(math.radians((1 / expected_block_px) / 60))
+        * 1_000
     )
 
 
 def test_logmar_chart_uses_supported_target_id() -> None:
     simulation = compute_simulation(
-        10,
         10,
         {},
         "logmar_chart",
@@ -192,7 +194,6 @@ def test_logmar_chart_first_row_uses_fifty_arcminute_letter_height() -> None:
     image_dx_arcmin = 1
     simulation = compute_simulation(
         10,
-        10,
         {},
         "logmar_chart",
         pupil_samples=32,
@@ -208,7 +209,6 @@ def test_logmar_chart_first_row_uses_fifty_arcminute_letter_height() -> None:
 def test_logmar_chart_first_row_uses_ten_arcminute_stroke_width() -> None:
     image_dx_arcmin = 1
     simulation = compute_simulation(
-        10,
         10,
         {},
         "logmar_chart",
@@ -227,7 +227,6 @@ def test_logmar_chart_first_row_uses_ten_arcminute_stroke_width() -> None:
 def test_logmar_chart_antialiases_letter_edges() -> None:
     simulation = compute_simulation(
         10,
-        10,
         {},
         "logmar_chart",
         pupil_samples=32,
@@ -239,7 +238,6 @@ def test_logmar_chart_antialiases_letter_edges() -> None:
 
 def test_logmar_chart_diagonal_letters_are_not_block_stair_steps() -> None:
     simulation = compute_simulation(
-        10,
         10,
         {},
         "logmar_chart",
@@ -260,7 +258,6 @@ def test_logmar_chart_diagonal_letters_are_not_block_stair_steps() -> None:
 def test_logmar_chart_row_heights_follow_logmar_values() -> None:
     image_dx_arcmin = 0.25
     simulation = compute_simulation(
-        10,
         10,
         {},
         "logmar_chart",
@@ -283,38 +280,30 @@ def test_logmar_chart_row_heights_follow_logmar_values() -> None:
 
 
 def test_logmar_chart_keeps_pixel_size_with_fixed_angular_sampling() -> None:
-    simulations = [
-        compute_simulation(
-            10,
-            efl_mm,
-            {},
-            "logmar_chart",
-            pupil_samples=32,
-            image_samples=512,
-            image_dx_arcmin=1,
-        )
-        for efl_mm in (10, 17)
-    ]
+    simulation = compute_simulation(
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+        image_dx_arcmin=1,
+    )
 
-    sizes = [_target_size_px(simulation.target) for simulation in simulations]
-
-    assert sizes[0] == sizes[1]
+    assert _target_size_px(simulation.target)[0] > 0
+    assert simulation.inputs.effective_focal_length_mm == DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
 
 
-def test_logmar_chart_legacy_default_physical_sampling_uses_angular_mode() -> None:
+def test_logmar_chart_default_sampling_records_physical_spacing() -> None:
     simulation = compute_simulation(
         300,
-        3000,
         {},
         "logmar_chart",
         pupil_samples=64,
         image_samples=512,
-        image_dx_um=0.5625,
     )
 
-    assert simulation.sampling.image_dx_arcmin is not None
     assert simulation.sampling.image_dx_um == pytest.approx(
-        3000
+        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
         * math.tan(math.radians(simulation.sampling.image_dx_arcmin / 60))
         * 1_000
     )
@@ -322,7 +311,6 @@ def test_logmar_chart_legacy_default_physical_sampling_uses_angular_mode() -> No
 
 def test_jupiter_502nm_uses_supported_target_id() -> None:
     simulation = compute_simulation(
-        10,
         10,
         {},
         "jupiter_502nm",
@@ -340,7 +328,6 @@ def test_jupiter_502nm_uses_supported_target_id() -> None:
 def test_jupiter_502nm_uses_fifty_arcsecond_diameter() -> None:
     image_dx_arcmin = 0.005
     simulation = compute_simulation(
-        10,
         10,
         {},
         "jupiter_502nm",
@@ -364,7 +351,6 @@ def test_jupiter_502nm_uses_fifty_arcsecond_diameter() -> None:
 def test_jupiter_502nm_default_diameter_tracks_image_samples() -> None:
     simulation = compute_simulation(
         10,
-        10,
         {},
         "jupiter_502nm",
         pupil_samples=32,
@@ -384,7 +370,6 @@ def test_jupiter_502nm_default_diameter_tracks_image_samples() -> None:
 def test_jupiter_502nm_contains_smooth_grayscale_detail() -> None:
     simulation = compute_simulation(
         10,
-        10,
         {},
         "jupiter_502nm",
         pupil_samples=32,
@@ -401,7 +386,6 @@ def test_jupiter_502nm_contains_smooth_grayscale_detail() -> None:
 
 def test_jupiter_502nm_is_centered_and_fits_grid() -> None:
     simulation = compute_simulation(
-        10,
         10,
         {},
         "jupiter_502nm",
@@ -424,7 +408,6 @@ def test_jupiter_502nm_is_centered_and_fits_grid() -> None:
 def test_non_snellen_target_uses_default_angular_sampling() -> None:
     simulation = compute_simulation(
         10,
-        100,
         {},
         "siemensstar",
         pupil_samples=32,
@@ -437,7 +420,6 @@ def test_non_snellen_target_uses_default_angular_sampling() -> None:
 def test_snellen_e_20_20_suppresses_replicated_psf_without_growing_pupil_grid() -> None:
     simulation = compute_simulation(
         30,
-        3000,
         {},
         "snellen_e_20_20",
         pupil_samples=256,
@@ -455,7 +437,6 @@ def test_large_aperture_snellen_e_does_not_raise_pupil_samples_past_pyodide_budg
 ) -> None:
     simulation = compute_simulation(
         aperture_mm,
-        3000,
         {},
         "snellen_e_20_20",
         pupil_samples=256,
@@ -468,34 +449,26 @@ def test_large_aperture_snellen_e_does_not_raise_pupil_samples_past_pyodide_budg
 
 
 def test_angular_sampling_metadata_records_physical_grid_spacing() -> None:
-    simulations = [
-        compute_simulation(
-            10,
-            efl_mm,
-            {},
-            "siemensstar",
-            pupil_samples=32,
-            image_samples=64,
-            image_dx_arcmin=0.25,
-        )
-        for efl_mm in (10, 17)
-    ]
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=0.25,
+    )
 
-    assert simulations[0].sampling.image_dx_arcmin == 0.25
-    assert simulations[1].sampling.image_dx_arcmin == 0.25
-    assert simulations[0].sampling.image_dx_um == pytest.approx(
-        10 * math.tan(math.radians(0.25 / 60)) * 1_000
+    assert simulation.sampling.image_dx_arcmin == 0.25
+    assert simulation.sampling.image_dx_um == pytest.approx(
+        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
+        * math.tan(math.radians(0.25 / 60))
+        * 1_000
     )
-    assert simulations[1].sampling.image_dx_um == pytest.approx(
-        17 * math.tan(math.radians(0.25 / 60)) * 1_000
-    )
-    assert simulations[0].sampling.image_dx_um != simulations[1].sampling.image_dx_um
 
 
 def test_render_helpers_return_png_and_svg_bytes() -> None:
     simulation = compute_simulation(
         10,
-        100,
         {},
         "tiltedsquare",
         pupil_samples=32,
