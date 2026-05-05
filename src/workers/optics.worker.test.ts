@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
+import { supportedTargetIds } from './types';
 
 vi.mock('comlink', () => ({
   expose: vi.fn()
 }));
+
+const arrayBuffer = vi.fn(async () => new Uint8Array([1, 2, 3]).buffer);
+vi.stubGlobal(
+  'fetch',
+  vi.fn(async () => ({
+    arrayBuffer
+  }))
+);
 
 const loadPackage = vi.fn();
 const runPythonAsync = vi.fn(async () => new TextEncoder().encode('pyng-bytes'));
@@ -26,6 +35,10 @@ vi.mock('pyodide', () => ({
 }));
 
 describe('optics worker', () => {
+  it('exposes the Jupiter HST target id', () => {
+    expect(supportedTargetIds).toContain('jupiter_502nm');
+  });
+
   it('initializes Pyodide without installing local wheel URLs', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');
@@ -73,6 +86,10 @@ describe('optics worker', () => {
     expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/simulation/compute.py',
       expect.stringContaining('def compute_simulation(')
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      '/home/pyodide/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz',
+      expect.any(Uint8Array)
     );
   });
 

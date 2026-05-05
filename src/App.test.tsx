@@ -36,6 +36,7 @@ it('renders default aperture and supported target options', async () => {
 
   expect(screen.getByRole('option', { name: 'Snellen Chart Letter E on 20/20' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'LogMAR Chart' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'Jupiter (HST 502 nm, 50 arcsec)' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
