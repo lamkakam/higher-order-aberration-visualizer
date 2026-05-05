@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import math
+from functools import lru_cache
+from importlib import resources
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy import ndimage
 
 SUPPORTED_TARGET_IDS = frozenset(
     {
@@ -14,8 +17,11 @@ SUPPORTED_TARGET_IDS = frozenset(
         "tiltedsquare",
         "snellen_e_20_20",
         "logmar_chart",
+        "jupiter_502nm",
     }
 )
+
+JUPITER_502NM_DIAMETER_ARCMIN = 50 / 60
 
 _LOGMAR_ROWS = (
     ("HVZDS", 1.0),
@@ -124,6 +130,13 @@ def _make_target(
         )
     if target_id == "logmar_chart":
         return _make_logmar_chart(
+            x.shape,
+            image_dx_um=image_dx_um,
+            image_dx_arcmin=image_dx_arcmin,
+            effective_focal_length_mm=effective_focal_length_mm,
+        )
+    if target_id == "jupiter_502nm":
+        return _make_jupiter_502nm(
             x.shape,
             image_dx_um=image_dx_um,
             image_dx_arcmin=image_dx_arcmin,
@@ -256,6 +269,47 @@ def _logmar_stroke_px(
         )
         return max(1.0, stroke_um / image_dx_um)
     return max(1.0, stroke_arcmin / image_dx_arcmin)
+
+
+def _make_jupiter_502nm(
+    shape: tuple[int, int],
+    *,
+    image_dx_um: float,
+    image_dx_arcmin: float | None,
+    effective_focal_length_mm: float,
+) -> NDArray[np.float64]:
+    """Build a centered monochrome HST Jupiter target with 50 arcsec diameter."""
+
+    resolved_image_dx_arcmin = image_dx_arcmin
+    if resolved_image_dx_arcmin is None:
+        resolved_image_dx_arcmin = math.degrees(
+            math.atan((image_dx_um / 1_000) / effective_focal_length_mm)
+        ) * 60
+
+    diameter_px = max(1, round(JUPITER_502NM_DIAMETER_ARCMIN / resolved_image_dx_arcmin))
+    rows, columns = shape
+    if diameter_px > rows or diameter_px > columns:
+        raise ValueError("jupiter_502nm target is larger than the image grid")
+
+    source = _load_jupiter_502nm_asset()
+    zoom = diameter_px / source.shape[0]
+    resized = ndimage.zoom(source, zoom, order=3, mode="nearest", prefilter=True)
+    resized = np.clip(resized, 0, 1)
+
+    target = np.zeros(shape, dtype=float)
+    y0 = (rows - resized.shape[0]) // 2
+    x0 = (columns - resized.shape[1]) // 2
+    target[y0 : y0 + resized.shape[0], x0 : x0 + resized.shape[1]] = resized
+    return target
+
+
+@lru_cache(maxsize=1)
+def _load_jupiter_502nm_asset() -> NDArray[np.float64]:
+    asset = resources.files("hoa_visualizer_utils.simulation.assets").joinpath(
+        "jupiter_502nm.npz"
+    )
+    with asset.open("rb") as file:
+        return np.asarray(np.load(file)["image"], dtype=float)
 
 
 def _draw_vector_optotype(

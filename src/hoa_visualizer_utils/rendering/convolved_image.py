@@ -15,6 +15,12 @@ def render_convolved_image(
 
     plt = _load_pyplot()
     fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
-    ax.imshow(simulation.convolved_image, cmap="gray", vmin=0, vmax=1)
+    ax.imshow(
+        simulation.convolved_image,
+        cmap="gray",
+        vmin=0,
+        vmax=1,
+        interpolation="bilinear",
+    )
     ax.set_axis_off()
     return _figure_to_bytes(fig, image_format)

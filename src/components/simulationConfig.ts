@@ -10,6 +10,10 @@ export const targetOptions = [
     label: 'LogMAR Chart'
   },
   {
+    id: 'jupiter_502nm',
+    label: 'Jupiter (HST 502 nm, 50 arcsec)'
+  },
+  {
     id: 'siemensstar',
     label: 'Siemens Star'
   },

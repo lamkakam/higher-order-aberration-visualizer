@@ -9,6 +9,8 @@ from hoa_visualizer_utils.rendering.psf import render_psf
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
 from hoa_visualizer_utils.simulation.compute import (
     DEFAULT_IMAGE_DX_ARCMIN,
+    JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION,
+    JUPITER_502NM_DIAMETER_ARCMIN,
     SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
     compute_simulation,
 )
@@ -318,6 +320,107 @@ def test_logmar_chart_legacy_default_physical_sampling_uses_angular_mode() -> No
     )
 
 
+def test_jupiter_502nm_uses_supported_target_id() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    assert "jupiter_502nm" in SUPPORTED_TARGET_IDS
+    assert simulation.target_id == "jupiter_502nm"
+    assert simulation.target.shape == (512, 512)
+    assert simulation.psf.shape == (512, 512)
+    assert simulation.convolved_image.shape == (512, 512)
+
+
+def test_jupiter_502nm_uses_fifty_arcsecond_diameter() -> None:
+    image_dx_arcmin = 0.005
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=256,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+    height_px, width_px = _target_size_px(simulation.target)
+
+    assert height_px * image_dx_arcmin == pytest.approx(
+        JUPITER_502NM_DIAMETER_ARCMIN,
+        abs=image_dx_arcmin,
+    )
+    assert width_px * image_dx_arcmin == pytest.approx(
+        JUPITER_502NM_DIAMETER_ARCMIN,
+        abs=image_dx_arcmin,
+    )
+
+
+def test_jupiter_502nm_default_diameter_tracks_image_samples() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    height_px, width_px = _target_size_px(simulation.target)
+    expected_diameter_px = round(512 * JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION)
+
+    assert height_px == pytest.approx(expected_diameter_px, abs=2)
+    assert width_px == pytest.approx(expected_diameter_px, abs=2)
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(
+        JUPITER_502NM_DIAMETER_ARCMIN / expected_diameter_px,
+    )
+
+
+def test_jupiter_502nm_contains_smooth_grayscale_detail() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=256,
+    )
+
+    intermediate_values = simulation.target[
+        (simulation.target > 0.05) & (simulation.target < 0.95)
+    ]
+
+    assert intermediate_values.size > 1_000
+    assert np.unique(np.round(intermediate_values, 3)).size > 100
+
+
+def test_jupiter_502nm_is_centered_and_fits_grid() -> None:
+    simulation = compute_simulation(
+        10,
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    y_min, x_min, y_max, x_max = _target_bbox(simulation.target)
+    center_y = (y_min + y_max) / 2
+    center_x = (x_min + x_max) / 2
+
+    assert y_min > 0
+    assert x_min > 0
+    assert y_max < simulation.target.shape[0] - 1
+    assert x_max < simulation.target.shape[1] - 1
+    assert center_y == pytest.approx((simulation.target.shape[0] - 1) / 2, abs=1)
+    assert center_x == pytest.approx((simulation.target.shape[1] - 1) / 2, abs=1)
+
+
 def test_non_snellen_target_uses_default_angular_sampling() -> None:
     simulation = compute_simulation(
         10,
@@ -408,10 +511,16 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
 
 
 def _target_size_px(target: np.ndarray) -> tuple[int, int]:
-    dark_pixels = np.argwhere(target < 0.5)
-    y_min, x_min = dark_pixels.min(axis=0)
-    y_max, x_max = dark_pixels.max(axis=0)
+    y_min, x_min, y_max, x_max = _target_bbox(target)
     return y_max - y_min + 1, x_max - x_min + 1
+
+
+def _target_bbox(target: np.ndarray) -> tuple[int, int, int, int]:
+    foreground_mask = target < 0.5 if np.median(target) > 0.5 else target > 0.05
+    foreground_pixels = np.argwhere(foreground_mask)
+    y_min, x_min = foreground_pixels.min(axis=0)
+    y_max, x_max = foreground_pixels.max(axis=0)
+    return int(y_min), int(x_min), int(y_max), int(x_max)
 
 
 def _row_bbox(mask: np.ndarray, *, row_index: int) -> tuple[int, int, int, int]:

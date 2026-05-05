@@ -7,6 +7,8 @@ import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?r
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
 import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
 import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw';
+import jupiter502nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz?url';
+import simulationAssetsInitSource from '../hoa_visualizer_utils/simulation/assets/__init__.py?raw';
 import simulationInitSource from '../hoa_visualizer_utils/simulation/__init__.py?raw';
 import computeSource from '../hoa_visualizer_utils/simulation/compute.py?raw';
 import modelsSource from '../hoa_visualizer_utils/simulation/models.py?raw';
@@ -32,11 +34,18 @@ const pythonSources = [
   ['hoa_visualizer_utils/rendering/psf.py', psfSource],
   ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
   ['hoa_visualizer_utils/simulation/__init__.py', simulationInitSource],
+  ['hoa_visualizer_utils/simulation/assets/__init__.py', simulationAssetsInitSource],
   ['hoa_visualizer_utils/simulation/compute.py', computeSource],
   ['hoa_visualizer_utils/simulation/models.py', modelsSource],
   ['hoa_visualizer_utils/simulation/targets.py', targetsSource],
   ['hoa_visualizer_utils/utils/__init__.py', utilsInitSource],
   ['hoa_visualizer_utils/utils/figures.py', figuresSource]
+] as const;
+const pythonAssets = [
+  [
+    'hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz',
+    jupiter502nmAssetUrl
+  ]
 ] as const;
 
 let pyodide: PyodideInterface | undefined;
@@ -76,7 +85,7 @@ async function initializePyodide(): Promise<void> {
       'matplotlib',
       'setuptools'
     ]);
-    loadPythonSources(nextPyodide);
+    await loadPythonSources(nextPyodide);
     const installGlobals = nextPyodide.toPy({
       prysm_wheel_url: prysmWheelUrl,
       python_package_root: pythonPackageRoot
@@ -183,10 +192,14 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function loadPythonSources(nextPyodide: PyodideInterface): void {
+async function loadPythonSources(nextPyodide: PyodideInterface): Promise<void> {
   const directories = new Set<string>();
 
   for (const [relativePath] of pythonSources) {
+    const directory = relativePath.split('/').slice(0, -1).join('/');
+    directories.add(`${pythonPackageRoot}/${directory}`);
+  }
+  for (const [relativePath] of pythonAssets) {
     const directory = relativePath.split('/').slice(0, -1).join('/');
     directories.add(`${pythonPackageRoot}/${directory}`);
   }
@@ -197,5 +210,10 @@ function loadPythonSources(nextPyodide: PyodideInterface): void {
 
   for (const [relativePath, source] of pythonSources) {
     nextPyodide.FS.writeFile(`${pythonPackageRoot}/${relativePath}`, source);
+  }
+  for (const [relativePath, assetUrl] of pythonAssets) {
+    const response = await fetch(assetUrl);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    nextPyodide.FS.writeFile(`${pythonPackageRoot}/${relativePath}`, bytes);
   }
 }

@@ -12,7 +12,11 @@ from hoa_visualizer_utils.simulation.models import (
     SimulationInputs,
     SimulationSampling,
 )
-from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS, _make_target
+from hoa_visualizer_utils.simulation.targets import (
+    JUPITER_502NM_DIAMETER_ARCMIN,
+    SUPPORTED_TARGET_IDS,
+    _make_target,
+)
 
 # Angular equivalent of 0.5625 um image sampling at 17 mm effective focal length.
 DEFAULT_IMAGE_DX_ARCMIN = 0.11374897399181322
@@ -20,6 +24,7 @@ LEGACY_DEFAULT_IMAGE_DX_UM = 0.5625
 SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION = 0.6
 LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION = 0.8
 LOGMAR_CHART_WIDEST_ROW_ARCMIN = 450
+JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION = 0.7
 _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 
@@ -216,6 +221,11 @@ def _resolve_image_dx_arcmin(
         return LOGMAR_CHART_WIDEST_ROW_ARCMIN / (
             image_samples * LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION
         )
+    if target_id == "jupiter_502nm":
+        target_diameter_px = round(
+            image_samples * JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION
+        )
+        return JUPITER_502NM_DIAMETER_ARCMIN / target_diameter_px
     return DEFAULT_IMAGE_DX_ARCMIN
 
 
