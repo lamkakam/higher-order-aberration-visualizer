@@ -13,8 +13,81 @@ SUPPORTED_TARGET_IDS = frozenset(
         "slantededge",
         "tiltedsquare",
         "snellen_e_20_20",
+        "logmar_chart",
     }
 )
+
+_LOGMAR_ROWS = (
+    ("HVZDS", 1.0),
+    ("NCVKD", 0.9),
+    ("CZSHN", 0.8),
+    ("ONVSR", 0.7),
+    ("KDNRO", 0.6),
+    ("ZKCSV", 0.5),
+)
+_LOGMAR_ANTIALIASING_FACTOR = 4
+
+_VECTOR_OPTOTYPE_STROKES = {
+    "C": (
+        ((0.5, 0.5), (4.5, 0.5)),
+        ((0.5, 0.5), (0.5, 4.5)),
+        ((0.5, 4.5), (4.5, 4.5)),
+    ),
+    "D": (
+        ((0.5, 0.5), (0.5, 4.5)),
+        ((0.5, 0.5), (3.5, 0.5)),
+        ((3.5, 0.5), (4.5, 1.5)),
+        ((4.5, 1.5), (4.5, 3.5)),
+        ((4.5, 3.5), (3.5, 4.5)),
+        ((0.5, 4.5), (3.5, 4.5)),
+    ),
+    "H": (
+        ((0.5, 0.5), (0.5, 4.5)),
+        ((4.5, 0.5), (4.5, 4.5)),
+        ((0.5, 2.5), (4.5, 2.5)),
+    ),
+    "K": (
+        ((0.5, 0.5), (0.5, 4.5)),
+        ((4.5, 0.5), (0.5, 2.5)),
+        ((0.5, 2.5), (4.5, 4.5)),
+    ),
+    "N": (
+        ((0.5, 0.5), (0.5, 4.5)),
+        ((0.5, 0.5), (4.5, 4.5)),
+        ((4.5, 0.5), (4.5, 4.5)),
+    ),
+    "O": (
+        ((0.5, 0.5), (4.5, 0.5)),
+        ((4.5, 0.5), (4.5, 4.5)),
+        ((4.5, 4.5), (0.5, 4.5)),
+        ((0.5, 4.5), (0.5, 0.5)),
+    ),
+    "R": (
+        ((0.5, 0.5), (0.5, 4.5)),
+        ((0.5, 0.5), (4.0, 0.5)),
+        ((4.0, 0.5), (4.5, 1.0)),
+        ((4.5, 1.0), (4.5, 2.0)),
+        ((4.5, 2.0), (4.0, 2.5)),
+        ((0.5, 2.5), (4.0, 2.5)),
+        ((2.5, 2.5), (4.5, 4.5)),
+    ),
+    "S": (
+        ((0.5, 0.5), (4.5, 0.5)),
+        ((0.5, 0.5), (0.5, 2.5)),
+        ((0.5, 2.5), (4.5, 2.5)),
+        ((4.5, 2.5), (4.5, 4.5)),
+        ((0.5, 4.5), (4.5, 4.5)),
+    ),
+    "V": (
+        ((0.5, 0.5), (2.5, 4.5)),
+        ((4.5, 0.5), (2.5, 4.5)),
+    ),
+    "Z": (
+        ((0.5, 0.5), (4.5, 0.5)),
+        ((4.5, 0.5), (0.5, 4.5)),
+        ((0.5, 4.5), (4.5, 4.5)),
+    ),
+}
 
 
 def _make_target(
@@ -44,6 +117,13 @@ def _make_target(
         return objects.tiltedsquare(x, y, radius=float(x.max()) * 0.35)
     if target_id == "snellen_e_20_20":
         return _make_snellen_e(
+            x.shape,
+            image_dx_um=image_dx_um,
+            image_dx_arcmin=image_dx_arcmin,
+            effective_focal_length_mm=effective_focal_length_mm,
+        )
+    if target_id == "logmar_chart":
+        return _make_logmar_chart(
             x.shape,
             image_dx_um=image_dx_um,
             image_dx_arcmin=image_dx_arcmin,
@@ -95,3 +175,129 @@ def _make_snellen_e(
                     x_start : x_start + block_px,
                 ] = 0
     return target
+
+
+def _make_logmar_chart(
+    shape: tuple[int, int],
+    *,
+    image_dx_um: float,
+    image_dx_arcmin: float | None,
+    effective_focal_length_mm: float,
+) -> NDArray[np.float64]:
+    """Build a six-row LogMAR chart from deterministic block optotypes."""
+
+    row_specs = [
+        (
+            letters,
+            _logmar_stroke_px(
+                logmar,
+                image_dx_um,
+                image_dx_arcmin,
+                effective_focal_length_mm,
+            ),
+        )
+        for letters, logmar in _LOGMAR_ROWS
+    ]
+    row_heights_px = [5 * stroke_px for _, stroke_px in row_specs]
+    row_widths_px = [
+        len(letters) * row_height_px + (len(letters) - 1) * row_height_px
+        for (letters, _), row_height_px in zip(row_specs, row_heights_px)
+    ]
+    chart_height_px = row_heights_px[0] + sum(
+        next_row_height_px + next_row_height_px
+        for next_row_height_px in row_heights_px[1:]
+    )
+
+    rows, columns = shape
+    if chart_height_px > rows or max(row_widths_px) > columns:
+        raise ValueError("logmar_chart target is larger than the image grid")
+
+    target = np.ones(
+        (
+            rows * _LOGMAR_ANTIALIASING_FACTOR,
+            columns * _LOGMAR_ANTIALIASING_FACTOR,
+        ),
+        dtype=float,
+    )
+    y_cursor = (rows - chart_height_px) / 2
+    for row_index, ((letters, stroke_px), row_height_px, row_width_px) in enumerate(
+        zip(row_specs, row_heights_px, row_widths_px)
+    ):
+        if row_index > 0:
+            y_cursor += row_height_px
+        x_cursor = (columns - row_width_px) / 2
+        for letter_index, letter in enumerate(letters):
+            if letter_index > 0:
+                x_cursor += row_height_px
+            _draw_vector_optotype(target, letter, y_cursor, x_cursor, stroke_px)
+            x_cursor += row_height_px
+        y_cursor += row_height_px
+
+    return target.reshape(
+        rows,
+        _LOGMAR_ANTIALIASING_FACTOR,
+        columns,
+        _LOGMAR_ANTIALIASING_FACTOR,
+    ).mean(axis=(1, 3))
+
+
+def _logmar_stroke_px(
+    logmar: float,
+    image_dx_um: float,
+    image_dx_arcmin: float | None,
+    effective_focal_length_mm: float,
+) -> float:
+    stroke_arcmin = 10**logmar
+    if image_dx_arcmin is None:
+        stroke_um = (
+            effective_focal_length_mm
+            * math.tan(math.radians(stroke_arcmin / 60))
+            * 1_000
+        )
+        return max(1.0, stroke_um / image_dx_um)
+    return max(1.0, stroke_arcmin / image_dx_arcmin)
+
+
+def _draw_vector_optotype(
+    target: NDArray[np.float64],
+    letter: str,
+    y0: float,
+    x0: float,
+    stroke_px: float,
+) -> None:
+    scale = _LOGMAR_ANTIALIASING_FACTOR
+    letter_height_px = 5 * stroke_px
+    y_start = max(0, math.floor(y0 * scale))
+    y_stop = min(target.shape[0], math.ceil((y0 + letter_height_px) * scale))
+    x_start = max(0, math.floor(x0 * scale))
+    x_stop = min(target.shape[1], math.ceil((x0 + letter_height_px) * scale))
+
+    yy, xx = np.mgrid[y_start:y_stop, x_start:x_stop]
+    x_units = ((xx + 0.5) / scale - x0) / stroke_px
+    y_units = ((yy + 0.5) / scale - y0) / stroke_px
+    mask = np.zeros_like(x_units, dtype=bool)
+    for start, end in _VECTOR_OPTOTYPE_STROKES[letter]:
+        mask |= _within_stroke(x_units, y_units, start, end)
+    target[y_start:y_stop, x_start:x_stop] = np.where(
+        mask,
+        0,
+        target[y_start:y_stop, x_start:x_stop],
+    )
+
+
+def _within_stroke(
+    x_units: NDArray[np.float64],
+    y_units: NDArray[np.float64],
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> NDArray[np.bool_]:
+    x1, y1 = start
+    x2, y2 = end
+    dx = x2 - x1
+    dy = y2 - y1
+    segment_length_squared = dx * dx + dy * dy
+    projection = ((x_units - x1) * dx + (y_units - y1) * dy) / segment_length_squared
+    projection = np.clip(projection, 0, 1)
+    closest_x = x1 + projection * dx
+    closest_y = y1 + projection * dy
+    return (x_units - closest_x) ** 2 + (y_units - closest_y) ** 2 <= 0.5**2

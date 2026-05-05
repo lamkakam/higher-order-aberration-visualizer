@@ -35,6 +35,7 @@ it('renders default aperture and supported target options', async () => {
   await user.click(screen.getByLabelText('Target'));
 
   expect(screen.getByRole('option', { name: 'Snellen Chart Letter E on 20/20' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'LogMAR Chart' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
@@ -87,7 +88,7 @@ it('debounces worker calls using the current UI payload', async () => {
     target: { value: '4' }
   });
   fireEvent.change(screen.getByLabelText('Target'), {
-    target: { value: 'siemensstar' }
+    target: { value: 'logmar_chart' }
   });
   fireEvent.keyDown(screen.getByRole('slider', { name: 'Defocus (2,0)' }), {
     key: 'ArrowRight'
@@ -104,7 +105,7 @@ it('debounces worker calls using the current UI payload', async () => {
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 4,
-    targetId: 'siemensstar',
+    targetId: 'logmar_chart',
     zernikeCoefficients: expect.objectContaining({
       '2,0': 0.1,
       '4,0': 0

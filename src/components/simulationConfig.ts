@@ -6,6 +6,10 @@ export const targetOptions = [
     label: 'Snellen Chart Letter E on 20/20'
   },
   {
+    id: 'logmar_chart',
+    label: 'LogMAR Chart'
+  },
+  {
     id: 'siemensstar',
     label: 'Siemens Star'
   },
