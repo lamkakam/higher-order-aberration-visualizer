@@ -18,6 +18,7 @@ SUPPORTED_TARGET_IDS = frozenset(
         "snellen_e_20_20",
         "logmar_chart",
         "jupiter_502nm",
+        "point_source",
     }
 )
 
@@ -142,6 +143,8 @@ def _make_target(
             image_dx_arcmin=image_dx_arcmin,
             effective_focal_length_mm=effective_focal_length_mm,
         )
+    if target_id == "point_source":
+        return _make_point_source(x.shape)
 
     raise ValueError(f"target_id must be one of {sorted(SUPPORTED_TARGET_IDS)}")
 
@@ -300,6 +303,15 @@ def _make_jupiter_502nm(
     y0 = (rows - resized.shape[0]) // 2
     x0 = (columns - resized.shape[1]) // 2
     target[y0 : y0 + resized.shape[0], x0 : x0 + resized.shape[1]] = resized
+    return target
+
+
+def _make_point_source(shape: tuple[int, int]) -> NDArray[np.float64]:
+    """Build a centered impulse target."""
+
+    target = np.zeros(shape, dtype=float)
+    rows, columns = shape
+    target[rows // 2, columns // 2] = 1
     return target
 
 

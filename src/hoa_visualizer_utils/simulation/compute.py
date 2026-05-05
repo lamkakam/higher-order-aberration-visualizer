@@ -25,6 +25,7 @@ SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION = 0.6
 LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION = 0.8
 LOGMAR_CHART_WIDEST_ROW_ARCMIN = 450
 JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION = 0.7
+POINT_SOURCE_AIRY_DIAMETER_PX = 64
 _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 
@@ -47,6 +48,8 @@ def compute_simulation(
         target_id,
         image_samples,
         image_dx_arcmin,
+        entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
+        wavelength_nm=wavelength_nm,
     )
     coefficients = _validate_inputs(
         entrance_pupil_diameter_mm,
@@ -115,8 +118,11 @@ def compute_simulation(
         image_dx_arcmin=resolved_image_dx_arcmin,
         effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
     )
-    convolved_image = convolution.conv(target, psf)
-    convolved_image = np.clip(convolved_image, 0, 1)
+    if target_id == "point_source":
+        convolved_image = psf / psf.max()
+    else:
+        convolved_image = convolution.conv(target, psf)
+        convolved_image = np.clip(convolved_image, 0, 1)
 
     return OpticalSimulation(
         target_id=target_id,
@@ -183,6 +189,9 @@ def _resolve_image_dx_arcmin(
     target_id: str,
     image_samples: int,
     image_dx_arcmin: float | None,
+    *,
+    entrance_pupil_diameter_mm: float,
+    wavelength_nm: float,
 ) -> float:
     """Resolve omitted angular sampling defaults."""
 
@@ -201,6 +210,11 @@ def _resolve_image_dx_arcmin(
             image_samples * JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION
         )
         return JUPITER_502NM_DIAMETER_ARCMIN / target_diameter_px
+    if target_id == "point_source":
+        airy_diameter_arcmin = math.degrees(
+            2 * 1.22 * (wavelength_nm * 1e-6) / entrance_pupil_diameter_mm
+        ) * 60
+        return airy_diameter_arcmin / POINT_SOURCE_AIRY_DIAMETER_PX
     return DEFAULT_IMAGE_DX_ARCMIN
 
 

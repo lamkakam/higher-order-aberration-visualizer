@@ -39,6 +39,10 @@ describe('optics worker', () => {
     expect(supportedTargetIds).toContain('jupiter_502nm');
   });
 
+  it('exposes the point source target id', () => {
+    expect(supportedTargetIds).toContain('point_source');
+  });
+
   it('initializes Pyodide without installing local wheel URLs', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');

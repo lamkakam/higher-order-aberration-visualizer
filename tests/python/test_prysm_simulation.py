@@ -405,6 +405,94 @@ def test_jupiter_502nm_is_centered_and_fits_grid() -> None:
     assert center_x == pytest.approx((simulation.target.shape[1] - 1) / 2, abs=1)
 
 
+def test_point_source_uses_supported_target_id() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    assert "point_source" in SUPPORTED_TARGET_IDS
+    assert simulation.target_id == "point_source"
+    assert simulation.target.shape == (64, 64)
+    assert simulation.psf.shape == (64, 64)
+    assert simulation.convolved_image.shape == (64, 64)
+
+
+@pytest.mark.parametrize("aperture_mm", [3, 6])
+def test_point_source_default_sampling_tracks_airy_diameter(
+    aperture_mm: float,
+) -> None:
+    wavelength_nm = 550
+    simulation = compute_simulation(
+        aperture_mm,
+        {},
+        "point_source",
+        wavelength_nm=wavelength_nm,
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    airy_diameter_arcmin = math.degrees(
+        2 * 1.22 * (wavelength_nm * 1e-6) / aperture_mm
+    ) * 60
+
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(
+        airy_diameter_arcmin / 64
+    )
+    assert airy_diameter_arcmin / simulation.sampling.image_dx_arcmin == pytest.approx(64)
+
+
+def test_point_source_default_sampling_changes_with_aperture() -> None:
+    small_aperture = compute_simulation(
+        3,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=128,
+    )
+    large_aperture = compute_simulation(
+        6,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    assert small_aperture.sampling.image_dx_arcmin == pytest.approx(
+        large_aperture.sampling.image_dx_arcmin * 2
+    )
+
+
+def test_point_source_convolved_image_is_display_normalized_psf() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    assert simulation.convolved_image.shape == simulation.psf.shape
+    assert simulation.convolved_image.max() == pytest.approx(1)
+    assert simulation.convolved_image == pytest.approx(simulation.psf / simulation.psf.max())
+
+
+def test_point_source_explicit_sampling_overrides_airy_default() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=128,
+        image_dx_arcmin=0.25,
+    )
+
+    assert simulation.sampling.image_dx_arcmin == 0.25
+
+
 def test_non_snellen_target_uses_default_angular_sampling() -> None:
     simulation = compute_simulation(
         10,
