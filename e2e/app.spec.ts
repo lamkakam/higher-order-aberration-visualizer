@@ -36,6 +36,23 @@ async function expectCardIsTopmost(page: Page, heading: string) {
   ).resolves.toBe(true);
 }
 
+async function expectPrimaryStickyGapIsMasked(page: Page) {
+  const card = page
+    .getByRole('heading', { name: 'Simulated Image' })
+    .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
+  await expect(card).toBeVisible();
+
+  await expect(
+    card.evaluate((element) => {
+      const stickyWrapper = element.parentElement;
+      const rect = element.getBoundingClientRect();
+      const topElement = document.elementFromPoint(rect.left + rect.width / 2, rect.top / 2);
+
+      return Boolean(stickyWrapper && topElement === stickyWrapper);
+    })
+  ).resolves.toBe(true);
+}
+
 async function expectPrimaryCardSticks(page: Page) {
   await page.evaluate(() => window.scrollTo(0, 260));
   const stuckTop = await getCardTopByHeading(page, 'Simulated Image');
@@ -91,6 +108,13 @@ test('keeps the simulated image card sticky in basic mode on desktop', async ({ 
   await page.goto('/');
 
   await expectPrimaryCardSticks(page);
+});
+
+test('masks the gap above the sticky simulated image card on desktop', async ({ page }) => {
+  await page.goto('/');
+
+  await page.evaluate(() => window.scrollTo(0, 620));
+  await expectPrimaryStickyGapIsMasked(page);
 });
 
 test('keeps all advanced image cards sticky on desktop', async ({ page }) => {

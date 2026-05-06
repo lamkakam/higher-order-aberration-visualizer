@@ -133,7 +133,20 @@ export function App({ workerClient }: AppProps) {
                 alignSelf: 'start',
                 position: 'sticky',
                 top: { xs: 16, sm: 24 },
-                zIndex: 3
+                zIndex: 3,
+                '&::before': {
+                  bgcolor: 'background.default',
+                  bottom: '100%',
+                  content: '""',
+                  height: { xs: 16, sm: 24 },
+                  left: 0,
+                  position: 'absolute',
+                  right: 0
+                },
+                '& > *': {
+                  position: 'relative',
+                  zIndex: 1
+                }
               }}
             >
               <SimulatedImageCard
