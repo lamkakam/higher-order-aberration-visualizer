@@ -14,3 +14,4 @@ description: Use when adding, moving, or reorganizing files in this repo.
 - Worker code must not import React.
 - Shared types must remain framework-neutral and serializable across the worker boundary.
 - Keep new files scoped to the requested feature; do not add docs or directories speculatively.
+- When adding, moving, or renaming documented files or directories, update links and descriptions in `docs/architecture.md`, `docs/development.md`, and `docs/simulation.md` as needed.

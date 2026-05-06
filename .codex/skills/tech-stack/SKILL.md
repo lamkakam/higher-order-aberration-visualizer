@@ -12,4 +12,5 @@ description: Use when working on React, TypeScript, Vite, Tailwind, Pyodide, Com
 - Do not use matplotlib for UI plots. Future browser plots should use ECharts or native web rendering.
 - Treat Pyodide and prysm as worker-only dependencies.
 - Preserve WCAG 2.2 AA expectations when adding UI: visible focus, semantic controls, contrast, and keyboard operation.
+- When changing React, Vite, worker, Pyodide, Comlink, Playwright, Vitest, Python, prysm, or command behavior described in `docs/`, update the affected docs in the same change.
 - Verify stack changes with `npm run typecheck`, relevant Vitest coverage, and Playwright smoke tests when UI behavior changes.
