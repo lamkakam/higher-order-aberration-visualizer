@@ -115,18 +115,38 @@ export function App({ workerClient }: AppProps) {
           onDisplayModeChange={setDisplayMode}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
-          <Stack spacing={3}>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 3,
+              gridTemplateColumns:
+                displayMode === 'advanced'
+                  ? {
+                      xs: '1fr',
+                      sm: `repeat(${visibleAdvancedCardCount}, minmax(0, 1fr))`
+                    }
+                  : '1fr'
+            }}
+          >
             <Box
               sx={{
-                display: 'grid',
-                gap: 3,
-                gridTemplateColumns:
-                  displayMode === 'advanced'
-                    ? {
-                        xs: '1fr',
-                        sm: `repeat(${visibleAdvancedCardCount}, minmax(0, 1fr))`
-                      }
-                    : '1fr'
+                alignSelf: 'start',
+                position: 'sticky',
+                top: { xs: 16, sm: 24 },
+                zIndex: 3,
+                '&::before': {
+                  bgcolor: 'background.default',
+                  bottom: '100%',
+                  content: '""',
+                  height: { xs: 16, sm: 24 },
+                  left: 0,
+                  position: 'absolute',
+                  right: 0
+                },
+                '& > *': {
+                  position: 'relative',
+                  zIndex: 1
+                }
               }}
             >
               <SimulatedImageCard
@@ -135,7 +155,16 @@ export function App({ workerClient }: AppProps) {
                 isLoading={isLoading}
                 error={error}
               />
-              {displayMode === 'advanced' && targetId !== 'point_source' ? (
+            </Box>
+            {displayMode === 'advanced' && targetId !== 'point_source' ? (
+              <Box
+                sx={{
+                  alignSelf: 'start',
+                  position: { xs: 'static', sm: 'sticky' },
+                  top: { sm: 24 },
+                  zIndex: { sm: 2 }
+                }}
+              >
                 <SimulatedImageCard
                   imageUrl={result?.psfImageUrl}
                   statusText={diagnostics.message}
@@ -145,8 +174,17 @@ export function App({ workerClient }: AppProps) {
                   description="The rendered point spread function for the current optical system."
                   altText="Rendered point spread function"
                 />
-              ) : undefined}
-              {displayMode === 'advanced' ? (
+              </Box>
+            ) : undefined}
+            {displayMode === 'advanced' ? (
+              <Box
+                sx={{
+                  alignSelf: 'start',
+                  position: { xs: 'static', sm: 'sticky' },
+                  top: { sm: 24 },
+                  zIndex: { sm: 2 }
+                }}
+              >
                 <SimulatedImageCard
                   imageUrl={result?.wavefrontImageUrl}
                   statusText={diagnostics.message}
@@ -156,22 +194,24 @@ export function App({ workerClient }: AppProps) {
                   description="The rendered wavefront map for the current Zernike aberration values."
                   altText="Rendered wavefront map"
                 />
-              ) : undefined}
-            </Box>
-            <OpticalSystemConfigCard
-              apertureDiameterMm={apertureDiameterMm}
-              targetId={targetId}
-              onApertureChange={setApertureDiameterMm}
-              onTargetChange={setTargetId}
-            />
-            <AberrationSlidersCard
-              values={zernikeCoefficients}
-              onValueChange={updateZernikeCoefficient}
-              onReset={() => {
-                setZernikeCoefficients(createDefaultZernikeCoefficients());
-              }}
-            />
-          </Stack>
+              </Box>
+            ) : undefined}
+            <Stack spacing={3} sx={{ gridColumn: '1 / -1' }}>
+              <OpticalSystemConfigCard
+                apertureDiameterMm={apertureDiameterMm}
+                targetId={targetId}
+                onApertureChange={setApertureDiameterMm}
+                onTargetChange={setTargetId}
+              />
+              <AberrationSlidersCard
+                values={zernikeCoefficients}
+                onValueChange={updateZernikeCoefficient}
+                onReset={() => {
+                  setZernikeCoefficients(createDefaultZernikeCoefficients());
+                }}
+              />
+            </Stack>
+          </Box>
         </Container>
       </Box>
     </ThemeProvider>
