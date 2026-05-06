@@ -3,7 +3,7 @@ import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 
 interface NumberFieldProps {
   readonly label: string;
@@ -21,11 +21,33 @@ export function NumberField({
   onChange
 }: NumberFieldProps) {
   const id = useId();
-  const [draftValue, setDraftValue] = useState(String(value));
 
-  useEffect(() => {
-    setDraftValue(String(value));
-  }, [value]);
+  return (
+    <NumberFieldInput
+      key={value}
+      id={id}
+      label={label}
+      value={value}
+      min={min}
+      error={error}
+      onChange={onChange}
+    />
+  );
+}
+
+interface NumberFieldInputProps extends NumberFieldProps {
+  readonly id: string;
+}
+
+function NumberFieldInput({
+  id,
+  label,
+  value,
+  min,
+  error = false,
+  onChange
+}: NumberFieldInputProps) {
+  const [draftValue, setDraftValue] = useState(String(value));
 
   function handleInputChange(nextValue: string) {
     setDraftValue(nextValue);
