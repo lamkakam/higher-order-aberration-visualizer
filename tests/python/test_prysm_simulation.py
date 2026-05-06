@@ -12,6 +12,8 @@ from hoa_visualizer_utils.simulation.compute import (
     DEFAULT_IMAGE_DX_ARCMIN,
     JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION,
     JUPITER_502NM_DIAMETER_ARCMIN,
+    LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION,
+    LOGMAR_CHART_WIDEST_ROW_ARCMIN,
     SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
     compute_simulation,
 )
@@ -81,11 +83,6 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.inputs.effective_focal_length_mm == DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
     assert simulation.sampling.pupil_samples == 32
     assert simulation.sampling.image_samples == 64
-    assert simulation.sampling.image_dx_um == pytest.approx(
-        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
-        * math.tan(math.radians(image_dx_arcmin / 60))
-        * 1_000
-    )
     assert simulation.sampling.image_dx_arcmin == image_dx_arcmin
     assert simulation.sampling.wavelength_nm == 550.0
 
@@ -150,7 +147,7 @@ def test_snellen_e_20_20_default_height_tracks_image_samples(
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
-def test_snellen_e_20_20_default_sampling_records_physical_spacing() -> None:
+def test_snellen_e_20_20_default_sampling_records_angular_spacing() -> None:
     simulation = compute_simulation(
         300,
         {},
@@ -169,11 +166,6 @@ def test_snellen_e_20_20_default_sampling_records_physical_spacing() -> None:
         5 * expected_block_px,
     )
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
-    assert simulation.sampling.image_dx_um == pytest.approx(
-        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
-        * math.tan(math.radians((1 / expected_block_px) / 60))
-        * 1_000
-    )
 
 
 def test_logmar_chart_uses_supported_target_id() -> None:
@@ -293,7 +285,7 @@ def test_logmar_chart_keeps_pixel_size_with_fixed_angular_sampling() -> None:
     assert simulation.inputs.effective_focal_length_mm == DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
 
 
-def test_logmar_chart_default_sampling_records_physical_spacing() -> None:
+def test_logmar_chart_default_sampling_records_angular_spacing() -> None:
     simulation = compute_simulation(
         300,
         {},
@@ -302,10 +294,9 @@ def test_logmar_chart_default_sampling_records_physical_spacing() -> None:
         image_samples=512,
     )
 
-    assert simulation.sampling.image_dx_um == pytest.approx(
-        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
-        * math.tan(math.radians(simulation.sampling.image_dx_arcmin / 60))
-        * 1_000
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(
+        LOGMAR_CHART_WIDEST_ROW_ARCMIN
+        / (512 * LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION)
     )
 
 
@@ -536,7 +527,7 @@ def test_large_aperture_snellen_e_does_not_raise_pupil_samples_past_pyodide_budg
     assert simulation.wavefront_nm.shape == (256, 256)
 
 
-def test_angular_sampling_metadata_records_physical_grid_spacing() -> None:
+def test_angular_sampling_metadata_records_angular_grid_spacing() -> None:
     simulation = compute_simulation(
         10,
         {},
@@ -547,11 +538,6 @@ def test_angular_sampling_metadata_records_physical_grid_spacing() -> None:
     )
 
     assert simulation.sampling.image_dx_arcmin == 0.25
-    assert simulation.sampling.image_dx_um == pytest.approx(
-        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM
-        * math.tan(math.radians(0.25 / 60))
-        * 1_000
-    )
 
 
 def test_render_helpers_return_png_and_svg_bytes() -> None:

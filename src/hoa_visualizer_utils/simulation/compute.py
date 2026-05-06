@@ -133,7 +133,6 @@ def compute_simulation(
             wavelength_nm=wavelength_nm,
             pupil_samples=pupil_samples,
             image_samples=image_samples,
-            image_dx_um=float(focused.dx),
             image_dx_arcmin=resolved_image_dx_arcmin,
             pupil_dx_mm=pupil_dx_mm,
         ),
