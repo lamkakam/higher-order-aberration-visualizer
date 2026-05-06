@@ -7,7 +7,7 @@ Common commands are defined in [`package.json`](../package.json).
 Install dependencies:
 
 ```sh
-npm install
+npm ci
 ```
 
 Run the Vite dev server:
