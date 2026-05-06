@@ -28,6 +28,8 @@ export interface ConvolvedImageInput {
 
 export interface ConvolvedImageResult {
   imageUrl: string;
+  psfImageUrl: string;
+  wavefrontImageUrl: string;
   diagnostics: WorkerDiagnostics;
 }
 

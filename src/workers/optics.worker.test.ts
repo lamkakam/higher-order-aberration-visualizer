@@ -112,6 +112,8 @@ describe('optics worker', () => {
     });
 
     expect(result.imageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
+    expect(result.psfImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
+    expect(result.wavefrontImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.diagnostics.status).toBe('ready');
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('simulation = compute_simulation('),
@@ -123,6 +125,18 @@ describe('optics worker', () => {
     );
     expect(runPythonAsync).not.toHaveBeenCalledWith(
       expect.stringContaining('effective_focal_length_mm='),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('render_convolved_image(simulation)'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('render_psf(simulation)'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('render_wavefront(simulation)'),
       expect.any(Object)
     );
   });

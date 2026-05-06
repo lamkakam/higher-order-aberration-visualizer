@@ -2,6 +2,7 @@
 
 import { expose } from 'comlink';
 import type { PyodideInterface } from 'pyodide';
+import type { PyProxy } from 'pyodide/ffi';
 import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
 import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
@@ -132,10 +133,9 @@ async function computeConvolvedImage(
     zernike_coefficients: input.zernikeCoefficients
   });
 
-  const imageBytes = (await pyodide.runPythonAsync(
+  await pyodide.runPythonAsync(
     `
 from hoa_visualizer_utils.simulation.compute import compute_simulation
-from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
 
 coefficients = {
     tuple(int(index) for index in key.split(",")): float(value)
@@ -148,13 +148,27 @@ simulation = compute_simulation(
     pupil_samples=256,
     image_samples=512,
 )
-render_convolved_image(simulation)
 `,
     { globals }
-  )) as Uint8Array;
+  );
+
+  const imageBytes = await renderSimulationImage(
+    globals,
+    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation)'
+  );
+  const psfImageBytes = await renderSimulationImage(
+    globals,
+    'from hoa_visualizer_utils.rendering.psf import render_psf\nrender_psf(simulation)'
+  );
+  const wavefrontImageBytes = await renderSimulationImage(
+    globals,
+    'from hoa_visualizer_utils.rendering.wavefront import render_wavefront\nrender_wavefront(simulation)'
+  );
 
   return {
     imageUrl: `data:image/png;base64,${bytesToBase64(imageBytes)}`,
+    psfImageUrl: `data:image/png;base64,${bytesToBase64(psfImageBytes)}`,
+    wavefrontImageUrl: `data:image/png;base64,${bytesToBase64(wavefrontImageBytes)}`,
     diagnostics
   };
 }
@@ -166,6 +180,17 @@ const api: OpticsWorkerApi = {
 };
 
 expose(api);
+
+async function renderSimulationImage(
+  globals: PyProxy,
+  source: string
+): Promise<Uint8Array> {
+  if (!pyodide) {
+    throw new Error('Pyodide is not initialized');
+  }
+
+  return (await pyodide.runPythonAsync(source, { globals })) as Uint8Array;
+}
 
 async function ensureInitialized(): Promise<void> {
   if (diagnostics.status === 'ready') {

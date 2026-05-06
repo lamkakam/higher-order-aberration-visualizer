@@ -11,6 +11,7 @@ import {
   OpticalSystemConfigCard,
   SettingsDrawer,
   SimulatedImageCard,
+  type DisplayMode,
   type ThemeMode
 } from './components';
 import { createWorkerClient, type WorkerClient } from './workers/client';
@@ -41,6 +42,7 @@ export function App({ workerClient }: AppProps) {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
   const [diagnostics, setDiagnostics] = useState<WorkerDiagnostics>(initialDiagnostics);
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
@@ -73,6 +75,7 @@ export function App({ workerClient }: AppProps) {
       }),
     [resolvedMode]
   );
+  const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
 
   useEffect(() => {
     if (workerClient) {
@@ -184,19 +187,57 @@ export function App({ workerClient }: AppProps) {
         <SettingsDrawer
           open={settingsOpen}
           mode={themeMode}
+          displayMode={displayMode}
           onClose={() => {
             setSettingsOpen(false);
           }}
           onModeChange={setThemeMode}
+          onDisplayModeChange={setDisplayMode}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
           <Stack spacing={3}>
-            <SimulatedImageCard
-              imageUrl={result?.imageUrl}
-              statusText={diagnostics.message}
-              isLoading={isLoading}
-              error={error}
-            />
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 3,
+                gridTemplateColumns:
+                  displayMode === 'advanced'
+                    ? {
+                        xs: '1fr',
+                        sm: `repeat(${visibleAdvancedCardCount}, minmax(0, 1fr))`
+                      }
+                    : '1fr'
+              }}
+            >
+              <SimulatedImageCard
+                imageUrl={result?.imageUrl}
+                statusText={diagnostics.message}
+                isLoading={isLoading}
+                error={error}
+              />
+              {displayMode === 'advanced' && targetId !== 'point_source' ? (
+                <SimulatedImageCard
+                  imageUrl={result?.psfImageUrl}
+                  statusText={diagnostics.message}
+                  isLoading={isLoading}
+                  error={error}
+                  title="PSF"
+                  description="The rendered point spread function for the current optical system."
+                  altText="Rendered point spread function"
+                />
+              ) : undefined}
+              {displayMode === 'advanced' ? (
+                <SimulatedImageCard
+                  imageUrl={result?.wavefrontImageUrl}
+                  statusText={diagnostics.message}
+                  isLoading={isLoading}
+                  error={error}
+                  title="Wavefront Map"
+                  description="The rendered wavefront map for the current Zernike aberration values."
+                  altText="Rendered wavefront map"
+                />
+              ) : undefined}
+            </Box>
             <OpticalSystemConfigCard
               apertureDiameterMm={apertureDiameterMm}
               targetId={targetId}
