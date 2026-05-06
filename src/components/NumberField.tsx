@@ -24,7 +24,6 @@ export function NumberField({
 
   return (
     <NumberFieldInput
-      key={value}
       id={id}
       label={label}
       value={value}
@@ -47,15 +46,34 @@ function NumberFieldInput({
   error = false,
   onChange
 }: NumberFieldInputProps) {
-  const [draftValue, setDraftValue] = useState(String(value));
+  const [draftState, setDraftState] = useState({
+    committedValue: value,
+    draftValue: String(value)
+  });
 
-  function handleInputChange(nextValue: string) {
-    setDraftValue(nextValue);
+  let draftValue = draftState.draftValue;
+  if (draftState.committedValue !== value) {
+    draftValue = String(value);
+    setDraftState({
+      committedValue: value,
+      draftValue
+    });
+  }
+
+  const handleInputChange = (nextValue: string) => {
+    if (!isDecimalText(nextValue)) {
+      return;
+    }
+
+    setDraftState({
+      committedValue: value,
+      draftValue: nextValue
+    });
     const parsedValue = Number(nextValue);
     if (Number.isFinite(parsedValue) && parsedValue >= min) {
       onChange(parsedValue);
     }
-  }
+  };
 
   return (
     <BaseNumberField.Root
@@ -73,9 +91,9 @@ function NumberFieldInput({
         <OutlinedInput
           id={id}
           label={label}
-          type="number"
+          type="text"
           value={draftValue}
-          inputProps={{ min, step: 0.1 }}
+          inputProps={{ inputMode: 'decimal', min, step: 0.1 }}
           onChange={(event) => {
             handleInputChange(event.target.value);
           }}
@@ -84,4 +102,8 @@ function NumberFieldInput({
       </FormControl>
     </BaseNumberField.Root>
   );
+}
+
+function isDecimalText(value: string) {
+  return value === '' || /^(?:\d+\.?\d*|\.\d+)$/.test(value);
 }

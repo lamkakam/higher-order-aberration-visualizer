@@ -32,7 +32,7 @@ it('renders default aperture and supported target options', async () => {
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue(3);
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('3');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
   await user.click(screen.getByLabelText('Target'));
