@@ -2,8 +2,8 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
-import { createTheme, ThemeProvider, useMediaQuery } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { ThemeProvider } from '@mui/material';
+import { useEffect, useState } from 'react';
 import {
   AberrationSlidersCard,
   AppHeader,
@@ -14,6 +14,7 @@ import {
   type DisplayMode,
   type ThemeMode
 } from './components';
+import { useAppTheme } from './hooks/useAppTheme';
 import { createWorkerClient, type WorkerClient } from './workers/client';
 import type {
   ConvolvedImageResult,
@@ -39,7 +40,6 @@ const computeTimeoutMs = 60_000;
 export function App({ workerClient }: AppProps) {
   const [ownedClient, setOwnedClient] = useState<WorkerClient | undefined>(undefined);
   const client = workerClient ?? ownedClient;
-  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
@@ -53,28 +53,7 @@ export function App({ workerClient }: AppProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
 
-  const resolvedMode = themeMode === 'system' ? (prefersDarkMode ? 'dark' : 'light') : themeMode;
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: resolvedMode,
-          primary: {
-            main: '#256f72'
-          },
-          secondary: {
-            main: '#8a5a2b'
-          },
-          background: {
-            default: resolvedMode === 'dark' ? '#101418' : '#f5f6f1'
-          }
-        },
-        shape: {
-          borderRadius: 8
-        }
-      }),
-    [resolvedMode]
-  );
+  const theme = useAppTheme(themeMode);
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
 
   useEffect(() => {
@@ -168,12 +147,12 @@ export function App({ workerClient }: AppProps) {
     };
   }, [apertureDiameterMm, client, targetId, zernikeCoefficients]);
 
-  function updateZernikeCoefficient(key: ZernikeCoefficientKey, value: number) {
+  const updateZernikeCoefficient = (key: ZernikeCoefficientKey, value: number) => {
     setZernikeCoefficients((currentValues) => ({
       ...currentValues,
       [key]: value
     }));
-  }
+  };
 
   return (
     <ThemeProvider theme={theme}>
