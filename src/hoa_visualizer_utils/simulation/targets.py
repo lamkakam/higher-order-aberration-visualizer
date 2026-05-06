@@ -18,6 +18,7 @@ SUPPORTED_TARGET_IDS = frozenset(
         "snellen_e_20_20",
         "logmar_chart",
         "jupiter_502nm",
+        "point_source",
     }
 )
 
@@ -101,9 +102,7 @@ def _make_target(
     x: NDArray[np.float64],
     y: NDArray[np.float64],
     *,
-    image_dx_um: float,
-    image_dx_arcmin: float | None,
-    effective_focal_length_mm: float,
+    image_dx_arcmin: float,
 ) -> NDArray[np.float64]:
     """Build the requested target image on the provided image grid."""
 
@@ -124,24 +123,20 @@ def _make_target(
     if target_id == "snellen_e_20_20":
         return _make_snellen_e(
             x.shape,
-            image_dx_um=image_dx_um,
             image_dx_arcmin=image_dx_arcmin,
-            effective_focal_length_mm=effective_focal_length_mm,
         )
     if target_id == "logmar_chart":
         return _make_logmar_chart(
             x.shape,
-            image_dx_um=image_dx_um,
             image_dx_arcmin=image_dx_arcmin,
-            effective_focal_length_mm=effective_focal_length_mm,
         )
     if target_id == "jupiter_502nm":
         return _make_jupiter_502nm(
             x.shape,
-            image_dx_um=image_dx_um,
             image_dx_arcmin=image_dx_arcmin,
-            effective_focal_length_mm=effective_focal_length_mm,
         )
+    if target_id == "point_source":
+        return _make_point_source(x.shape)
 
     raise ValueError(f"target_id must be one of {sorted(SUPPORTED_TARGET_IDS)}")
 
@@ -149,17 +144,11 @@ def _make_target(
 def _make_snellen_e(
     shape: tuple[int, int],
     *,
-    image_dx_um: float,
-    image_dx_arcmin: float | None,
-    effective_focal_length_mm: float,
+    image_dx_arcmin: float,
 ) -> NDArray[np.float64]:
     """Build a 20/20 Snellen E target with five-arcminute letter height."""
 
-    if image_dx_arcmin is None:
-        height_um = effective_focal_length_mm * math.tan(math.radians(5 / 60)) * 1_000
-        block_px = max(1, round(height_um / (5 * image_dx_um)))
-    else:
-        block_px = max(1, round(1.0 / image_dx_arcmin))
+    block_px = max(1, round(1.0 / image_dx_arcmin))
     height_px = 5 * block_px
     rows, columns = shape
     if height_px > rows or height_px > columns:
@@ -193,9 +182,7 @@ def _make_snellen_e(
 def _make_logmar_chart(
     shape: tuple[int, int],
     *,
-    image_dx_um: float,
-    image_dx_arcmin: float | None,
-    effective_focal_length_mm: float,
+    image_dx_arcmin: float,
 ) -> NDArray[np.float64]:
     """Build a six-row LogMAR chart from deterministic block optotypes."""
 
@@ -204,9 +191,7 @@ def _make_logmar_chart(
             letters,
             _logmar_stroke_px(
                 logmar,
-                image_dx_um,
                 image_dx_arcmin,
-                effective_focal_length_mm,
             ),
         )
         for letters, logmar in _LOGMAR_ROWS
@@ -256,37 +241,20 @@ def _make_logmar_chart(
 
 def _logmar_stroke_px(
     logmar: float,
-    image_dx_um: float,
-    image_dx_arcmin: float | None,
-    effective_focal_length_mm: float,
+    image_dx_arcmin: float,
 ) -> float:
     stroke_arcmin = 10**logmar
-    if image_dx_arcmin is None:
-        stroke_um = (
-            effective_focal_length_mm
-            * math.tan(math.radians(stroke_arcmin / 60))
-            * 1_000
-        )
-        return max(1.0, stroke_um / image_dx_um)
     return max(1.0, stroke_arcmin / image_dx_arcmin)
 
 
 def _make_jupiter_502nm(
     shape: tuple[int, int],
     *,
-    image_dx_um: float,
-    image_dx_arcmin: float | None,
-    effective_focal_length_mm: float,
+    image_dx_arcmin: float,
 ) -> NDArray[np.float64]:
     """Build a centered monochrome HST Jupiter target with 50 arcsec diameter."""
 
-    resolved_image_dx_arcmin = image_dx_arcmin
-    if resolved_image_dx_arcmin is None:
-        resolved_image_dx_arcmin = math.degrees(
-            math.atan((image_dx_um / 1_000) / effective_focal_length_mm)
-        ) * 60
-
-    diameter_px = max(1, round(JUPITER_502NM_DIAMETER_ARCMIN / resolved_image_dx_arcmin))
+    diameter_px = max(1, round(JUPITER_502NM_DIAMETER_ARCMIN / image_dx_arcmin))
     rows, columns = shape
     if diameter_px > rows or diameter_px > columns:
         raise ValueError("jupiter_502nm target is larger than the image grid")
@@ -300,6 +268,15 @@ def _make_jupiter_502nm(
     y0 = (rows - resized.shape[0]) // 2
     x0 = (columns - resized.shape[1]) // 2
     target[y0 : y0 + resized.shape[0], x0 : x0 + resized.shape[1]] = resized
+    return target
+
+
+def _make_point_source(shape: tuple[int, int]) -> NDArray[np.float64]:
+    """Build a centered impulse target."""
+
+    target = np.zeros(shape, dtype=float)
+    rows, columns = shape
+    target[rows // 2, columns // 2] = 1
     return target
 
 

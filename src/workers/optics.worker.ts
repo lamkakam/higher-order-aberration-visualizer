@@ -25,7 +25,6 @@ import type {
 const pyodideIndexUrl = '/node_modules/pyodide/';
 const pyodidePackageBaseUrl = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/';
 const prysmWheelUrl = '/pyodide/prysm-0.21.1-py2.py3-none-any.whl';
-const effectiveFocalLengthMm = 17;
 const pythonPackageRoot = '/home/pyodide';
 const pythonSources = [
   ['hoa_visualizer_utils/__init__.py', packageInitSource],
@@ -129,7 +128,6 @@ async function computeConvolvedImage(
 
   const globals = pyodide.toPy({
     aperture_diameter_mm: input.apertureDiameterMm,
-    effective_focal_length_mm: effectiveFocalLengthMm,
     target_id: input.targetId,
     zernike_coefficients: input.zernikeCoefficients
   });
@@ -145,7 +143,6 @@ coefficients = {
 }
 simulation = compute_simulation(
     entrance_pupil_diameter_mm=float(aperture_diameter_mm),
-    effective_focal_length_mm=float(effective_focal_length_mm),
     zernike_coefficients=coefficients,
     target_id=str(target_id),
     pupil_samples=256,

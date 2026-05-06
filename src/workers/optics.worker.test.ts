@@ -39,6 +39,10 @@ describe('optics worker', () => {
     expect(supportedTargetIds).toContain('jupiter_502nm');
   });
 
+  it('exposes the point source target id', () => {
+    expect(supportedTargetIds).toContain('point_source');
+  });
+
   it('initializes Pyodide without installing local wheel URLs', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');
@@ -109,5 +113,17 @@ describe('optics worker', () => {
 
     expect(result.imageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.diagnostics.status).toBe('ready');
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('simulation = compute_simulation('),
+      expect.objectContaining({
+        globals: expect.not.objectContaining({
+          effective_focal_length_mm: expect.any(Number)
+        })
+      })
+    );
+    expect(runPythonAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining('effective_focal_length_mm='),
+      expect.any(Object)
+    );
   });
 });

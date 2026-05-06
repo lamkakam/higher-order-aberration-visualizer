@@ -14,6 +14,10 @@ export const targetOptions = [
     label: 'Jupiter (HST 502 nm, 50 arcsec)'
   },
   {
+    id: 'point_source',
+    label: 'Point Source (Airy Disc)'
+  },
+  {
     id: 'siemensstar',
     label: 'Siemens Star'
   },

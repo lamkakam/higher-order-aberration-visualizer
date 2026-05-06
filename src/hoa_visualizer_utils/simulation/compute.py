@@ -19,25 +19,24 @@ from hoa_visualizer_utils.simulation.targets import (
 )
 
 # Angular equivalent of 0.5625 um image sampling at 17 mm effective focal length.
+DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM = 17
 DEFAULT_IMAGE_DX_ARCMIN = 0.11374897399181322
-LEGACY_DEFAULT_IMAGE_DX_UM = 0.5625
 SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION = 0.6
 LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION = 0.8
 LOGMAR_CHART_WIDEST_ROW_ARCMIN = 450
 JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION = 0.7
+POINT_SOURCE_AIRY_DIAMETER_PX = 64
 _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 
 def compute_simulation(
     entrance_pupil_diameter_mm: float,
-    effective_focal_length_mm: float,
     zernike_coefficients: Mapping[tuple[int, int], float],
     target_id: str,
     *,
     wavelength_nm: float = 550.0,
     pupil_samples: int = 1024,
     image_samples: int = 2048,
-    image_dx_um: float | None = None,
     image_dx_arcmin: float | None = cast(
         float | None,
         _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL,
@@ -49,31 +48,22 @@ def compute_simulation(
         target_id,
         image_samples,
         image_dx_arcmin,
+        entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
+        wavelength_nm=wavelength_nm,
     )
     coefficients = _validate_inputs(
         entrance_pupil_diameter_mm,
-        effective_focal_length_mm,
         zernike_coefficients,
         target_id,
         wavelength_nm,
         pupil_samples,
         image_samples,
-        image_dx_um,
         resolved_image_dx_arcmin,
     )
-    uses_physical_sampling = _uses_physical_image_sampling(
-        image_dx_um,
+    prysm_image_dx_um = _angular_dx_to_image_dx_um(
+        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
         resolved_image_dx_arcmin,
     )
-    prysm_image_dx_um = (
-        image_dx_um
-        if uses_physical_sampling
-        else _angular_dx_to_image_dx_um(
-            effective_focal_length_mm,
-            resolved_image_dx_arcmin,
-        )
-    )
-    sampling_image_dx_arcmin = None if uses_physical_sampling else resolved_image_dx_arcmin
 
     from prysm import coordinates, convolution, geometry, polynomials, propagation
 
@@ -101,20 +91,19 @@ def compute_simulation(
         pupil_dx_mm,
     )
     focused = pupil.focus_fixed_sampling(
-        effective_focal_length_mm,
+        DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
         prysm_image_dx_um,
         image_samples,
         method="czt",
     )
     psf = np.asarray(focused.intensity.data, dtype=float)
-    if not uses_physical_sampling:
-        psf = _suppress_psf_replicas(
-            psf,
-            wavelength_nm=wavelength_nm,
-            effective_focal_length_mm=effective_focal_length_mm,
-            pupil_dx_mm=pupil_dx_mm,
-            image_dx_um=float(focused.dx),
-        )
+    psf = _suppress_psf_replicas(
+        psf,
+        wavelength_nm=wavelength_nm,
+        effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
+        pupil_dx_mm=pupil_dx_mm,
+        image_dx_um=float(focused.dx),
+    )
     psf_sum = psf.sum()
     if not np.isfinite(psf_sum) or psf_sum <= 0:
         raise ValueError("PSF energy must be finite and positive")
@@ -125,12 +114,13 @@ def compute_simulation(
         target_id,
         x,
         y,
-        image_dx_um=float(focused.dx),
-        image_dx_arcmin=sampling_image_dx_arcmin,
-        effective_focal_length_mm=effective_focal_length_mm,
+        image_dx_arcmin=resolved_image_dx_arcmin,
     )
-    convolved_image = convolution.conv(target, psf)
-    convolved_image = np.clip(convolved_image, 0, 1)
+    if target_id == "point_source":
+        convolved_image = psf / psf.max()
+    else:
+        convolved_image = convolution.conv(target, psf)
+        convolved_image = np.clip(convolved_image, 0, 1)
 
     return OpticalSimulation(
         target_id=target_id,
@@ -143,13 +133,12 @@ def compute_simulation(
             wavelength_nm=wavelength_nm,
             pupil_samples=pupil_samples,
             image_samples=image_samples,
-            image_dx_um=float(focused.dx),
-            image_dx_arcmin=sampling_image_dx_arcmin,
+            image_dx_arcmin=resolved_image_dx_arcmin,
             pupil_dx_mm=pupil_dx_mm,
         ),
         inputs=SimulationInputs(
             entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
-            effective_focal_length_mm=effective_focal_length_mm,
+            effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
             zernike_coefficients=dict(coefficients),
             target_id=target_id,
         ),
@@ -158,14 +147,12 @@ def compute_simulation(
 
 def _validate_inputs(
     entrance_pupil_diameter_mm: float,
-    effective_focal_length_mm: float,
     zernike_coefficients: Mapping[tuple[int, int], float],
     target_id: str,
     wavelength_nm: float,
     pupil_samples: int,
     image_samples: int,
-    image_dx_um: float | None,
-    image_dx_arcmin: float | None,
+    image_dx_arcmin: float,
 ) -> dict[tuple[int, int], float]:
     """Validate simulation inputs and normalize coefficient values."""
 
@@ -173,17 +160,8 @@ def _validate_inputs(
         entrance_pupil_diameter_mm,
         "entrance_pupil_diameter_mm",
     )
-    _validate_positive_finite(
-        effective_focal_length_mm,
-        "effective_focal_length_mm",
-    )
     _validate_positive_finite(wavelength_nm, "wavelength_nm")
-    if _uses_physical_image_sampling(image_dx_um, image_dx_arcmin):
-        _validate_positive_finite(image_dx_um, "image_dx_um")
-    else:
-        if image_dx_arcmin is None:
-            raise ValueError("image_dx_arcmin must be positive and finite")
-        _validate_positive_finite(image_dx_arcmin, "image_dx_arcmin")
+    _validate_positive_finite(image_dx_arcmin, "image_dx_arcmin")
     _validate_positive_int(pupil_samples, "pupil_samples")
     _validate_positive_int(image_samples, "image_samples")
     if target_id not in SUPPORTED_TARGET_IDS:
@@ -208,10 +186,13 @@ def _resolve_image_dx_arcmin(
     target_id: str,
     image_samples: int,
     image_dx_arcmin: float | None,
-) -> float | None:
+    *,
+    entrance_pupil_diameter_mm: float,
+    wavelength_nm: float,
+) -> float:
     """Resolve omitted angular sampling defaults."""
 
-    if image_dx_arcmin is not _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL:
+    if image_dx_arcmin is not _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL and image_dx_arcmin is not None:
         return image_dx_arcmin
     if target_id == "snellen_e_20_20":
         target_height_px = round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION)
@@ -226,19 +207,12 @@ def _resolve_image_dx_arcmin(
             image_samples * JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION
         )
         return JUPITER_502NM_DIAMETER_ARCMIN / target_diameter_px
+    if target_id == "point_source":
+        airy_diameter_arcmin = math.degrees(
+            2 * 1.22 * (wavelength_nm * 1e-6) / entrance_pupil_diameter_mm
+        ) * 60
+        return airy_diameter_arcmin / POINT_SOURCE_AIRY_DIAMETER_PX
     return DEFAULT_IMAGE_DX_ARCMIN
-
-
-def _uses_physical_image_sampling(
-    image_dx_um: float | None,
-    image_dx_arcmin: float | None,
-) -> bool:
-    """Return whether the caller requested explicit focal-plane spacing."""
-
-    return image_dx_um is not None and (
-        image_dx_arcmin is None
-        or not math.isclose(float(image_dx_um), LEGACY_DEFAULT_IMAGE_DX_UM)
-    )
 
 
 def _angular_dx_to_image_dx_um(
