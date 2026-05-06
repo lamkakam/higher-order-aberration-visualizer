@@ -22,6 +22,9 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('button', { name: 'Light' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'System' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Dark' })).toBeInTheDocument();
+  expect(screen.getByText('Display')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Basic' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
 });
 
 it('renders default aperture and supported target options', async () => {
@@ -64,6 +67,8 @@ it('debounces worker calls using the current UI payload', async () => {
   const computeConvolvedImage = vi.fn(
     async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready',
@@ -122,6 +127,8 @@ it('renders simulated image loading and error states', async () => {
     .mockRejectedValueOnce(new Error('Simulation exploded'))
     .mockResolvedValueOnce({
       imageUrl: 'data:image/png;base64,c2ltdWxhdGVk',
+      psfImageUrl: 'data:image/png;base64,cHNm',
+      wavefrontImageUrl: 'data:image/png;base64,d2F2ZWZyb250',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -143,4 +150,36 @@ it('renders simulated image loading and error states', async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(screen.getByAltText('Convolved simulated target')).toBeInTheDocument();
+});
+
+it('shows PSF and wavefront cards in advanced display mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Wavefront Map' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+
+  expect(screen.getByRole('heading', { name: 'PSF' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Wavefront Map' })).toBeInTheDocument();
+});
+
+it('hides the PSF card for point source targets in advanced display mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+  fireEvent.change(screen.getByLabelText('Target'), {
+    target: { value: 'point_source' }
+  });
+
+  expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Wavefront Map' })).toBeInTheDocument();
 });

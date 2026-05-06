@@ -27,6 +27,8 @@ export function createMockWorkerClient(
     ): Promise<ConvolvedImageResult> {
       return {
         imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+        psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+        wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
         diagnostics
       };
     },

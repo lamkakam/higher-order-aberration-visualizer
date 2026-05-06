@@ -8,16 +8,22 @@ interface SimulatedImageCardProps {
   readonly statusText: string;
   readonly isLoading: boolean;
   readonly error: string | undefined;
+  readonly title?: string;
+  readonly description?: string;
+  readonly altText?: string;
 }
 
 export function SimulatedImageCard({
   imageUrl,
   statusText,
   isLoading,
-  error
+  error,
+  title = 'Simulated Image',
+  description = 'The convolved target image updates automatically as aperture diameter, target, and Zernike aberration values change.',
+  altText = 'Convolved simulated target'
 }: SimulatedImageCardProps) {
   return (
-    <Card variant="outlined">
+    <Card variant="outlined" sx={{ height: '100%' }}>
       <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box
           sx={{
@@ -37,7 +43,7 @@ export function SimulatedImageCard({
             <Box
               component="img"
               src={imageUrl}
-              alt="Convolved simulated target"
+              alt={altText}
               sx={{ height: '100%', objectFit: 'contain', width: '100%' }}
             />
           ) : (
@@ -47,11 +53,10 @@ export function SimulatedImageCard({
           )}
         </Box>
         <Typography variant="h5" component="h2">
-          Simulated Image
+          {title}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          The convolved target image updates automatically as aperture diameter,
-          target, and Zernike aberration values change.
+          {description}
         </Typography>
       </CardContent>
     </Card>
