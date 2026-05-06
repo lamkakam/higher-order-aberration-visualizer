@@ -21,7 +21,7 @@ Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). T
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `OpticsWorkerApi`: `initialize`, `getStatus`, and `computeConvolvedImage`
 
-[`src/workers/client.ts`](../src/workers/client.ts) creates the module worker and wraps it with Comlink. The React UI talks to that Comlink proxy rather than importing worker or Pyodide code directly.
+[`src/workers/client.ts`](../src/workers/client.ts) creates the module worker and wraps it with Comlink. [`src/hooks/useWorkerClient.ts`](../src/hooks/useWorkerClient.ts) owns the React-side session singleton for the app-created worker client and initializes diagnostics. The React UI talks to that Comlink proxy rather than importing worker or Pyodide code directly.
 
 ## Pyodide Worker
 

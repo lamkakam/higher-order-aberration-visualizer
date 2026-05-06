@@ -15,11 +15,11 @@ import {
   type ThemeMode
 } from './components';
 import { useAppTheme } from './hooks/useAppTheme';
-import { createWorkerClient, type WorkerClient } from './workers/client';
+import { useWorkerClient } from './hooks/useWorkerClient';
+import type { WorkerClient } from './workers/client';
 import type {
   ConvolvedImageResult,
   SupportedTargetId,
-  WorkerDiagnostics,
   ZernikeCoefficientKey
 } from './workers/types';
 
@@ -27,23 +27,16 @@ interface AppProps {
   readonly workerClient?: WorkerClient;
 }
 
-const initialDiagnostics: WorkerDiagnostics = {
-  status: 'idle',
-  message: 'Worker not initialized'
-};
-
 const defaultTargetId: SupportedTargetId = 'snellen_e_20_20';
 const defaultApertureDiameterMm = 3;
 const debounceMs = 300;
 const computeTimeoutMs = 60_000;
 
 export function App({ workerClient }: AppProps) {
-  const [ownedClient, setOwnedClient] = useState<WorkerClient | undefined>(undefined);
-  const client = workerClient ?? ownedClient;
+  const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
-  const [diagnostics, setDiagnostics] = useState<WorkerDiagnostics>(initialDiagnostics);
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficients, setZernikeCoefficients] = useState(
@@ -57,58 +50,6 @@ export function App({ workerClient }: AppProps) {
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
 
   useEffect(() => {
-    if (workerClient) {
-      setOwnedClient(undefined);
-      return undefined;
-    }
-
-    const nextClient = createWorkerClient();
-    setOwnedClient(nextClient);
-
-    return () => {
-      nextClient.dispose();
-    };
-  }, [workerClient]);
-
-  useEffect(() => {
-    if (!client) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    setDiagnostics({
-      status: 'initializing',
-      message: 'Starting worker'
-    });
-
-    client.api
-      .initialize()
-      .then((nextDiagnostics) => {
-        if (!cancelled) {
-          setDiagnostics(nextDiagnostics);
-        }
-      })
-      .catch((caughtError) => {
-        if (!cancelled) {
-          setDiagnostics({
-            status: 'error',
-            message:
-              caughtError instanceof Error ? caughtError.message : 'Worker failed to initialize'
-          });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [client]);
-
-  useEffect(() => {
-    if (!client) {
-      return undefined;
-    }
-
     let cancelled = false;
     const timeoutId = window.setTimeout(() => {
       setIsLoading(true);
