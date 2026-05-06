@@ -114,9 +114,7 @@ def compute_simulation(
         target_id,
         x,
         y,
-        image_dx_um=float(focused.dx),
         image_dx_arcmin=resolved_image_dx_arcmin,
-        effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
     )
     if target_id == "point_source":
         convolved_image = psf / psf.max()
