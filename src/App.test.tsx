@@ -302,6 +302,82 @@ it('renders simulated image loading and error states', async () => {
   expect(screen.getByAltText('Convolved simulated target')).toBeInTheDocument();
 });
 
+it('opens and closes an enlarged preview from the simulated image', async () => {
+  vi.useFakeTimers();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })
+  );
+
+  const preview = screen.getByRole('dialog', { name: 'Simulated Image image preview' });
+  expect(preview).toBeInTheDocument();
+  expect(preview).toContainElement(screen.getAllByAltText('Convolved simulated target')[1]);
+
+  fireEvent.click(preview);
+  expect(
+    screen.queryByRole('dialog', { name: 'Simulated Image image preview' })
+  ).not.toBeInTheDocument();
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Close image preview' }));
+  expect(
+    screen.queryByRole('dialog', { name: 'Simulated Image image preview' })
+  ).not.toBeInTheDocument();
+});
+
+it('opens enlarged previews from advanced PSF and wavefront images', async () => {
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await screen.findByRole('button', { name: 'Open enlarged Simulated Image image' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open enlarged PSF image' }));
+  expect(screen.getByRole('dialog', { name: 'PSF image preview' })).toContainElement(
+    screen.getAllByAltText('Rendered point spread function')[1]
+  );
+  fireEvent.keyDown(screen.getByRole('dialog', { name: 'PSF image preview' }), {
+    key: 'Escape'
+  });
+  expect(
+    screen.queryByRole('dialog', { name: 'PSF image preview' })
+  ).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open enlarged Wavefront Map image' }));
+  expect(screen.getByRole('dialog', { name: 'Wavefront Map image preview' })).toContainElement(
+    screen.getAllByAltText('Rendered wavefront map')[1]
+  );
+});
+
+it('does not expose image preview buttons for loading and error placeholders', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn().mockRejectedValue(new Error('Simulation exploded'));
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  expect(
+    screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
+  ).not.toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(screen.getByText('Simulation exploded')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
+  ).not.toBeInTheDocument();
+});
+
 it('shows PSF and wavefront cards in advanced display mode', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
