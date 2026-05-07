@@ -60,6 +60,7 @@ export function AberrationSlidersCard({
           </Box>
           {zernikeTerms.map((term) => {
             const label = `${term.label} Z(${term.n},${term.m})`;
+            const coefficientLabel = `${label} coefficient`;
             const hasDraftRangeError = isOutOfRangeDraft(draftValues[term.key]);
             return (
               <Box key={term.key}>
@@ -71,9 +72,7 @@ export function AberrationSlidersCard({
                     justifyContent: 'space-between'
                   }}
                 >
-                  <Typography id={`zernike-label-${term.key}`} variant="body2">
-                    {label}
-                  </Typography>
+                  <Typography variant="body2">{label}</Typography>
                   <TextField
                     data-testid={`zernike-value-${term.key}`}
                     autoComplete="off"
@@ -108,7 +107,7 @@ export function AberrationSlidersCard({
                     }}
                     slotProps={{
                       htmlInput: {
-                        'aria-label': `${label} coefficient`,
+                        'aria-label': coefficientLabel,
                         autoComplete: 'off',
                         min: zernikeCoefficientMin,
                         max: zernikeCoefficientMax,
@@ -118,8 +117,7 @@ export function AberrationSlidersCard({
                   />
                 </Box>
                 <Slider
-                  aria-label={label}
-                  aria-labelledby={`zernike-label-${term.key}`}
+                  aria-label={coefficientLabel}
                   min={zernikeCoefficientMin}
                   max={zernikeCoefficientMax}
                   step={zernikeCoefficientStep}
