@@ -316,7 +316,13 @@ it('opens and closes an enlarged preview from the simulated image', async () => 
 
   const preview = screen.getByRole('dialog', { name: 'Simulated Image image preview' });
   expect(preview).toBeInTheDocument();
+  expect(preview).toHaveStyle({
+    backgroundColor: 'rgb(245, 246, 241)'
+  });
   expect(preview).toContainElement(screen.getAllByAltText('Convolved simulated target')[1]);
+  expect(screen.getByRole('button', { name: 'Close image preview' })).toHaveStyle({
+    backgroundColor: 'rgb(255, 255, 255)'
+  });
 
   fireEvent.click(preview);
   expect(

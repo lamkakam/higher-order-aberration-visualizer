@@ -109,6 +109,7 @@ export function SimulatedImageCard({
           }}
           sx={{
             alignItems: 'center',
+            bgcolor: 'background.default',
             display: 'flex',
             inset: 0,
             justifyContent: 'center',
@@ -136,6 +137,15 @@ export function SimulatedImageCard({
               setIsPreviewOpen(false);
             }}
             sx={{
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'divider',
+              boxShadow: 4,
+              color: 'text.primary',
+              '&:hover': {
+                bgcolor: 'background.paper',
+                boxShadow: 4
+              },
               position: 'fixed',
               right: 16,
               top: 16
