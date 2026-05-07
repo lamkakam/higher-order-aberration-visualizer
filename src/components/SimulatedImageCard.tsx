@@ -97,11 +97,11 @@ export function SimulatedImageCard({
         onClose={() => {
           setIsPreviewOpen(false);
         }}
-        aria-label={`${title} image preview`}
+        aria-label={`${title} enlarged image`}
       >
         <Box
           role="dialog"
-          aria-label={`${title} image preview`}
+          aria-label={`${title} enlarged image`}
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setIsPreviewOpen(false);
@@ -130,28 +130,18 @@ export function SimulatedImageCard({
             }}
           />
           <Button
-            aria-label="Close image preview"
-            disableRipple
+            aria-label="Close enlarged image"
             variant="contained"
             onClick={() => {
               setIsPreviewOpen(false);
             }}
             sx={{
-              bgcolor: 'background.paper',
-              border: 1,
-              borderColor: 'divider',
-              boxShadow: 4,
-              color: 'text.primary',
-              '&:hover': {
-                bgcolor: 'background.paper',
-                boxShadow: 4
-              },
               position: 'fixed',
               right: 16,
               top: 16
             }}
           >
-            Close image preview
+            Close enlarged image
           </Button>
         </Box>
       </Modal>

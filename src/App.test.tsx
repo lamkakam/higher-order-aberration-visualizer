@@ -314,27 +314,30 @@ it('opens and closes an enlarged preview from the simulated image', async () => 
     screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })
   );
 
-  const preview = screen.getByRole('dialog', { name: 'Simulated Image image preview' });
+  const preview = screen.getByRole('dialog', { name: 'Simulated Image enlarged image' });
   expect(preview).toBeInTheDocument();
   expect(preview).toHaveStyle({
     backgroundColor: 'rgb(245, 246, 241)'
   });
   expect(preview).toContainElement(screen.getAllByAltText('Convolved simulated target')[1]);
-  expect(screen.getByRole('button', { name: 'Close image preview' })).toHaveStyle({
+  const closeButton = screen.getByRole('button', { name: 'Close enlarged image' });
+  expect(closeButton).toHaveClass('MuiButton-contained');
+  expect(closeButton).toHaveClass('MuiButton-colorPrimary');
+  expect(closeButton).not.toHaveStyle({
     backgroundColor: 'rgb(255, 255, 255)'
   });
 
   fireEvent.click(preview);
   expect(
-    screen.queryByRole('dialog', { name: 'Simulated Image image preview' })
+    screen.queryByRole('dialog', { name: 'Simulated Image enlarged image' })
   ).not.toBeInTheDocument();
 
   fireEvent.click(
     screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Close image preview' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close enlarged image' }));
   expect(
-    screen.queryByRole('dialog', { name: 'Simulated Image image preview' })
+    screen.queryByRole('dialog', { name: 'Simulated Image enlarged image' })
   ).not.toBeInTheDocument();
 });
 
@@ -348,18 +351,18 @@ it('opens enlarged previews from advanced PSF and wavefront images', async () =>
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
   fireEvent.click(screen.getByRole('button', { name: 'Open enlarged PSF image' }));
-  expect(screen.getByRole('dialog', { name: 'PSF image preview' })).toContainElement(
+  expect(screen.getByRole('dialog', { name: 'PSF enlarged image' })).toContainElement(
     screen.getAllByAltText('Rendered point spread function')[1]
   );
-  fireEvent.keyDown(screen.getByRole('dialog', { name: 'PSF image preview' }), {
+  fireEvent.keyDown(screen.getByRole('dialog', { name: 'PSF enlarged image' }), {
     key: 'Escape'
   });
   expect(
-    screen.queryByRole('dialog', { name: 'PSF image preview' })
+    screen.queryByRole('dialog', { name: 'PSF enlarged image' })
   ).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Open enlarged Wavefront Map image' }));
-  expect(screen.getByRole('dialog', { name: 'Wavefront Map image preview' })).toContainElement(
+  expect(screen.getByRole('dialog', { name: 'Wavefront Map enlarged image' })).toContainElement(
     screen.getAllByAltText('Rendered wavefront map')[1]
   );
 });
