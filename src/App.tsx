@@ -31,6 +31,9 @@ const defaultTargetId: SupportedTargetId = 'snellen_e_20_20';
 const defaultApertureDiameterMm = 3;
 const debounceMs = 300;
 const computeTimeoutMs = 60_000;
+const mobileStickyTopPx = 16;
+const desktopStickyTopPx = 24;
+const advancedGridHalfGapPx = 12;
 
 export function App({ workerClient }: AppProps) {
   const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
@@ -48,6 +51,29 @@ export function App({ workerClient }: AppProps) {
 
   const theme = useAppTheme(themeMode);
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
+  const desktopAdvancedMaskOffset = displayMode === 'advanced' ? `-${advancedGridHalfGapPx}px` : 0;
+  const stickyImageCardMaskSx = {
+    '&::before': {
+      bgcolor: 'background.default',
+      bottom: 0,
+      content: '""',
+      left: { xs: 0, sm: desktopAdvancedMaskOffset },
+      position: 'absolute',
+      right: { xs: 0, sm: desktopAdvancedMaskOffset },
+      top: { xs: `-${mobileStickyTopPx}px`, sm: `-${desktopStickyTopPx}px` }
+    },
+    '& > *': {
+      position: 'relative',
+      zIndex: 1
+    }
+  };
+  const desktopStickyImageCardMaskSx = {
+    ...stickyImageCardMaskSx,
+    '&::before': {
+      ...stickyImageCardMaskSx['&::before'],
+      display: { xs: 'none', sm: 'block' }
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -130,23 +156,11 @@ export function App({ workerClient }: AppProps) {
           >
             <Box
               sx={{
+                ...stickyImageCardMaskSx,
                 alignSelf: 'start',
                 position: 'sticky',
-                top: { xs: 16, sm: 24 },
-                zIndex: 3,
-                '&::before': {
-                  bgcolor: 'background.default',
-                  bottom: '100%',
-                  content: '""',
-                  height: { xs: 16, sm: 24 },
-                  left: 0,
-                  position: 'absolute',
-                  right: 0
-                },
-                '& > *': {
-                  position: 'relative',
-                  zIndex: 1
-                }
+                top: { xs: mobileStickyTopPx, sm: desktopStickyTopPx },
+                zIndex: 3
               }}
             >
               <SimulatedImageCard
@@ -159,9 +173,10 @@ export function App({ workerClient }: AppProps) {
             {displayMode === 'advanced' && targetId !== 'point_source' ? (
               <Box
                 sx={{
+                  ...desktopStickyImageCardMaskSx,
                   alignSelf: 'start',
                   position: { xs: 'static', sm: 'sticky' },
-                  top: { sm: 24 },
+                  top: { sm: desktopStickyTopPx },
                   zIndex: { sm: 2 }
                 }}
               >
@@ -179,9 +194,10 @@ export function App({ workerClient }: AppProps) {
             {displayMode === 'advanced' ? (
               <Box
                 sx={{
+                  ...desktopStickyImageCardMaskSx,
                   alignSelf: 'start',
                   position: { xs: 'static', sm: 'sticky' },
-                  top: { sm: 24 },
+                  top: { sm: desktopStickyTopPx },
                   zIndex: { sm: 2 }
                 }}
               >

@@ -53,6 +53,57 @@ async function expectPrimaryStickyGapIsMasked(page: Page) {
   ).resolves.toBe(true);
 }
 
+async function expectAdvancedStickyGapsAreMasked(page: Page) {
+  const cards = await Promise.all(
+    ['Simulated Image', 'PSF', 'Wavefront Map'].map(async (heading) => {
+      const card = page
+        .getByRole('heading', { name: heading })
+        .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
+      await expect(card).toBeVisible();
+
+      return card.elementHandle();
+    })
+  );
+
+  await expect(
+    page.evaluate((elements) => {
+      if (elements.some((element) => !element)) {
+        return false;
+      }
+
+      const typedElements = elements as HTMLElement[];
+      const wrappers = typedElements.map((element) => element.parentElement);
+      const [primaryRect, psfRect, wavefrontRect] = typedElements.map((element) =>
+        element?.getBoundingClientRect()
+      );
+
+      if (
+        wrappers.some((wrapper) => !wrapper) ||
+        !primaryRect ||
+        !psfRect ||
+        !wavefrontRect
+      ) {
+        return false;
+      }
+
+      const topGapY = psfRect.top / 2;
+      const gutterY = psfRect.top + 16;
+      const points = [
+        { x: psfRect.left + psfRect.width / 2, y: topGapY },
+        { x: wavefrontRect.left + wavefrontRect.width / 2, y: topGapY },
+        { x: (primaryRect.right + psfRect.left) / 2, y: gutterY },
+        { x: (psfRect.right + wavefrontRect.left) / 2, y: gutterY }
+      ];
+
+      return points.every(({ x, y }) => {
+        const topElement = document.elementFromPoint(x, y);
+
+        return wrappers.some((wrapper) => topElement === wrapper);
+      });
+    }, cards)
+  ).resolves.toBe(true);
+}
+
 async function expectPrimaryCardSticks(page: Page) {
   await page.evaluate(() => window.scrollTo(0, 260));
   const stuckTop = await getCardTopByHeading(page, 'Simulated Image');
@@ -133,6 +184,14 @@ test('keeps all advanced image cards sticky on desktop', async ({ page }) => {
   await expectCardSticks(page, 'PSF', psfTop);
   await expectCardSticks(page, 'Wavefront Map', wavefrontTop);
   await expectCardIsTopmost(page, 'Simulated Image');
+});
+
+test('masks the advanced sticky card gutters and top gaps on desktop', async ({ page }) => {
+  await page.goto('/');
+  await enableAdvancedMode(page);
+
+  await page.evaluate(() => window.scrollTo(0, 620));
+  await expectAdvancedStickyGapsAreMasked(page);
 });
 
 test('keeps the simulated image card sticky in basic mode on small screens', async ({ page }) => {
