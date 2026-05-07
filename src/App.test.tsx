@@ -51,9 +51,11 @@ it('shows zernike textbox values and resets changed values', async () => {
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Primary Spherical Aberration Z(4,0) coefficient')).toHaveValue(
-    '0.00'
+  const sphericalCoefficient = screen.getByLabelText(
+    'Primary Spherical Aberration Z(4,0) coefficient'
   );
+  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveAttribute('autocomplete', 'off');
 
   const spherical = screen.getByRole('slider', { name: 'Primary Spherical Aberration Z(4,0)' });
   spherical.focus();
@@ -63,14 +65,10 @@ it('shows zernike textbox values and resets changed values', async () => {
   await act(async () => {
     fireEvent.keyDown(spherical, { key: 'ArrowRight' });
   });
-  expect(screen.getByLabelText('Primary Spherical Aberration Z(4,0) coefficient')).toHaveValue(
-    '0.20'
-  );
+  expect(sphericalCoefficient).toHaveValue('0.10');
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
-  expect(screen.getByLabelText('Primary Spherical Aberration Z(4,0) coefficient')).toHaveValue(
-    '0.00'
-  );
+  expect(sphericalCoefficient).toHaveValue('0.00');
 });
 
 it('commits valid zernike textbox values to the worker payload', async () => {
@@ -159,6 +157,53 @@ it('keeps temporary invalid zernike textbox drafts out of the worker payload', a
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 });
 
+it('shows inline errors for out-of-range zernike textbox drafts without worker calls', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  const sphericalCoefficient = screen.getByLabelText(
+    'Primary Spherical Aberration Z(4,0) coefficient'
+  );
+  fireEvent.change(sphericalCoefficient, {
+    target: { value: '2.01' }
+  });
+  expect(sphericalCoefficient).toHaveValue('2.01');
+  expect(screen.getByText('Value must be between -2 and 2.')).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+
+  fireEvent.change(sphericalCoefficient, {
+    target: { value: '-2.01' }
+  });
+  expect(sphericalCoefficient).toHaveValue('-2.01');
+  expect(screen.getByText('Value must be between -2 and 2.')).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+});
+
 it('debounces worker calls using the current UI payload', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
@@ -211,7 +256,7 @@ it('debounces worker calls using the current UI payload', async () => {
     apertureDiameterMm: 4,
     targetId: 'logmar_chart',
     zernikeCoefficients: expect.objectContaining({
-      '2,0': 0.1,
+      '2,0': 0.05,
       '4,0': 0
     })
   });

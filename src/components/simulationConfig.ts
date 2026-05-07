@@ -58,7 +58,7 @@ export const zernikeTerms = [
 
 export const zernikeCoefficientMin = -2;
 export const zernikeCoefficientMax = 2;
-export const zernikeCoefficientStep = 0.1;
+export const zernikeCoefficientStep = 0.05;
 
 export function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;

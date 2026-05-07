@@ -60,6 +60,7 @@ export function AberrationSlidersCard({
           </Box>
           {zernikeTerms.map((term) => {
             const label = `${term.label} Z(${term.n},${term.m})`;
+            const hasDraftRangeError = isOutOfRangeDraft(draftValues[term.key]);
             return (
               <Box key={term.key}>
                 <Box
@@ -75,6 +76,9 @@ export function AberrationSlidersCard({
                   </Typography>
                   <TextField
                     data-testid={`zernike-value-${term.key}`}
+                    autoComplete="off"
+                    error={hasDraftRangeError}
+                    helperText={hasDraftRangeError ? 'Value must be between -2 and 2.' : undefined}
                     inputMode="decimal"
                     size="small"
                     sx={{
@@ -105,6 +109,7 @@ export function AberrationSlidersCard({
                     slotProps={{
                       htmlInput: {
                         'aria-label': `${label} coefficient`,
+                        autoComplete: 'off',
                         min: zernikeCoefficientMin,
                         max: zernikeCoefficientMax,
                         step: zernikeCoefficientStep
@@ -154,6 +159,15 @@ function isValidCommittedDraft(draft: string, value: number): boolean {
     Number.isFinite(value) &&
     value >= zernikeCoefficientMin &&
     value <= zernikeCoefficientMax
+  );
+}
+
+function isOutOfRangeDraft(draft: string): boolean {
+  const value = Number(draft);
+  return (
+    draft.trim() !== '' &&
+    Number.isFinite(value) &&
+    (value < zernikeCoefficientMin || value > zernikeCoefficientMax)
   );
 }
 
