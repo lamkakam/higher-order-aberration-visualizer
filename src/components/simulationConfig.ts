@@ -42,18 +42,18 @@ export interface ZernikeTerm {
 }
 
 export const zernikeTerms = [
-  { key: '2,-2', n: 2, m: -2, label: 'Astigmatism 45' },
+  { key: '2,-2', n: 2, m: -2, label: 'Astigmatism (Oblique)' },
   { key: '2,0', n: 2, m: 0, label: 'Defocus' },
-  { key: '2,2', n: 2, m: 2, label: 'Astigmatism 0' },
-  { key: '3,-3', n: 3, m: -3, label: 'Trefoil Y' },
-  { key: '3,-1', n: 3, m: -1, label: 'Coma Y' },
-  { key: '3,1', n: 3, m: 1, label: 'Coma X' },
-  { key: '3,3', n: 3, m: 3, label: 'Trefoil X' },
-  { key: '4,-4', n: 4, m: -4, label: 'Quadrafoil Y' },
-  { key: '4,-2', n: 4, m: -2, label: 'Secondary Astigmatism 45' },
-  { key: '4,0', n: 4, m: 0, label: 'Spherical' },
-  { key: '4,2', n: 4, m: 2, label: 'Secondary Astigmatism 0' },
-  { key: '4,4', n: 4, m: 4, label: 'Quadrafoil X' }
+  { key: '2,2', n: 2, m: 2, label: 'Astigmatism (Vertical)' },
+  { key: '3,-3', n: 3, m: -3, label: 'Trefoil (Vertical)' },
+  { key: '3,-1', n: 3, m: -1, label: 'Coma (Vertical)' },
+  { key: '3,1', n: 3, m: 1, label: 'Coma (Horizontal)' },
+  { key: '3,3', n: 3, m: 3, label: 'Trefoil (Oblique)' },
+  { key: '4,-4', n: 4, m: -4, label: 'Quadrafoil (Oblique)' },
+  { key: '4,-2', n: 4, m: -2, label: 'Secondary Astigmatism (Oblique)' },
+  { key: '4,0', n: 4, m: 0, label: 'Primary Spherical Aberration' },
+  { key: '4,2', n: 4, m: 2, label: 'Secondary Astigmatism (Vertical)' },
+  { key: '4,4', n: 4, m: 4, label: 'Quadrafoil (Vertical)' }
 ] as const satisfies readonly ZernikeTerm[];
 
 export const zernikeCoefficientMin = -2;

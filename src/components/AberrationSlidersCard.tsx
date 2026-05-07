@@ -59,7 +59,7 @@ export function AberrationSlidersCard({
             </Button>
           </Box>
           {zernikeTerms.map((term) => {
-            const label = `${term.label} (${term.n},${term.m})`;
+            const label = `${term.label} Z(${term.n},${term.m})`;
             return (
               <Box key={term.key}>
                 <Box

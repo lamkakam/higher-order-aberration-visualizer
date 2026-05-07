@@ -51,9 +51,11 @@ it('shows zernike textbox values and resets changed values', async () => {
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Spherical (4,0) coefficient')).toHaveValue('0.00');
+  expect(screen.getByLabelText('Primary Spherical Aberration Z(4,0) coefficient')).toHaveValue(
+    '0.00'
+  );
 
-  const spherical = screen.getByRole('slider', { name: 'Spherical (4,0)' });
+  const spherical = screen.getByRole('slider', { name: 'Primary Spherical Aberration Z(4,0)' });
   spherical.focus();
   await act(async () => {
     fireEvent.keyDown(spherical, { key: 'ArrowRight' });
@@ -61,10 +63,14 @@ it('shows zernike textbox values and resets changed values', async () => {
   await act(async () => {
     fireEvent.keyDown(spherical, { key: 'ArrowRight' });
   });
-  expect(screen.getByLabelText('Spherical (4,0) coefficient')).toHaveValue('0.20');
+  expect(screen.getByLabelText('Primary Spherical Aberration Z(4,0) coefficient')).toHaveValue(
+    '0.20'
+  );
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
-  expect(screen.getByLabelText('Spherical (4,0) coefficient')).toHaveValue('0.00');
+  expect(screen.getByLabelText('Primary Spherical Aberration Z(4,0) coefficient')).toHaveValue(
+    '0.00'
+  );
 });
 
 it('commits valid zernike textbox values to the worker payload', async () => {
@@ -88,7 +94,9 @@ it('commits valid zernike textbox values to the worker payload', async () => {
   });
   computeConvolvedImage.mockClear();
 
-  const sphericalCoefficient = screen.getByLabelText('Spherical (4,0) coefficient');
+  const sphericalCoefficient = screen.getByLabelText(
+    'Primary Spherical Aberration Z(4,0) coefficient'
+  );
   fireEvent.change(sphericalCoefficient, {
     target: { value: '-0.3' }
   });
@@ -127,7 +135,9 @@ it('keeps temporary invalid zernike textbox drafts out of the worker payload', a
   });
   computeConvolvedImage.mockClear();
 
-  const sphericalCoefficient = screen.getByLabelText('Spherical (4,0) coefficient');
+  const sphericalCoefficient = screen.getByLabelText(
+    'Primary Spherical Aberration Z(4,0) coefficient'
+  );
   fireEvent.change(sphericalCoefficient, {
     target: { value: '' }
   });
@@ -184,7 +194,7 @@ it('debounces worker calls using the current UI payload', async () => {
   fireEvent.change(screen.getByLabelText('Target'), {
     target: { value: 'logmar_chart' }
   });
-  fireEvent.keyDown(screen.getByRole('slider', { name: 'Defocus (2,0)' }), {
+  fireEvent.keyDown(screen.getByRole('slider', { name: 'Defocus Z(2,0)' }), {
     key: 'ArrowRight'
   });
 
