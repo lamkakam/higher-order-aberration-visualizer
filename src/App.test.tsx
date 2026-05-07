@@ -46,6 +46,50 @@ it('renders default aperture and supported target options', async () => {
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
 });
 
+it('describes the default simulated image target in plain language', async () => {
+  vi.useFakeTimers();
+  await act(async () => {
+    render(<App workerClient={createMockWorkerClient()} />);
+  });
+
+  expect(
+    screen.getByText(
+      'This shows how the selected picture would look through the current optical settings. Current target: An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target.'
+    )
+  ).toBeInTheDocument();
+});
+
+it('updates the simulated image description when the target changes', async () => {
+  vi.useFakeTimers();
+  await act(async () => {
+    render(<App workerClient={createMockWorkerClient()} />);
+  });
+
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Target'), {
+      target: { value: 'logmar_chart' }
+    });
+  });
+
+  expect(
+    screen.getByText(
+      'This shows how the selected picture would look through the current optical settings. Current target: The first six lines of an eye chart, with letters arranged in rows.'
+    )
+  ).toBeInTheDocument();
+
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Target'), {
+      target: { value: 'siemensstar' }
+    });
+  });
+
+  expect(
+    screen.getByText(
+      'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
+    )
+  ).toBeInTheDocument();
+});
+
 it('shows zernike textbox values and resets changed values', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);

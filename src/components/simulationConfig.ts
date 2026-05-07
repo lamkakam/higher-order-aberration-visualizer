@@ -3,35 +3,45 @@ import type { SupportedTargetId, ZernikeCoefficientKey } from '../workers/types'
 export const targetOptions = [
   {
     id: 'snellen_e_20_20',
-    label: 'Snellen Chart Letter E on 20/20'
+    label: 'Snellen Chart Letter E on 20/20',
+    description:
+      'An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target.'
   },
   {
     id: 'logmar_chart',
-    label: 'LogMAR Chart'
+    label: 'LogMAR Chart',
+    description: 'The first six lines of an eye chart, with letters arranged in rows.'
   },
   {
     id: 'jupiter_502nm',
-    label: 'Jupiter (HST 502 nm, 50 arcsec)'
+    label: 'Jupiter (HST 502 nm, 50 arcsec)',
+    description: 'A telescope-style picture of Jupiter used to see how fine details are softened.'
   },
   {
     id: 'point_source',
-    label: 'Point Source (Airy Disc)'
+    label: 'Point Source (Airy Disc)',
+    description: 'A single tiny bright point, useful for showing how a perfect dot spreads out.'
   },
   {
     id: 'siemensstar',
-    label: 'Siemens Star'
+    label: 'Siemens Star',
+    description:
+      'A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
   },
   {
     id: 'slantededge',
-    label: 'Slanted Edge'
+    label: 'Slanted Edge',
+    description: 'A tilted black-and-white edge used to show how crisp an edge looks.'
   },
   {
     id: 'tiltedsquare',
-    label: 'Tilted Square'
+    label: 'Tilted Square',
+    description: 'A rotated square used to show how corners and edges change.'
   }
 ] as const satisfies readonly {
   readonly id: SupportedTargetId;
   readonly label: string;
+  readonly description: string;
 }[];
 
 export interface ZernikeTerm {

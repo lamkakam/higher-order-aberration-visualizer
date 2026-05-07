@@ -22,7 +22,7 @@ export function SimulatedImageCard({
   isLoading,
   error,
   title = 'Simulated Image',
-  description = 'The convolved target image updates automatically as aperture diameter, target, and Zernike aberration values change.',
+  description = 'This shows how the selected picture would look through the current optical settings.',
   altText = 'Convolved simulated target'
 }: SimulatedImageCardProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);

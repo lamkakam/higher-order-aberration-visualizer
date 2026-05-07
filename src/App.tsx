@@ -11,6 +11,7 @@ import {
   OpticalSystemConfigCard,
   SettingsDrawer,
   SimulatedImageCard,
+  targetOptions,
   type DisplayMode,
   type ThemeMode
 } from './components';
@@ -50,6 +51,8 @@ export function App({ workerClient }: AppProps) {
   const [error, setError] = useState<string | undefined>(undefined);
 
   const theme = useAppTheme(themeMode);
+  const selectedTarget = targetOptions.find((target) => target.id === targetId) ?? targetOptions[0];
+  const simulatedImageDescription = `This shows how the selected picture would look through the current optical settings. Current target: ${selectedTarget.description}`;
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
   const desktopAdvancedMaskOffset = displayMode === 'advanced' ? `-${advancedGridHalfGapPx}px` : 0;
   const stickyImageCardMaskSx = {
@@ -168,6 +171,7 @@ export function App({ workerClient }: AppProps) {
                 statusText={diagnostics.message}
                 isLoading={isLoading}
                 error={error}
+                description={simulatedImageDescription}
               />
             </Box>
             {displayMode === 'advanced' && targetId !== 'point_source' ? (
