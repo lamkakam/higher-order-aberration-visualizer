@@ -56,6 +56,14 @@ export const zernikeTerms = [
   { key: '4,4', n: 4, m: 4, label: 'Quadrafoil X' }
 ] as const satisfies readonly ZernikeTerm[];
 
+export const zernikeCoefficientMin = -2;
+export const zernikeCoefficientMax = 2;
+export const zernikeCoefficientStep = 0.1;
+
+export function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 export function createDefaultZernikeCoefficients(): Record<ZernikeCoefficientKey, number> {
   return Object.fromEntries(zernikeTerms.map((term) => [term.key, 0])) as Record<
     ZernikeCoefficientKey,

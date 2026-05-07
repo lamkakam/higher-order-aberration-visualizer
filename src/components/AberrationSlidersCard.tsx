@@ -4,9 +4,17 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useEffect, useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
-import { zernikeTerms } from './simulationConfig';
+import {
+  roundToTwoDecimals,
+  zernikeCoefficientMax,
+  zernikeCoefficientMin,
+  zernikeCoefficientStep,
+  zernikeTerms
+} from './simulationConfig';
 
 interface AberrationSlidersCardProps {
   readonly values: Record<ZernikeCoefficientKey, number>;
@@ -19,6 +27,25 @@ export function AberrationSlidersCard({
   onValueChange,
   onReset
 }: AberrationSlidersCardProps) {
+  const [draftValues, setDraftValues] = useState(() => createDraftValues(values));
+
+  useEffect(() => {
+    setDraftValues((currentDrafts) =>
+      Object.fromEntries(
+        zernikeTerms.map((term) => {
+          const currentDraft = currentDrafts[term.key];
+          const parsedDraft = Number(currentDraft);
+          const nextDraft =
+            Number.isFinite(parsedDraft) && parsedDraft === values[term.key]
+              ? currentDraft
+              : formatCommittedValue(values[term.key]);
+
+          return [term.key, nextDraft];
+        })
+      ) as Record<ZernikeCoefficientKey, string>
+    );
+  }, [values]);
+
   return (
     <Card variant="outlined">
       <CardContent>
@@ -46,24 +73,58 @@ export function AberrationSlidersCard({
                   <Typography id={`zernike-label-${term.key}`} variant="body2">
                     {label}
                   </Typography>
-                  <Typography
+                  <TextField
                     data-testid={`zernike-value-${term.key}`}
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {values[term.key].toFixed(2)}
-                  </Typography>
+                    inputMode="decimal"
+                    size="small"
+                    sx={{
+                      '& input': {
+                        py: 0.5,
+                        textAlign: 'right',
+                        width: '4.5rem'
+                      }
+                    }}
+                    type="text"
+                    value={draftValues[term.key]}
+                    onChange={(event) => {
+                      const nextDraft = event.target.value;
+                      if (!isSignedDecimalDraft(nextDraft)) {
+                        return;
+                      }
+
+                      setDraftValues((currentDrafts) => ({
+                        ...currentDrafts,
+                        [term.key]: nextDraft
+                      }));
+
+                      const nextValue = Number(nextDraft);
+                      if (isValidCommittedDraft(nextDraft, nextValue)) {
+                        onValueChange(term.key, nextValue);
+                      }
+                    }}
+                    slotProps={{
+                      htmlInput: {
+                        'aria-label': `${label} coefficient`,
+                        min: zernikeCoefficientMin,
+                        max: zernikeCoefficientMax,
+                        step: zernikeCoefficientStep
+                      }
+                    }}
+                  />
                 </Box>
                 <Slider
                   aria-label={label}
                   aria-labelledby={`zernike-label-${term.key}`}
-                  min={-2}
-                  max={2}
-                  step={0.1}
+                  min={zernikeCoefficientMin}
+                  max={zernikeCoefficientMax}
+                  step={zernikeCoefficientStep}
                   value={values[term.key]}
                   valueLabelDisplay="auto"
                   onChange={(_, nextValue) => {
-                    onValueChange(term.key, Array.isArray(nextValue) ? nextValue[0] : nextValue);
+                    onValueChange(
+                      term.key,
+                      roundToTwoDecimals(Array.isArray(nextValue) ? nextValue[0] : nextValue)
+                    );
                   }}
                 />
               </Box>
@@ -73,4 +134,29 @@ export function AberrationSlidersCard({
       </CardContent>
     </Card>
   );
+}
+
+function createDraftValues(
+  values: Record<ZernikeCoefficientKey, number>
+): Record<ZernikeCoefficientKey, string> {
+  return Object.fromEntries(
+    zernikeTerms.map((term) => [term.key, formatCommittedValue(values[term.key])])
+  ) as Record<ZernikeCoefficientKey, string>;
+}
+
+function formatCommittedValue(value: number): string {
+  return roundToTwoDecimals(value).toFixed(2);
+}
+
+function isValidCommittedDraft(draft: string, value: number): boolean {
+  return (
+    draft.trim() !== '' &&
+    Number.isFinite(value) &&
+    value >= zernikeCoefficientMin &&
+    value <= zernikeCoefficientMax
+  );
+}
+
+function isSignedDecimalDraft(value: string): boolean {
+  return value === '' || /^-?(?:\d+\.?\d*|\.\d*)?$/.test(value);
 }
