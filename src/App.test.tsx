@@ -60,7 +60,6 @@ it('shows zernike textbox values and resets changed values', async () => {
   const spherical = screen.getByRole('slider', {
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
   });
-  spherical.focus();
   await act(async () => {
     fireEvent.keyDown(spherical, { key: 'ArrowRight' });
   });
@@ -68,6 +67,13 @@ it('shows zernike textbox values and resets changed values', async () => {
     fireEvent.keyDown(spherical, { key: 'ArrowRight' });
   });
   expect(sphericalCoefficient).toHaveValue('0.10');
+
+  await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
+  expect(sphericalCoefficient).toHaveValue('0.00');
+
+  await user.clear(sphericalCoefficient);
+  await user.type(sphericalCoefficient, '1.25');
+  expect(sphericalCoefficient).toHaveValue('1.25');
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
   expect(sphericalCoefficient).toHaveValue('0.00');

@@ -6,7 +6,7 @@ import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
 import {
   roundToTwoDecimals,
@@ -27,24 +27,16 @@ export function AberrationSlidersCard({
   onValueChange,
   onReset
 }: AberrationSlidersCardProps) {
-  const [draftValues, setDraftValues] = useState(() => createDraftValues(values));
+  const [draftState, setDraftState] = useState(() => createDraftState(values));
 
-  useEffect(() => {
-    setDraftValues((currentDrafts) =>
-      Object.fromEntries(
-        zernikeTerms.map((term) => {
-          const currentDraft = currentDrafts[term.key];
-          const parsedDraft = Number(currentDraft);
-          const nextDraft =
-            Number.isFinite(parsedDraft) && parsedDraft === values[term.key]
-              ? currentDraft
-              : formatCommittedValue(values[term.key]);
-
-          return [term.key, nextDraft];
-        })
-      ) as Record<ZernikeCoefficientKey, string>
-    );
-  }, [values]);
+  let draftValues = draftState.draftValues;
+  if (!areCommittedValuesEqual(draftState.committedValues, values)) {
+    draftValues = reconcileDraftValues(draftValues, values);
+    setDraftState({
+      committedValues: values,
+      draftValues
+    });
+  }
 
   return (
     <Card variant="outlined">
@@ -95,9 +87,12 @@ export function AberrationSlidersCard({
                         return;
                       }
 
-                      setDraftValues((currentDrafts) => ({
-                        ...currentDrafts,
-                        [term.key]: nextDraft
+                      setDraftState((currentState) => ({
+                        committedValues: values,
+                        draftValues: {
+                          ...currentState.draftValues,
+                          [term.key]: nextDraft
+                        }
                       }));
 
                       const nextValue = Number(nextDraft);
@@ -139,12 +134,49 @@ export function AberrationSlidersCard({
   );
 }
 
+interface DraftState {
+  readonly committedValues: Record<ZernikeCoefficientKey, number>;
+  readonly draftValues: Record<ZernikeCoefficientKey, string>;
+}
+
+function createDraftState(values: Record<ZernikeCoefficientKey, number>): DraftState {
+  return {
+    committedValues: values,
+    draftValues: createDraftValues(values)
+  };
+}
+
 function createDraftValues(
   values: Record<ZernikeCoefficientKey, number>
 ): Record<ZernikeCoefficientKey, string> {
   return Object.fromEntries(
     zernikeTerms.map((term) => [term.key, formatCommittedValue(values[term.key])])
   ) as Record<ZernikeCoefficientKey, string>;
+}
+
+function reconcileDraftValues(
+  draftValues: Record<ZernikeCoefficientKey, string>,
+  values: Record<ZernikeCoefficientKey, number>
+): Record<ZernikeCoefficientKey, string> {
+  return Object.fromEntries(
+    zernikeTerms.map((term) => {
+      const currentDraft = draftValues[term.key];
+      const parsedDraft = Number(currentDraft);
+      const nextDraft =
+        Number.isFinite(parsedDraft) && parsedDraft === values[term.key]
+          ? currentDraft
+          : formatCommittedValue(values[term.key]);
+
+      return [term.key, nextDraft];
+    })
+  ) as Record<ZernikeCoefficientKey, string>;
+}
+
+function areCommittedValuesEqual(
+  previousValues: Record<ZernikeCoefficientKey, number>,
+  nextValues: Record<ZernikeCoefficientKey, number>
+): boolean {
+  return zernikeTerms.every((term) => previousValues[term.key] === nextValues[term.key]);
 }
 
 function formatCommittedValue(value: number): string {
