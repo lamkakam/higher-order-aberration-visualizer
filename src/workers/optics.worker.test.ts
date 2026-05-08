@@ -50,6 +50,7 @@ describe('optics worker', () => {
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
       apertureDiameterMm: 3,
+      showScaleBar: true,
       targetId: 'siemensstar',
       zernikeCoefficients: {}
     });
@@ -82,6 +83,7 @@ describe('optics worker', () => {
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
       apertureDiameterMm: 3,
+      showScaleBar: true,
       targetId: 'siemensstar',
       zernikeCoefficients: {}
     });
@@ -90,6 +92,10 @@ describe('optics worker', () => {
     expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/simulation/compute.py',
       expect.stringContaining('def compute_simulation(')
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      '/home/pyodide/hoa_visualizer_utils/rendering/scale_bar.py',
+      expect.stringContaining('def add_scale_bar(')
     );
     expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz',
@@ -104,6 +110,7 @@ describe('optics worker', () => {
     const api = vi.mocked(expose).mock.calls[0][0];
     const result = await api.computeConvolvedImage({
       apertureDiameterMm: 3,
+      showScaleBar: true,
       targetId: 'siemensstar',
       zernikeCoefficients: {
         '2,0': 0.25,
@@ -128,15 +135,45 @@ describe('optics worker', () => {
       expect.any(Object)
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
-      expect.stringContaining('render_convolved_image(simulation)'),
+      expect.stringContaining('render_convolved_image(simulation, show_scale_bar=bool(show_scale_bar))'),
       expect.any(Object)
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
-      expect.stringContaining('render_psf(simulation)'),
+      expect.stringContaining('render_psf(simulation, show_scale_bar=bool(show_scale_bar))'),
       expect.any(Object)
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('render_wavefront(simulation)'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining('render_wavefront(simulation, show_scale_bar='),
+      expect.any(Object)
+    );
+  });
+
+  it('passes disabled scale bar preference to image and PSF renderers only', async () => {
+    const { expose } = await import('comlink');
+    await import('./optics.worker');
+
+    const api = vi.mocked(expose).mock.calls[0][0];
+    await api.computeConvolvedImage({
+      apertureDiameterMm: 3,
+      showScaleBar: false,
+      targetId: 'siemensstar',
+      zernikeCoefficients: {}
+    });
+
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('show_scale_bar=bool(show_scale_bar)'),
+      expect.objectContaining({
+        globals: expect.objectContaining({
+          show_scale_bar: false
+        })
+      })
+    );
+    expect(runPythonAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining('render_wavefront(simulation, show_scale_bar='),
       expect.any(Object)
     );
   });

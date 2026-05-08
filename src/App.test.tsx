@@ -25,6 +25,7 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByText('Display')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Basic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
+  expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
 it('renders default aperture and supported target options', async () => {
@@ -44,6 +45,50 @@ it('renders default aperture and supported target options', async () => {
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
+});
+
+it('describes the default simulated image target in plain language', async () => {
+  vi.useFakeTimers();
+  await act(async () => {
+    render(<App workerClient={createMockWorkerClient()} />);
+  });
+
+  expect(
+    screen.getByText(
+      'This shows how the selected picture would look through the current optical settings. Current target: An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target.'
+    )
+  ).toBeInTheDocument();
+});
+
+it('updates the simulated image description when the target changes', async () => {
+  vi.useFakeTimers();
+  await act(async () => {
+    render(<App workerClient={createMockWorkerClient()} />);
+  });
+
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Target'), {
+      target: { value: 'logmar_chart' }
+    });
+  });
+
+  expect(
+    screen.getByText(
+      'This shows how the selected picture would look through the current optical settings. Current target: The first six lines of an eye chart, with letters arranged in rows.'
+    )
+  ).toBeInTheDocument();
+
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Target'), {
+      target: { value: 'siemensstar' }
+    });
+  });
+
+  expect(
+    screen.getByText(
+      'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
+    )
+  ).toBeInTheDocument();
 });
 
 it('shows zernike textbox values and resets changed values', async () => {
@@ -113,6 +158,7 @@ it('commits valid zernike textbox values to the worker payload', async () => {
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 3,
+    showScaleBar: false,
     targetId: 'snellen_e_20_20',
     zernikeCoefficients: expect.objectContaining({
       '4,0': -0.3
@@ -235,6 +281,7 @@ it('debounces worker calls using the current UI payload', async () => {
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 3,
+    showScaleBar: false,
     targetId: 'snellen_e_20_20',
     zernikeCoefficients: expect.objectContaining({
       '4,0': 0
@@ -262,9 +309,48 @@ it('debounces worker calls using the current UI payload', async () => {
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 4,
+    showScaleBar: false,
     targetId: 'logmar_chart',
     zernikeCoefficients: expect.objectContaining({
       '2,0': 0.05,
+      '4,0': 0
+    })
+  });
+});
+
+it('sends enabled scale bar preference to the worker payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Show scale bar' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 3,
+    showScaleBar: true,
+    targetId: 'snellen_e_20_20',
+    zernikeCoefficients: expect.objectContaining({
       '4,0': 0
     })
   });
@@ -300,6 +386,91 @@ it('renders simulated image loading and error states', async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(screen.getByAltText('Convolved simulated target')).toBeInTheDocument();
+});
+
+it('opens and closes an enlarged preview from the simulated image', async () => {
+  vi.useFakeTimers();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })
+  );
+
+  const preview = screen.getByRole('dialog', { name: 'Simulated Image enlarged image' });
+  expect(preview).toBeInTheDocument();
+  expect(preview).toHaveStyle({
+    backgroundColor: 'rgb(245, 246, 241)'
+  });
+  expect(preview).toContainElement(screen.getAllByAltText('Convolved simulated target')[1]);
+  const closeButton = screen.getByRole('button', { name: 'Close enlarged image' });
+  expect(closeButton).toHaveClass('MuiButton-contained');
+  expect(closeButton).toHaveClass('MuiButton-colorPrimary');
+  expect(closeButton).not.toHaveStyle({
+    backgroundColor: 'rgb(255, 255, 255)'
+  });
+
+  fireEvent.click(preview);
+  expect(
+    screen.queryByRole('dialog', { name: 'Simulated Image enlarged image' })
+  ).not.toBeInTheDocument();
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Close enlarged image' }));
+  expect(
+    screen.queryByRole('dialog', { name: 'Simulated Image enlarged image' })
+  ).not.toBeInTheDocument();
+});
+
+it('opens enlarged previews from advanced PSF and wavefront images', async () => {
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await screen.findByRole('button', { name: 'Open enlarged Simulated Image image' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open enlarged PSF image' }));
+  expect(screen.getByRole('dialog', { name: 'PSF enlarged image' })).toContainElement(
+    screen.getAllByAltText('Rendered point spread function')[1]
+  );
+  fireEvent.keyDown(screen.getByRole('dialog', { name: 'PSF enlarged image' }), {
+    key: 'Escape'
+  });
+  expect(
+    screen.queryByRole('dialog', { name: 'PSF enlarged image' })
+  ).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open enlarged Wavefront Map image' }));
+  expect(screen.getByRole('dialog', { name: 'Wavefront Map enlarged image' })).toContainElement(
+    screen.getAllByAltText('Rendered wavefront map')[1]
+  );
+});
+
+it('does not expose image preview buttons for loading and error placeholders', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn().mockRejectedValue(new Error('Simulation exploded'));
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  expect(
+    screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
+  ).not.toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(screen.getByText('Simulation exploded')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
+  ).not.toBeInTheDocument();
 });
 
 it('shows PSF and wavefront cards in advanced display mode', async () => {

@@ -11,6 +11,7 @@ import {
   OpticalSystemConfigCard,
   SettingsDrawer,
   SimulatedImageCard,
+  targetOptions,
   type DisplayMode,
   type ThemeMode
 } from './components';
@@ -40,6 +41,7 @@ export function App({ workerClient }: AppProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
+  const [showScaleBar, setShowScaleBar] = useState(false);
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficients, setZernikeCoefficients] = useState(
@@ -50,6 +52,8 @@ export function App({ workerClient }: AppProps) {
   const [error, setError] = useState<string | undefined>(undefined);
 
   const theme = useAppTheme(themeMode);
+  const selectedTarget = targetOptions.find((target) => target.id === targetId) ?? targetOptions[0];
+  const simulatedImageDescription = `This shows how the selected picture would look through the current optical settings. Current target: ${selectedTarget.description}`;
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
   const desktopAdvancedMaskOffset = displayMode === 'advanced' ? `-${advancedGridHalfGapPx}px` : 0;
   const stickyImageCardMaskSx = {
@@ -84,6 +88,7 @@ export function App({ workerClient }: AppProps) {
       withTimeout(
         client.api.computeConvolvedImage({
           apertureDiameterMm,
+          showScaleBar,
           targetId,
           zernikeCoefficients
         }),
@@ -112,7 +117,7 @@ export function App({ workerClient }: AppProps) {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [apertureDiameterMm, client, targetId, zernikeCoefficients]);
+  }, [apertureDiameterMm, client, showScaleBar, targetId, zernikeCoefficients]);
 
   const updateZernikeCoefficient = (key: ZernikeCoefficientKey, value: number) => {
     setZernikeCoefficients((currentValues) => ({
@@ -134,11 +139,13 @@ export function App({ workerClient }: AppProps) {
           open={settingsOpen}
           mode={themeMode}
           displayMode={displayMode}
+          showScaleBar={showScaleBar}
           onClose={() => {
             setSettingsOpen(false);
           }}
           onModeChange={setThemeMode}
           onDisplayModeChange={setDisplayMode}
+          onShowScaleBarChange={setShowScaleBar}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
           <Box
@@ -168,6 +175,7 @@ export function App({ workerClient }: AppProps) {
                 statusText={diagnostics.message}
                 isLoading={isLoading}
                 error={error}
+                description={simulatedImageDescription}
               />
             </Box>
             {displayMode === 'advanced' && targetId !== 'point_source' ? (

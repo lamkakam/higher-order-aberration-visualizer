@@ -7,6 +7,7 @@ import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
 import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
 import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
+import scaleBarSource from '../hoa_visualizer_utils/rendering/scale_bar.py?raw';
 import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw';
 import jupiter502nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz?url';
 import simulationAssetsInitSource from '../hoa_visualizer_utils/simulation/assets/__init__.py?raw';
@@ -32,6 +33,7 @@ const pythonSources = [
   ['hoa_visualizer_utils/rendering/__init__.py', renderingInitSource],
   ['hoa_visualizer_utils/rendering/convolved_image.py', convolvedImageSource],
   ['hoa_visualizer_utils/rendering/psf.py', psfSource],
+  ['hoa_visualizer_utils/rendering/scale_bar.py', scaleBarSource],
   ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
   ['hoa_visualizer_utils/simulation/__init__.py', simulationInitSource],
   ['hoa_visualizer_utils/simulation/assets/__init__.py', simulationAssetsInitSource],
@@ -129,6 +131,7 @@ async function computeConvolvedImage(
 
   const globals = pyodide.toPy({
     aperture_diameter_mm: input.apertureDiameterMm,
+    show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
     zernike_coefficients: input.zernikeCoefficients
   });
@@ -154,11 +157,11 @@ simulation = compute_simulation(
 
   const imageBytes = await renderSimulationImage(
     globals,
-    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation)'
+    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation, show_scale_bar=bool(show_scale_bar))'
   );
   const psfImageBytes = await renderSimulationImage(
     globals,
-    'from hoa_visualizer_utils.rendering.psf import render_psf\nrender_psf(simulation)'
+    'from hoa_visualizer_utils.rendering.psf import render_psf\nrender_psf(simulation, show_scale_bar=bool(show_scale_bar))'
   );
   const wavefrontImageBytes = await renderSimulationImage(
     globals,

@@ -1,12 +1,16 @@
 import math
 
+from matplotlib.colors import LogNorm
+from matplotlib.ticker import LogFormatterSciNotation, ScalarFormatter
 import numpy as np
 import pytest
 from scipy import ndimage
 
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
 from hoa_visualizer_utils.rendering.psf import render_psf
+from hoa_visualizer_utils.rendering.scale_bar import _scale_bar_spec, add_scale_bar
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
+from hoa_visualizer_utils.utils.figures import _load_pyplot
 from hoa_visualizer_utils.simulation.compute import (
     DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
     DEFAULT_IMAGE_DX_ARCMIN,
@@ -555,6 +559,223 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_wavefront(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_psf(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
+
+
+def test_psf_renderer_uses_viridis_log_normalized_intensity_colorbar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.psf._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_psf(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        fig.canvas.draw()
+        image = fig.axes[0].images[0]
+        colorbar_axis = fig.axes[1]
+        tick_labels = [
+            tick.get_text()
+            for tick in colorbar_axis.get_yticklabels()
+            if tick.get_text()
+        ]
+
+        assert image.get_cmap().name == "viridis"
+        assert isinstance(image.norm, LogNorm)
+        assert isinstance(
+            colorbar_axis.yaxis.get_major_formatter(),
+            LogFormatterSciNotation,
+        )
+        assert colorbar_axis.get_ylabel() == "normalized intensity"
+        assert "log10" not in colorbar_axis.get_ylabel()
+        assert any("\\mathdefault" in tick and "10^" in tick for tick in tick_labels)
+    finally:
+        _load_pyplot().close(fig)
+
+
+def test_wavefront_renderer_uses_waves_viridis_and_compact_tick_format(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.2},
+        "tiltedsquare",
+        wavelength_nm=500,
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_wavefront(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        image = fig.axes[0].images[0]
+        colorbar_axis = fig.axes[1]
+        plotted_wavefront = np.asarray(image.get_array())
+        expected_wavefront = np.where(
+            simulation.pupil_mask,
+            simulation.wavefront_nm / simulation.sampling.wavelength_nm,
+            np.nan,
+        )
+        formatter = colorbar_axis.yaxis.get_major_formatter()
+
+        assert plotted_wavefront == pytest.approx(expected_wavefront, nan_ok=True)
+        assert image.get_cmap().name == "viridis"
+        assert colorbar_axis.get_ylabel() == "waves"
+        assert isinstance(formatter, ScalarFormatter)
+        assert formatter.get_useMathText()
+        assert "\\mathdefault" in formatter(0.001, None)
+        assert "10^" in formatter(0.001, None)
+        assert formatter(0.1, None) == "0.1"
+        assert "\\mathdefault" in formatter(1000, None)
+        assert "10^" in formatter(1000, None)
+    finally:
+        _load_pyplot().close(fig)
+
+
+def test_scale_bar_uses_arcsec_label_for_sub_arcminute_length() -> None:
+    spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.005)
+
+    assert spec.label == "6 arcsec"
+    assert spec.length_arcmin == pytest.approx(0.1)
+
+
+def test_scale_bar_uses_arcmin_label_for_arcminute_length() -> None:
+    spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.2)
+
+    assert spec.label == "5 arcmin"
+    assert spec.length_arcmin == pytest.approx(5)
+
+
+def test_scale_bar_converts_angular_length_to_pixels() -> None:
+    spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.25)
+
+    assert spec.length_arcmin == pytest.approx(5)
+    assert spec.length_px == pytest.approx(20)
+
+
+def test_scale_bar_draws_contrast_backing() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    plt = _load_pyplot()
+    fig, ax = plt.subplots()
+
+    try:
+        add_scale_bar(ax, simulation)
+
+        assert len(ax.patches) == 1
+        assert ax.patches[0].get_alpha() == pytest.approx(0.55)
+        assert ax.patches[0].get_facecolor()[:3] == pytest.approx((0, 0, 0))
+    finally:
+        plt.close(fig)
+
+
+def test_convolved_image_and_psf_renderers_can_show_scale_bar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    calls = []
+
+    def add_scale_bar(ax, rendered_simulation):
+        calls.append((ax, rendered_simulation))
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.convolved_image.add_scale_bar",
+        add_scale_bar,
+    )
+    monkeypatch.setattr("hoa_visualizer_utils.rendering.psf.add_scale_bar", add_scale_bar)
+
+    render_convolved_image(simulation, image_format="png", show_scale_bar=True)
+    render_psf(simulation, image_format="png", show_scale_bar=True)
+
+    assert [call[1] for call in calls] == [simulation, simulation]
+
+
+def test_convolved_image_and_psf_renderers_hide_scale_bar_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    calls = []
+
+    def add_scale_bar(ax, rendered_simulation):
+        calls.append((ax, rendered_simulation))
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.convolved_image.add_scale_bar",
+        add_scale_bar,
+    )
+    monkeypatch.setattr("hoa_visualizer_utils.rendering.psf.add_scale_bar", add_scale_bar)
+
+    render_convolved_image(simulation, image_format="png")
+    render_psf(simulation, image_format="png")
+
+    assert calls == []
+
+
+def test_wavefront_renderer_does_not_add_scale_bar(monkeypatch: pytest.MonkeyPatch) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    figure_axes = []
+
+    def figure_to_bytes(fig, image_format):
+        figure_axes.extend(fig.axes)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_wavefront(simulation, image_format="png") == b"rendered"
+    assert list(figure_axes[0].texts) == []
+    assert list(figure_axes[0].lines) == []
 
 
 def _target_size_px(target: np.ndarray) -> tuple[int, int]:
