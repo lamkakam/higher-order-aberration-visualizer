@@ -700,7 +700,36 @@ def test_scale_bar_draws_contrast_backing() -> None:
         plt.close(fig)
 
 
-def test_convolved_image_and_psf_renderers_add_scale_bar(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_convolved_image_and_psf_renderers_can_show_scale_bar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    calls = []
+
+    def add_scale_bar(ax, rendered_simulation):
+        calls.append((ax, rendered_simulation))
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.convolved_image.add_scale_bar",
+        add_scale_bar,
+    )
+    monkeypatch.setattr("hoa_visualizer_utils.rendering.psf.add_scale_bar", add_scale_bar)
+
+    render_convolved_image(simulation, image_format="png", show_scale_bar=True)
+    render_psf(simulation, image_format="png", show_scale_bar=True)
+
+    assert [call[1] for call in calls] == [simulation, simulation]
+
+
+def test_convolved_image_and_psf_renderers_hide_scale_bar_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     simulation = compute_simulation(
         10,
         {},
@@ -722,7 +751,7 @@ def test_convolved_image_and_psf_renderers_add_scale_bar(monkeypatch: pytest.Mon
     render_convolved_image(simulation, image_format="png")
     render_psf(simulation, image_format="png")
 
-    assert [call[1] for call in calls] == [simulation, simulation]
+    assert calls == []
 
 
 def test_wavefront_renderer_does_not_add_scale_bar(monkeypatch: pytest.MonkeyPatch) -> None:

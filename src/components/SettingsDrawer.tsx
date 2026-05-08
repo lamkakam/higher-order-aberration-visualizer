@@ -2,6 +2,8 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Drawer from '@mui/material/Drawer';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
 export type ThemeMode = 'light' | 'system' | 'dark';
@@ -11,9 +13,11 @@ interface SettingsDrawerProps {
   readonly open: boolean;
   readonly mode: ThemeMode;
   readonly displayMode: DisplayMode;
+  readonly showScaleBar: boolean;
   readonly onClose: () => void;
   readonly onModeChange: (mode: ThemeMode) => void;
   readonly onDisplayModeChange: (mode: DisplayMode) => void;
+  readonly onShowScaleBarChange: (showScaleBar: boolean) => void;
 }
 
 const modeOptions = [
@@ -31,9 +35,11 @@ export function SettingsDrawer({
   open,
   mode,
   displayMode,
+  showScaleBar,
   onClose,
   onModeChange,
-  onDisplayModeChange
+  onDisplayModeChange,
+  onShowScaleBarChange
 }: SettingsDrawerProps) {
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -72,6 +78,19 @@ export function SettingsDrawer({
             </Button>
           ))}
         </ButtonGroup>
+        <FormControlLabel
+          sx={{ mt: 3 }}
+          control={
+            <Switch
+              checked={showScaleBar}
+              onChange={(event) => {
+                onShowScaleBarChange(event.target.checked);
+              }}
+              slotProps={{ input: { 'aria-label': 'Show scale bar' } }}
+            />
+          }
+          label="Show scale bar"
+        />
       </Box>
     </Drawer>
   );

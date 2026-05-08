@@ -7,6 +7,7 @@ The optics simulation is implemented in the Python package under [`src/hoa_visua
 The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the worker:
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
+- `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `targetId`: one of the supported target ids
 - `zernikeCoefficients`: a record keyed by `"n,m"` strings with coefficient values in waves
 
@@ -49,7 +50,7 @@ The worker renders three PNG outputs from each `OpticalSimulation`:
 - log-scaled PSF image from [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - wavefront OPD map from [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
 
-The convolved target image and PSF renderings include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`.
+By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars.
 
 The worker returns these as `imageUrl`, `psfImageUrl`, and `wavefrontImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
 

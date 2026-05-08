@@ -41,6 +41,7 @@ export function App({ workerClient }: AppProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
+  const [showScaleBar, setShowScaleBar] = useState(false);
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficients, setZernikeCoefficients] = useState(
@@ -87,6 +88,7 @@ export function App({ workerClient }: AppProps) {
       withTimeout(
         client.api.computeConvolvedImage({
           apertureDiameterMm,
+          showScaleBar,
           targetId,
           zernikeCoefficients
         }),
@@ -115,7 +117,7 @@ export function App({ workerClient }: AppProps) {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [apertureDiameterMm, client, targetId, zernikeCoefficients]);
+  }, [apertureDiameterMm, client, showScaleBar, targetId, zernikeCoefficients]);
 
   const updateZernikeCoefficient = (key: ZernikeCoefficientKey, value: number) => {
     setZernikeCoefficients((currentValues) => ({
@@ -137,11 +139,13 @@ export function App({ workerClient }: AppProps) {
           open={settingsOpen}
           mode={themeMode}
           displayMode={displayMode}
+          showScaleBar={showScaleBar}
           onClose={() => {
             setSettingsOpen(false);
           }}
           onModeChange={setThemeMode}
           onDisplayModeChange={setDisplayMode}
+          onShowScaleBarChange={setShowScaleBar}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
           <Box

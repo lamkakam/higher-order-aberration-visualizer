@@ -11,6 +11,7 @@ def render_convolved_image(
     simulation: OpticalSimulation,
     *,
     image_format: ImageFormat = "png",
+    show_scale_bar: bool = False,
 ) -> bytes:
     """Render the target image convolved with the normalized PSF."""
 
@@ -23,6 +24,7 @@ def render_convolved_image(
         vmax=1,
         interpolation="bilinear",
     )
-    add_scale_bar(ax, simulation)
+    if show_scale_bar:
+        add_scale_bar(ax, simulation)
     ax.set_axis_off()
     return _figure_to_bytes(fig, image_format)

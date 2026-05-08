@@ -17,7 +17,7 @@ When an input changes, `App` debounces the update and calls `computeConvolvedIma
 
 Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
 
-- `ConvolvedImageInput`: aperture diameter, supported target id, and Zernike coefficients keyed as `"n,m"` strings
+- `ConvolvedImageInput`: aperture diameter, scale-bar visibility, supported target id, and Zernike coefficients keyed as `"n,m"` strings
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `OpticsWorkerApi`: `initialize`, `getStatus`, and `computeConvolvedImage`
 

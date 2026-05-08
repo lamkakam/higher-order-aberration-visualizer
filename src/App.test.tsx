@@ -25,6 +25,7 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByText('Display')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Basic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
+  expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
 it('renders default aperture and supported target options', async () => {
@@ -157,6 +158,7 @@ it('commits valid zernike textbox values to the worker payload', async () => {
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 3,
+    showScaleBar: false,
     targetId: 'snellen_e_20_20',
     zernikeCoefficients: expect.objectContaining({
       '4,0': -0.3
@@ -279,6 +281,7 @@ it('debounces worker calls using the current UI payload', async () => {
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 3,
+    showScaleBar: false,
     targetId: 'snellen_e_20_20',
     zernikeCoefficients: expect.objectContaining({
       '4,0': 0
@@ -306,9 +309,48 @@ it('debounces worker calls using the current UI payload', async () => {
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureDiameterMm: 4,
+    showScaleBar: false,
     targetId: 'logmar_chart',
     zernikeCoefficients: expect.objectContaining({
       '2,0': 0.05,
+      '4,0': 0
+    })
+  });
+});
+
+it('sends enabled scale bar preference to the worker payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Show scale bar' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 3,
+    showScaleBar: true,
+    targetId: 'snellen_e_20_20',
+    zernikeCoefficients: expect.objectContaining({
       '4,0': 0
     })
   });

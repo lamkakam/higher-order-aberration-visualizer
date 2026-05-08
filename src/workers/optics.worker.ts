@@ -131,6 +131,7 @@ async function computeConvolvedImage(
 
   const globals = pyodide.toPy({
     aperture_diameter_mm: input.apertureDiameterMm,
+    show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
     zernike_coefficients: input.zernikeCoefficients
   });
@@ -156,11 +157,11 @@ simulation = compute_simulation(
 
   const imageBytes = await renderSimulationImage(
     globals,
-    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation)'
+    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation, show_scale_bar=bool(show_scale_bar))'
   );
   const psfImageBytes = await renderSimulationImage(
     globals,
-    'from hoa_visualizer_utils.rendering.psf import render_psf\nrender_psf(simulation)'
+    'from hoa_visualizer_utils.rendering.psf import render_psf\nrender_psf(simulation, show_scale_bar=bool(show_scale_bar))'
   );
   const wavefrontImageBytes = await renderSimulationImage(
     globals,

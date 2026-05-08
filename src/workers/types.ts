@@ -22,6 +22,7 @@ export type ZernikeCoefficientKey = `${number},${number}`;
 
 export interface ConvolvedImageInput {
   apertureDiameterMm: number;
+  showScaleBar: boolean;
   targetId: SupportedTargetId;
   zernikeCoefficients: Record<ZernikeCoefficientKey, number>;
 }

@@ -15,6 +15,7 @@ def render_psf(
     simulation: OpticalSimulation,
     *,
     image_format: ImageFormat = "png",
+    show_scale_bar: bool = False,
 ) -> bytes:
     """Render the normalized PSF on a log intensity scale."""
 
@@ -22,7 +23,8 @@ def render_psf(
     psf_view = np.clip(simulation.psf / simulation.psf.max(), 1e-6, 1)
     fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
     image = ax.imshow(psf_view, cmap="viridis", norm=LogNorm(vmin=1e-6, vmax=1))
-    add_scale_bar(ax, simulation)
+    if show_scale_bar:
+        add_scale_bar(ax, simulation)
     ax.set_axis_off()
     fig.colorbar(
         image,
