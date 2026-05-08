@@ -1,5 +1,7 @@
 import math
 
+from matplotlib.colors import LogNorm
+from matplotlib.ticker import LogFormatterSciNotation, ScalarFormatter
 import numpy as np
 import pytest
 from scipy import ndimage
@@ -557,6 +559,103 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_wavefront(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_psf(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
+
+
+def test_psf_renderer_uses_viridis_log_normalized_intensity_colorbar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.psf._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_psf(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        fig.canvas.draw()
+        image = fig.axes[0].images[0]
+        colorbar_axis = fig.axes[1]
+        tick_labels = [
+            tick.get_text()
+            for tick in colorbar_axis.get_yticklabels()
+            if tick.get_text()
+        ]
+
+        assert image.get_cmap().name == "viridis"
+        assert isinstance(image.norm, LogNorm)
+        assert isinstance(
+            colorbar_axis.yaxis.get_major_formatter(),
+            LogFormatterSciNotation,
+        )
+        assert colorbar_axis.get_ylabel() == "normalized intensity"
+        assert "log10" not in colorbar_axis.get_ylabel()
+        assert any("\\mathdefault" in tick and "10^" in tick for tick in tick_labels)
+    finally:
+        _load_pyplot().close(fig)
+
+
+def test_wavefront_renderer_uses_waves_viridis_and_compact_tick_format(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.2},
+        "tiltedsquare",
+        wavelength_nm=500,
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_wavefront(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        image = fig.axes[0].images[0]
+        colorbar_axis = fig.axes[1]
+        plotted_wavefront = np.asarray(image.get_array())
+        expected_wavefront = np.where(
+            simulation.pupil_mask,
+            simulation.wavefront_nm / simulation.sampling.wavelength_nm,
+            np.nan,
+        )
+        formatter = colorbar_axis.yaxis.get_major_formatter()
+
+        assert plotted_wavefront == pytest.approx(expected_wavefront, nan_ok=True)
+        assert image.get_cmap().name == "viridis"
+        assert colorbar_axis.get_ylabel() == "waves"
+        assert isinstance(formatter, ScalarFormatter)
+        assert formatter.get_useMathText()
+        assert "\\mathdefault" in formatter(0.001, None)
+        assert "10^" in formatter(0.001, None)
+        assert formatter(0.1, None) == "0.1"
+        assert "\\mathdefault" in formatter(1000, None)
+        assert "10^" in formatter(1000, None)
+    finally:
+        _load_pyplot().close(fig)
 
 
 def test_scale_bar_uses_arcsec_label_for_sub_arcminute_length() -> None:
