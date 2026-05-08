@@ -4,7 +4,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface SimulatedImageCardProps {
   readonly imageUrl: string | undefined;
@@ -16,84 +16,46 @@ interface SimulatedImageCardProps {
   readonly altText?: string;
 }
 
-export function SimulatedImageCard({
-  imageUrl,
-  statusText,
-  isLoading,
-  error,
-  title = 'Simulated Image',
-  description = 'This shows how the selected picture would look through the current optical settings.',
-  altText = 'Convolved simulated target'
-}: SimulatedImageCardProps) {
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const canPreviewImage = Boolean(imageUrl && !error);
+interface PreviewableImageProps {
+  readonly imageUrl: string;
+  readonly title: string;
+  readonly altText: string;
+}
 
-  useEffect(() => {
-    if (!canPreviewImage) {
-      setIsPreviewOpen(false);
-    }
-  }, [canPreviewImage]);
+function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   return (
-    <Card variant="outlined" sx={{ height: '100%' }}>
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <>
+      <Box
+        component="button"
+        type="button"
+        aria-label={`Open enlarged ${title} image`}
+        onClick={() => {
+          setIsPreviewOpen(true);
+        }}
+        sx={{
+          alignItems: 'center',
+          appearance: 'none',
+          bgcolor: 'transparent',
+          border: 0,
+          cursor: 'zoom-in',
+          display: 'flex',
+          height: '100%',
+          justifyContent: 'center',
+          p: 0,
+          width: '100%'
+        }}
+      >
         <Box
-          sx={{
-            alignItems: 'center',
-            bgcolor: 'background.default',
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            display: 'flex',
-            height: '25vh',
-            justifyContent: 'center',
-            minHeight: 160,
-            overflow: 'hidden'
-          }}
-        >
-          {imageUrl && !error ? (
-            <Box
-              component="button"
-              type="button"
-              aria-label={`Open enlarged ${title} image`}
-              onClick={() => {
-                setIsPreviewOpen(true);
-              }}
-              sx={{
-                alignItems: 'center',
-                appearance: 'none',
-                bgcolor: 'transparent',
-                border: 0,
-                cursor: 'zoom-in',
-                display: 'flex',
-                height: '100%',
-                justifyContent: 'center',
-                p: 0,
-                width: '100%'
-              }}
-            >
-              <Box
-                component="img"
-                src={imageUrl}
-                alt={altText}
-                sx={{ height: '100%', objectFit: 'contain', width: '100%' }}
-              />
-            </Box>
-          ) : (
-            <Typography color={error ? 'error' : 'text.secondary'}>
-              {error ?? (isLoading ? 'Preparing simulation' : statusText)}
-            </Typography>
-          )}
-        </Box>
-        <Typography variant="h5" component="h2">
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {description}
-        </Typography>
-      </CardContent>
+          component="img"
+          src={imageUrl}
+          alt={altText}
+          sx={{ height: '100%', objectFit: 'contain', width: '100%' }}
+        />
+      </Box>
       <Modal
-        open={canPreviewImage && isPreviewOpen}
+        open={isPreviewOpen}
         onClose={() => {
           setIsPreviewOpen(false);
         }}
@@ -145,6 +107,51 @@ export function SimulatedImageCard({
           </Button>
         </Box>
       </Modal>
+    </>
+  );
+}
+
+export function SimulatedImageCard({
+  imageUrl,
+  statusText,
+  isLoading,
+  error,
+  title = 'Simulated Image',
+  description = 'This shows how the selected picture would look through the current optical settings.',
+  altText = 'Convolved simulated target'
+}: SimulatedImageCardProps) {
+  return (
+    <Card variant="outlined" sx={{ height: '100%' }}>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box
+          sx={{
+            alignItems: 'center',
+            bgcolor: 'background.default',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            display: 'flex',
+            height: '25vh',
+            justifyContent: 'center',
+            minHeight: 160,
+            overflow: 'hidden'
+          }}
+        >
+          {imageUrl && !error ? (
+            <PreviewableImage imageUrl={imageUrl} title={title} altText={altText} />
+          ) : (
+            <Typography color={error ? 'error' : 'text.secondary'}>
+              {error ?? (isLoading ? 'Preparing simulation' : statusText)}
+            </Typography>
+          )}
+        </Box>
+        <Typography variant="h5" component="h2">
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {description}
+        </Typography>
+      </CardContent>
     </Card>
   );
 }
