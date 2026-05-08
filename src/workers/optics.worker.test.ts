@@ -92,6 +92,10 @@ describe('optics worker', () => {
       expect.stringContaining('def compute_simulation(')
     );
     expect(writeFile).toHaveBeenCalledWith(
+      '/home/pyodide/hoa_visualizer_utils/rendering/scale_bar.py',
+      expect.stringContaining('def add_scale_bar(')
+    );
+    expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz',
       expect.any(Uint8Array)
     );

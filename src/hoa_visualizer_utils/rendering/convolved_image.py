@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from hoa_visualizer_utils.rendering.scale_bar import add_scale_bar
 from hoa_visualizer_utils.simulation.models import OpticalSimulation
 from hoa_visualizer_utils.utils.figures import ImageFormat, _figure_to_bytes, _load_pyplot
 
@@ -22,5 +23,6 @@ def render_convolved_image(
         vmax=1,
         interpolation="bilinear",
     )
+    add_scale_bar(ax, simulation)
     ax.set_axis_off()
     return _figure_to_bytes(fig, image_format)

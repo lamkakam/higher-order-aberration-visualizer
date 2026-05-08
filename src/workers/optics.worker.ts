@@ -7,6 +7,7 @@ import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
 import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
 import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
+import scaleBarSource from '../hoa_visualizer_utils/rendering/scale_bar.py?raw';
 import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw';
 import jupiter502nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz?url';
 import simulationAssetsInitSource from '../hoa_visualizer_utils/simulation/assets/__init__.py?raw';
@@ -32,6 +33,7 @@ const pythonSources = [
   ['hoa_visualizer_utils/rendering/__init__.py', renderingInitSource],
   ['hoa_visualizer_utils/rendering/convolved_image.py', convolvedImageSource],
   ['hoa_visualizer_utils/rendering/psf.py', psfSource],
+  ['hoa_visualizer_utils/rendering/scale_bar.py', scaleBarSource],
   ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
   ['hoa_visualizer_utils/simulation/__init__.py', simulationInitSource],
   ['hoa_visualizer_utils/simulation/assets/__init__.py', simulationAssetsInitSource],

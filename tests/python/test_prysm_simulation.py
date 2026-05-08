@@ -6,7 +6,9 @@ from scipy import ndimage
 
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
 from hoa_visualizer_utils.rendering.psf import render_psf
+from hoa_visualizer_utils.rendering.scale_bar import _scale_bar_spec, add_scale_bar
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
+from hoa_visualizer_utils.utils.figures import _load_pyplot
 from hoa_visualizer_utils.simulation.compute import (
     DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
     DEFAULT_IMAGE_DX_ARCMIN,
@@ -555,6 +557,97 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_wavefront(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_psf(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
+
+
+def test_scale_bar_uses_arcsec_label_for_sub_arcminute_length() -> None:
+    spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.005)
+
+    assert spec.label == "6 arcsec"
+    assert spec.length_arcmin == pytest.approx(0.1)
+
+
+def test_scale_bar_uses_arcmin_label_for_arcminute_length() -> None:
+    spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.2)
+
+    assert spec.label == "5 arcmin"
+    assert spec.length_arcmin == pytest.approx(5)
+
+
+def test_scale_bar_converts_angular_length_to_pixels() -> None:
+    spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.25)
+
+    assert spec.length_arcmin == pytest.approx(5)
+    assert spec.length_px == pytest.approx(20)
+
+
+def test_scale_bar_draws_contrast_backing() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    plt = _load_pyplot()
+    fig, ax = plt.subplots()
+
+    try:
+        add_scale_bar(ax, simulation)
+
+        assert len(ax.patches) == 1
+        assert ax.patches[0].get_alpha() == pytest.approx(0.55)
+        assert ax.patches[0].get_facecolor()[:3] == pytest.approx((0, 0, 0))
+    finally:
+        plt.close(fig)
+
+
+def test_convolved_image_and_psf_renderers_add_scale_bar(monkeypatch: pytest.MonkeyPatch) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    calls = []
+
+    def add_scale_bar(ax, rendered_simulation):
+        calls.append((ax, rendered_simulation))
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.convolved_image.add_scale_bar",
+        add_scale_bar,
+    )
+    monkeypatch.setattr("hoa_visualizer_utils.rendering.psf.add_scale_bar", add_scale_bar)
+
+    render_convolved_image(simulation, image_format="png")
+    render_psf(simulation, image_format="png")
+
+    assert [call[1] for call in calls] == [simulation, simulation]
+
+
+def test_wavefront_renderer_does_not_add_scale_bar(monkeypatch: pytest.MonkeyPatch) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    figure_axes = []
+
+    def figure_to_bytes(fig, image_format):
+        figure_axes.extend(fig.axes)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_wavefront(simulation, image_format="png") == b"rendered"
+    assert list(figure_axes[0].texts) == []
+    assert list(figure_axes[0].lines) == []
 
 
 def _target_size_px(target: np.ndarray) -> tuple[int, int]:
