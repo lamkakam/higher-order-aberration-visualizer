@@ -1,7 +1,10 @@
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
 import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { useEffect, useState } from 'react';
 import {
@@ -36,6 +39,10 @@ const computeTimeoutMs = 60_000;
 const mobileStickyTopPx = 16;
 const desktopStickyTopPx = 24;
 const advancedGridHalfGapPx = 12;
+const wavefrontLegendUnitOptions = [
+  { value: 'wave', label: 'Wave' },
+  { value: 'micron', label: 'Micron' }
+] as const;
 
 export function App({ workerClient }: AppProps) {
   const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
@@ -151,14 +158,12 @@ export function App({ workerClient }: AppProps) {
           mode={themeMode}
           displayMode={displayMode}
           showScaleBar={showScaleBar}
-          wavefrontLegendUnit={wavefrontLegendUnit}
           onClose={() => {
             setSettingsOpen(false);
           }}
           onModeChange={setThemeMode}
           onDisplayModeChange={setDisplayMode}
           onShowScaleBarChange={setShowScaleBar}
-          onWavefrontLegendUnitChange={setWavefrontLegendUnit}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
           <Box
@@ -230,6 +235,36 @@ export function App({ workerClient }: AppProps) {
                   title="Wavefront Map"
                   description="The rendered wavefront map for the current Zernike aberration values."
                   altText="Rendered wavefront map"
+                  bottomContent={
+                    <Box>
+                      <Typography
+                        id="wavefront-legend-unit-button-group-label"
+                        variant="subtitle1"
+                        sx={{ mb: 1 }}
+                      >
+                        Legend Unit
+                      </Typography>
+                      <ButtonGroup
+                        aria-labelledby="wavefront-legend-unit-button-group-label"
+                        fullWidth
+                      >
+                        {wavefrontLegendUnitOptions.map((option) => (
+                          <Button
+                            key={option.value}
+                            aria-label={option.label}
+                            variant={
+                              wavefrontLegendUnit === option.value ? 'contained' : 'outlined'
+                            }
+                            onClick={() => {
+                              setWavefrontLegendUnit(option.value);
+                            }}
+                          >
+                            {option.label}
+                          </Button>
+                        ))}
+                      </ButtonGroup>
+                    </Box>
+                  }
                 />
               </Box>
             ) : undefined}

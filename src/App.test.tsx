@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -25,9 +25,10 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByText('Display')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Basic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
-  expect(screen.getByText('Wavefront legend unit')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Wave' })).toHaveClass('MuiButton-contained');
-  expect(screen.getByRole('button', { name: 'Micron' })).toBeInTheDocument();
+  expect(screen.queryByText('Wavefront legend unit')).not.toBeInTheDocument();
+  expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Wave' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Micron' })).not.toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
@@ -398,6 +399,9 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   computeConvolvedImage.mockClear();
 
   fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
   fireEvent.click(screen.getByRole('button', { name: 'Micron' }));
 
   await act(async () => {
@@ -546,6 +550,28 @@ it('shows PSF and wavefront cards in advanced display mode', async () => {
 
   expect(screen.getByRole('heading', { name: 'PSF' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Wavefront Map' })).toBeInTheDocument();
+});
+
+it('shows the legend unit selector at the bottom of the wavefront map card in advanced display mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+
+  const wavefrontDescription = screen.getByText(
+    'The rendered wavefront map for the current Zernike aberration values.'
+  );
+  const wavefrontCardContent = wavefrontDescription.closest('.MuiCardContent-root');
+  expect(wavefrontCardContent).not.toBeNull();
+
+  const wavefrontCard = within(wavefrontCardContent as HTMLElement);
+  expect(wavefrontCard.getByText('Legend Unit')).toBeInTheDocument();
+  expect(wavefrontCard.getByRole('button', { name: 'Wave' })).toHaveClass('MuiButton-contained');
+  expect(wavefrontCard.getByRole('button', { name: 'Micron' })).toBeInTheDocument();
 });
 
 it('hides the PSF card for point source targets in advanced display mode', async () => {

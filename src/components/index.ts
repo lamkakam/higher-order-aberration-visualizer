@@ -5,8 +5,7 @@ export { OpticalSystemConfigCard } from './OpticalSystemConfigCard';
 export {
   SettingsDrawer,
   type DisplayMode,
-  type ThemeMode,
-  type WavefrontLegendUnit
+  type ThemeMode
 } from './SettingsDrawer';
 export { SimulatedImageCard } from './SimulatedImageCard';
 export {
@@ -14,3 +13,4 @@ export {
   targetOptions,
   zernikeTerms
 } from './simulationConfig';
+export type { WavefrontLegendUnit } from '../workers/types';
