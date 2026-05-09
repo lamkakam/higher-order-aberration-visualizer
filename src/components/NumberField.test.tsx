@@ -14,7 +14,7 @@ describe('NumberField', () => {
     expect(screen.getByLabelText('Aperture')).toHaveValue('3');
   });
 
-  it('updates draft text immediately without committing before the debounce', async () => {
+  it('updates draft text immediately without committing after timers advance', async () => {
     vi.useFakeTimers();
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
@@ -27,46 +27,25 @@ describe('NumberField', () => {
     expect(onChange).not.toHaveBeenCalled();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(149);
+      await vi.advanceTimersByTimeAsync(1000);
     });
 
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('commits valid input changes after the debounce', async () => {
-    vi.useFakeTimers();
-    const onChange = vi.fn();
-    render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
-
-    fireEvent.change(screen.getByLabelText('Aperture'), {
-      target: { value: '4.2' }
-    });
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(150);
-    });
-
-    expect(onChange).toHaveBeenCalledWith(4.2);
-  });
-
-  it('commits leading-dot decimal input changes after the debounce', async () => {
-    vi.useFakeTimers();
+  it('commits leading-dot decimal input changes on blur', () => {
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
 
     fireEvent.change(screen.getByLabelText('Aperture'), {
       target: { value: '.5' }
     });
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(150);
-    });
+    fireEvent.blur(screen.getByLabelText('Aperture'));
 
     expect(onChange).toHaveBeenCalledWith(0.5);
   });
 
   it('flushes valid input changes on blur', () => {
-    vi.useFakeTimers();
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
 
@@ -80,7 +59,6 @@ describe('NumberField', () => {
   });
 
   it('flushes valid input changes on Enter', () => {
-    vi.useFakeTimers();
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
 
@@ -93,8 +71,7 @@ describe('NumberField', () => {
     expect(onChange).toHaveBeenCalledWith(4.2);
   });
 
-  it('keeps focus after a draft change rerenders the parent on commit', async () => {
-    vi.useFakeTimers();
+  it('keeps focus after Enter commits a draft change and rerenders the parent', () => {
     function StatefulNumberField() {
       const [value, setValue] = useState(3);
 
@@ -114,9 +91,7 @@ describe('NumberField', () => {
     expect(input).toHaveFocus();
     expect(input).toHaveValue('4');
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(150);
-    });
+    fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(input).toHaveFocus();
     expect(input).toHaveValue('4');
@@ -161,7 +136,7 @@ describe('NumberField', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('does not commit invalid or too-small drafts after the debounce', async () => {
+  it('does not commit too-small drafts after timers advance', async () => {
     vi.useFakeTimers();
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
@@ -171,7 +146,7 @@ describe('NumberField', () => {
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(150);
+      await vi.advanceTimersByTimeAsync(1000);
     });
 
     expect(screen.getByLabelText('Aperture')).toHaveValue('0.4');
@@ -191,7 +166,7 @@ describe('NumberField', () => {
     expect(screen.getByLabelText('Aperture')).toHaveValue('4');
   });
 
-  it('cancels a pending debounced commit when the committed value changes', async () => {
+  it('replaces an uncommitted draft when the committed value changes', async () => {
     vi.useFakeTimers();
     const onChange = vi.fn();
     const { rerender } = render(
@@ -204,7 +179,7 @@ describe('NumberField', () => {
     rerender(<NumberField label="Aperture" value={5} min={0.5} onChange={onChange} />);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(150);
+      await vi.advanceTimersByTimeAsync(1000);
     });
 
     expect(screen.getByLabelText('Aperture')).toHaveValue('5');

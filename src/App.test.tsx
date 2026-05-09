@@ -463,7 +463,7 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 });
 
-it('keeps aperture typing out of the worker payload until textbox and worker debounces finish', async () => {
+it('keeps aperture typing out of the worker payload until blur commits it', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
     async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
@@ -490,14 +490,61 @@ it('keeps aperture typing out of the worker payload until textbox and worker deb
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('4');
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(149);
+    await vi.advanceTimersByTimeAsync(1000);
   });
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 
+  fireEvent.blur(screen.getByLabelText('Aperture Diameter (mm)'));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(299);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1);
   });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 4,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('keeps aperture typing out of the worker payload until Enter commits it', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
+    target: { value: '4' }
+  });
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('4');
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
   expect(computeConvolvedImage).not.toHaveBeenCalled();
+
+  fireEvent.keyDown(screen.getByLabelText('Aperture Diameter (mm)'), { key: 'Enter' });
   await act(async () => {
     await vi.advanceTimersByTimeAsync(299);
   });
@@ -679,6 +726,7 @@ it('debounces worker calls using the current UI payload', async () => {
   fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
     target: { value: '4' }
   });
+  fireEvent.blur(screen.getByLabelText('Aperture Diameter (mm)'));
   fireEvent.change(screen.getByLabelText('Target'), {
     target: { value: 'logmar_chart' }
   });
@@ -690,14 +738,6 @@ it('debounces worker calls using the current UI payload', async () => {
   });
 
   computeConvolvedImage.mockClear();
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(149);
-  });
-  expect(computeConvolvedImage).not.toHaveBeenCalled();
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(1);
-  });
-  expect(computeConvolvedImage).not.toHaveBeenCalled();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(299);
   });

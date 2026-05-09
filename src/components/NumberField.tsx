@@ -3,9 +3,7 @@ import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import { useCallback, useId, useRef, useState } from 'react';
-
-const inputCommitDebounceMs = 150;
+import { useCallback, useId, useState } from 'react';
 
 interface NumberFieldProps {
   readonly label: string;
@@ -50,111 +48,46 @@ function NumberFieldInput({
 }: NumberFieldInputProps) {
   const [draftState, setDraftState] = useState({
     committedValue: value,
-    draftValue: String(value),
-    draftVersion: 0
+    draftValue: String(value)
   });
-  const commitTimerRef = useRef<number | undefined>(undefined);
   let currentDraftState = draftState;
 
   if (currentDraftState.committedValue !== value) {
     currentDraftState = {
       committedValue: value,
-      draftValue: String(value),
-      draftVersion: currentDraftState.draftVersion + 1
+      draftValue: String(value)
     };
     setDraftState(currentDraftState);
   }
 
-  const latestCommitInputsRef = useRef({
-    draftVersion: currentDraftState.draftVersion,
-    min,
-    onChange,
-    value
-  });
-  latestCommitInputsRef.current = {
-    draftVersion: currentDraftState.draftVersion,
-    min,
-    onChange,
-    value
-  };
-
-  const clearCommitTimer = useCallback(() => {
-    window.clearTimeout(commitTimerRef.current);
-    commitTimerRef.current = undefined;
-  }, []);
-
   const commitDraft = useCallback(
     (nextDraft: string) => {
-      const {
-        min: latestMin,
-        onChange: latestOnChange,
-        value: latestValue
-      } = latestCommitInputsRef.current;
       const parsedValue = Number(nextDraft);
       if (
         nextDraft.trim() !== '' &&
         Number.isFinite(parsedValue) &&
-        parsedValue >= latestMin &&
-        parsedValue !== latestValue
+        parsedValue >= min &&
+        parsedValue !== value
       ) {
-        latestOnChange(parsedValue);
+        onChange(parsedValue);
       }
     },
-    []
-  );
-
-  const scheduleDraftCommit = useCallback(
-    (nextDraft: string, nextDraftVersion: number) => {
-      const {
-        min: latestMin,
-        value: latestValue
-      } = latestCommitInputsRef.current;
-      const parsedValue = Number(nextDraft);
-
-      clearCommitTimer();
-      if (
-        nextDraft.trim() !== '' &&
-        Number.isFinite(parsedValue) &&
-        parsedValue >= latestMin &&
-        parsedValue !== latestValue
-      ) {
-        commitTimerRef.current = window.setTimeout(() => {
-          if (latestCommitInputsRef.current.draftVersion === nextDraftVersion) {
-            commitDraft(nextDraft);
-          }
-        }, inputCommitDebounceMs);
-      }
-    },
-    [clearCommitTimer, commitDraft]
+    [min, onChange, value]
   );
 
   const flushDraft = useCallback(() => {
-    clearCommitTimer();
     commitDraft(currentDraftState.draftValue);
-  }, [clearCommitTimer, commitDraft, currentDraftState.draftValue]);
-
-  const handleInputRef = useCallback(
-    (node: HTMLInputElement | null) => {
-      if (node === null) {
-        clearCommitTimer();
-      }
-    },
-    [clearCommitTimer]
-  );
+  }, [commitDraft, currentDraftState.draftValue]);
 
   const handleInputChange = (nextValue: string) => {
     if (!isDecimalText(nextValue)) {
       return;
     }
 
-    const nextDraftVersion = currentDraftState.draftVersion + 1;
     setDraftState({
       committedValue: value,
-      draftValue: nextValue,
-      draftVersion: nextDraftVersion
+      draftValue: nextValue
     });
-    latestCommitInputsRef.current.draftVersion = nextDraftVersion;
-    scheduleDraftCommit(nextValue, nextDraftVersion);
   };
 
   return (
@@ -176,7 +109,6 @@ function NumberFieldInput({
           type="text"
           value={currentDraftState.draftValue}
           inputProps={{ inputMode: 'decimal', min, step: 0.1 }}
-          inputRef={handleInputRef}
           onChange={(event) => {
             handleInputChange(event.target.value);
           }}
