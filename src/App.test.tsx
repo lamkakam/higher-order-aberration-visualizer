@@ -36,13 +36,16 @@ it('renders default aperture and supported target options', async () => {
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('3');
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
   await user.click(screen.getByLabelText('Target'));
 
+  const targetOptions = screen.getAllByRole('option');
+  expect(targetOptions[0]).toHaveTextContent('Eye Chart (logMAR)');
+  expect(targetOptions[0]).toHaveValue('logmar_chart');
+  expect(screen.getByRole('option', { name: 'Eye Chart (logMAR)' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Snellen Chart Letter E on 20/20' })).toBeInTheDocument();
-  expect(screen.getByRole('option', { name: 'LogMAR Chart' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Jupiter (HST 502 nm, 50 arcsec)' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Point Source (Airy Disc)' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
@@ -58,7 +61,7 @@ it('describes the default simulated image target in plain language', async () =>
 
   expect(
     screen.getByText(
-      'This shows how the selected picture would look through the current optical settings. Current target: An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target.'
+      'This shows how the selected picture would look through the current optical settings. Current target: The first six lines of an eye chart, with letters arranged in rows.'
     )
   ).toBeInTheDocument();
 });
@@ -160,7 +163,7 @@ it('commits valid zernike textbox values to the worker payload', async () => {
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
   });
   fireEvent.change(sphericalCoefficient, {
-    target: { value: '-0.3' }
+    target: { value: '4.5' }
   });
 
   await act(async () => {
@@ -168,12 +171,12 @@ it('commits valid zernike textbox values to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
-    apertureDiameterMm: 3,
+    apertureDiameterMm: 6,
     showScaleBar: false,
-    targetId: 'snellen_e_20_20',
+    targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
     zernikeCoefficients: expect.objectContaining({
-      '4,0': -0.3
+      '4,0': 4.5
     })
   });
 });
@@ -248,10 +251,10 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
   });
   fireEvent.change(sphericalCoefficient, {
-    target: { value: '2.01' }
+    target: { value: '5.01' }
   });
-  expect(sphericalCoefficient).toHaveValue('2.01');
-  expect(screen.getByText('Value must be between -2 and 2.')).toBeInTheDocument();
+  expect(sphericalCoefficient).toHaveValue('5.01');
+  expect(screen.getByText('Value must be between -5 and 5.')).toBeInTheDocument();
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -259,10 +262,10 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 
   fireEvent.change(sphericalCoefficient, {
-    target: { value: '-2.01' }
+    target: { value: '-5.01' }
   });
-  expect(sphericalCoefficient).toHaveValue('-2.01');
-  expect(screen.getByText('Value must be between -2 and 2.')).toBeInTheDocument();
+  expect(sphericalCoefficient).toHaveValue('-5.01');
+  expect(screen.getByText('Value must be between -5 and 5.')).toBeInTheDocument();
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -292,9 +295,9 @@ it('debounces worker calls using the current UI payload', async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
-    apertureDiameterMm: 3,
+    apertureDiameterMm: 6,
     showScaleBar: false,
-    targetId: 'snellen_e_20_20',
+    targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
     zernikeCoefficients: expect.objectContaining({
       '5,-5': 0,
@@ -363,9 +366,9 @@ it('sends enabled scale bar preference to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
-    apertureDiameterMm: 3,
+    apertureDiameterMm: 6,
     showScaleBar: true,
-    targetId: 'snellen_e_20_20',
+    targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
     zernikeCoefficients: expect.objectContaining({
       '4,0': 0
@@ -402,9 +405,9 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
-    apertureDiameterMm: 3,
+    apertureDiameterMm: 6,
     showScaleBar: false,
-    targetId: 'snellen_e_20_20',
+    targetId: 'logmar_chart',
     wavefrontLegendUnit: 'micron',
     zernikeCoefficients: expect.objectContaining({
       '4,0': 0

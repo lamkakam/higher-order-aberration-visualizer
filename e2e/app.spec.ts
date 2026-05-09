@@ -155,8 +155,8 @@ test('app loads the simulator controls', async ({ page }) => {
   await page.keyboard.press('Escape');
 
   await expect(page.getByRole('heading', { name: 'Optical System Config' })).toBeVisible();
-  await expect(page.getByLabel('Aperture Diameter (mm)')).toHaveValue('3');
-  await expect(page.getByLabel('Target')).toContainText('Snellen Chart Letter E on 20/20');
+  await expect(page.getByLabel('Aperture Diameter (mm)')).toHaveValue('6');
+  await expect(page.getByLabel('Target')).toContainText('Eye Chart (logMAR)');
   await expect(page.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset aberrations' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Simulated Image' })).toBeVisible();

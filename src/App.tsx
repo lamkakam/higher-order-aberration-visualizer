@@ -29,8 +29,8 @@ interface AppProps {
   readonly workerClient?: WorkerClient;
 }
 
-const defaultTargetId: SupportedTargetId = 'snellen_e_20_20';
-const defaultApertureDiameterMm = 3;
+const defaultTargetId: SupportedTargetId = 'logmar_chart';
+const defaultApertureDiameterMm = 6;
 const debounceMs = 300;
 const computeTimeoutMs = 60_000;
 const mobileStickyTopPx = 16;
