@@ -122,6 +122,8 @@ export function SimulatedImageCard({
   altText = 'Convolved simulated target',
   bottomContent
 }: SimulatedImageCardProps) {
+  const previewImageUrl = imageUrl && !error ? imageUrl : undefined;
+
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>
       <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -139,8 +141,8 @@ export function SimulatedImageCard({
             overflow: 'hidden'
           }}
         >
-          {imageUrl && !error ? (
-            <PreviewableImage imageUrl={imageUrl} title={title} altText={altText} />
+          {previewImageUrl ? (
+            <PreviewableImage imageUrl={previewImageUrl} title={title} altText={altText} />
           ) : (
             <Typography color={error ? 'error' : 'text.secondary'}>
               {error ?? (isLoading ? 'Preparing simulation' : statusText)}
@@ -153,6 +155,11 @@ export function SimulatedImageCard({
         <Typography variant="body2" color="text.secondary">
           {description}
         </Typography>
+        {previewImageUrl ? (
+          <Typography variant="body2" color="text.secondary">
+            Click the image to view it enlarged.
+          </Typography>
+        ) : undefined}
         {bottomContent}
       </CardContent>
     </Card>
