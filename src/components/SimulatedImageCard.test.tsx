@@ -133,6 +133,24 @@ describe('SimulatedImageCard', () => {
     expect(screen.queryByText(enlargementHint)).not.toBeInTheDocument();
   });
 
+  it('hides an existing image and preview controls while loading', () => {
+    render(
+      <SimulatedImageCard
+        imageUrl={imageUrl}
+        statusText="Ready"
+        isLoading
+        error={undefined}
+      />
+    );
+
+    expect(screen.getByText('Preparing image...')).toBeInTheDocument();
+    expect(screen.queryByAltText('Convolved simulated target')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(enlargementHint)).not.toBeInTheDocument();
+  });
+
   it('does not show an enlargement hint when an error is shown', () => {
     render(
       <SimulatedImageCard
@@ -144,6 +162,21 @@ describe('SimulatedImageCard', () => {
     );
 
     expect(screen.queryByText(enlargementHint)).not.toBeInTheDocument();
+  });
+
+  it('shows errors ahead of loading and existing images', () => {
+    render(
+      <SimulatedImageCard
+        imageUrl={imageUrl}
+        statusText="Ready"
+        isLoading
+        error="Simulation failed"
+      />
+    );
+
+    expect(screen.getByText('Simulation failed')).toBeInTheDocument();
+    expect(screen.queryByText('Preparing image...')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Convolved simulated target')).not.toBeInTheDocument();
   });
 
   it('renders bottom content after the description', () => {

@@ -3,9 +3,11 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
+import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useCallback, useEffect, useState } from 'react';
 import {
   AberrationSlidersCard,
@@ -62,6 +64,8 @@ export function App({ workerClient }: AppProps) {
   const [error, setError] = useState<string | undefined>(undefined);
 
   const theme = useAppTheme(themeMode);
+  const isWorkerInitializing = diagnostics.status === 'initializing';
+  const isImageLoading = isLoading && !isWorkerInitializing;
   const selectedTarget = targetOptions.find((target) => target.id === targetId) ?? targetOptions[0];
   const simulatedImageDescription = `This shows how the selected picture would look through the current optical settings. Current target: ${selectedTarget.description}`;
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
@@ -195,7 +199,7 @@ export function App({ workerClient }: AppProps) {
               <SimulatedImageCard
                 imageUrl={result?.imageUrl}
                 statusText={diagnostics.message}
-                isLoading={isLoading}
+                isLoading={isImageLoading}
                 error={error}
                 description={simulatedImageDescription}
               />
@@ -213,7 +217,7 @@ export function App({ workerClient }: AppProps) {
                 <SimulatedImageCard
                   imageUrl={result?.psfImageUrl}
                   statusText={diagnostics.message}
-                  isLoading={isLoading}
+                  isLoading={isImageLoading}
                   error={error}
                   title="PSF"
                   description="The rendered point spread function for the current optical system."
@@ -234,7 +238,7 @@ export function App({ workerClient }: AppProps) {
                 <SimulatedImageCard
                   imageUrl={result?.wavefrontImageUrl}
                   statusText={diagnostics.message}
-                  isLoading={isLoading}
+                  isLoading={isImageLoading}
                   error={error}
                   title="Wavefront Map"
                   description="The rendered wavefront map for the current Zernike aberration values."
@@ -287,6 +291,30 @@ export function App({ workerClient }: AppProps) {
             </Stack>
           </Box>
         </Container>
+        {isWorkerInitializing ? (
+          <Box
+            role="status"
+            aria-label="Worker initialization"
+            sx={{
+              alignItems: 'center',
+              backdropFilter: 'blur(2px)',
+              bgcolor: alpha(theme.palette.background.default, 0.86),
+              display: 'flex',
+              inset: 0,
+              justifyContent: 'center',
+              p: 3,
+              position: 'fixed',
+              zIndex: theme.zIndex.modal + 1
+            }}
+          >
+            <Stack spacing={2} sx={{ width: 'min(320px, 100%)' }}>
+              <Typography variant="h6" component="p" sx={{ textAlign: 'center' }}>
+                Initializing...
+              </Typography>
+              <LinearProgress aria-label="Initialization progress" />
+            </Stack>
+          </Box>
+        ) : undefined}
       </Box>
     </ThemeProvider>
   );

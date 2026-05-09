@@ -30,6 +30,32 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
+it('shows an app-level initialization mask while the worker initializes', async () => {
+  let resolveInitialize: (diagnostics: ConvolvedImageResult['diagnostics']) => void = () => {};
+  const initialize = vi.fn(
+    () =>
+      new Promise<ConvolvedImageResult['diagnostics']>((resolve) => {
+        resolveInitialize = resolve;
+      })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ initialize })} />);
+
+  expect(screen.getByRole('status', { name: 'Worker initialization' })).toBeInTheDocument();
+  expect(screen.getByText('Initializing...')).toBeInTheDocument();
+  expect(screen.getByRole('progressbar', { name: 'Initialization progress' })).toBeInTheDocument();
+
+  await act(async () => {
+    resolveInitialize({
+      status: 'ready',
+      message: 'Mock worker ready'
+    });
+  });
+
+  expect(screen.queryByRole('status', { name: 'Worker initialization' })).not.toBeInTheDocument();
+  expect(screen.queryByText('Initializing...')).not.toBeInTheDocument();
+});
+
 it('renders default aperture and supported target options', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
@@ -631,7 +657,10 @@ it('debounces worker calls using the current UI payload', async () => {
 
   render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
-  expect(screen.getByText('Preparing simulation')).toBeInTheDocument();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(screen.getByText('Preparing image...')).toBeInTheDocument();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -793,7 +822,10 @@ it('renders simulated image loading and error states', async () => {
     <App workerClient={createMockWorkerClient({ computeConvolvedImage })} />
   );
 
-  expect(screen.getByText('Preparing simulation')).toBeInTheDocument();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(screen.getByText('Preparing image...')).toBeInTheDocument();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -803,6 +835,62 @@ it('renders simulated image loading and error states', async () => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
+  expect(screen.getByAltText('Convolved simulated target')).toBeInTheDocument();
+});
+
+it('hides stale chart images while a later image render is pending', async () => {
+  vi.useFakeTimers();
+  let resolveSecondCompute: (result: ConvolvedImageResult) => void = () => {};
+  const computeConvolvedImage = vi
+    .fn()
+    .mockResolvedValueOnce({
+      imageUrl: 'data:image/png;base64,bG9nbWFy',
+      psfImageUrl: 'data:image/png;base64,cHNm',
+      wavefrontImageUrl: 'data:image/png;base64,d2F2ZWZyb250',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    } satisfies ConvolvedImageResult)
+    .mockImplementationOnce(
+      () =>
+        new Promise<ConvolvedImageResult>((resolve) => {
+          resolveSecondCompute = resolve;
+        })
+    );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(screen.getByAltText('Convolved simulated target')).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText('Target'), {
+    target: { value: 'siemensstar' }
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(screen.getByText('Preparing image...')).toBeInTheDocument();
+  expect(screen.queryByAltText('Convolved simulated target')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
+  ).not.toBeInTheDocument();
+
+  await act(async () => {
+    resolveSecondCompute({
+      imageUrl: 'data:image/png;base64,c2llbWVuc3N0YXI=',
+      psfImageUrl: 'data:image/png;base64,c2llbWVuc3N0YXItcHNm',
+      wavefrontImageUrl: 'data:image/png;base64,c2llbWVuc3N0YXItd2F2ZWZyb250',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    });
+  });
+
   expect(screen.getByAltText('Convolved simulated target')).toBeInTheDocument();
 });
 

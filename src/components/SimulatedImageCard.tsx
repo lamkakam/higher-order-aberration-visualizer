@@ -122,7 +122,7 @@ export function SimulatedImageCard({
   altText = 'Convolved simulated target',
   bottomContent
 }: SimulatedImageCardProps) {
-  const previewImageUrl = imageUrl && !error ? imageUrl : undefined;
+  const previewImageUrl = imageUrl && !error && !isLoading ? imageUrl : undefined;
 
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>
@@ -145,7 +145,7 @@ export function SimulatedImageCard({
             <PreviewableImage imageUrl={previewImageUrl} title={title} altText={altText} />
           ) : (
             <Typography color={error ? 'error' : 'text.secondary'}>
-              {error ?? (isLoading ? 'Preparing simulation' : statusText)}
+              {error ?? (isLoading ? 'Preparing image...' : statusText)}
             </Typography>
           )}
         </Box>
