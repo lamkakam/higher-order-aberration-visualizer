@@ -27,8 +27,6 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
   expect(screen.queryByText('Wavefront legend unit')).not.toBeInTheDocument();
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Wave' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Micron' })).not.toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
@@ -137,6 +135,101 @@ it('shows zernike textbox values and resets changed values', async () => {
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
   expect(sphericalCoefficient).toHaveValue('0.00');
+});
+
+it('shows the zernike coefficient unit selector defaulting to wave', async () => {
+  vi.useFakeTimers();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(screen.getByText('Coefficient Unit (RMS)')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Wave' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Micron' })).toHaveAttribute('aria-pressed', 'false');
+});
+
+it('converts zernike textbox values when switching to microns', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  const sphericalCoefficient = screen.getByRole('textbox', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  await user.clear(sphericalCoefficient);
+  await user.type(sphericalCoefficient, '1.00');
+
+  await user.click(screen.getByRole('button', { name: 'Micron' }));
+
+  expect(sphericalCoefficient).toHaveValue('0.55');
+});
+
+it('commits micron zernike textbox values to the worker payload in waves', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  const coefficientMicronButton = screen
+    .getAllByRole('button', { name: 'Micron' })
+    .find((button) => button.getAttribute('aria-pressed') === 'false');
+  expect(coefficientMicronButton).toBeDefined();
+  fireEvent.click(coefficientMicronButton as HTMLButtonElement);
+  fireEvent.change(
+    screen.getByRole('textbox', {
+      name: 'Primary Spherical Aberration Z(4,0) coefficient'
+    }),
+    {
+      target: { value: '1.10' }
+    }
+  );
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 2
+    })
+  });
+});
+
+it('resets zernike textbox values to zero in the selected coefficient unit', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  const sphericalCoefficient = screen.getByRole('textbox', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  await user.click(screen.getByRole('button', { name: 'Micron' }));
+  await user.clear(sphericalCoefficient);
+  await user.type(sphericalCoefficient, '1.10');
+
+  await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
+
+  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(screen.getByRole('button', { name: 'Micron' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('commits valid zernike textbox values to the worker payload', async () => {
@@ -402,7 +495,11 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Micron' }));
+  const wavefrontLegendMicronButton = screen
+    .getAllByRole('button', { name: 'Micron' })
+    .find((button) => !button.hasAttribute('aria-pressed'));
+  expect(wavefrontLegendMicronButton).toBeDefined();
+  fireEvent.click(wavefrontLegendMicronButton as HTMLButtonElement);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);

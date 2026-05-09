@@ -10,6 +10,9 @@ export {
 export { SimulatedImageCard } from './SimulatedImageCard';
 export {
   createDefaultZernikeCoefficients,
+  micronsToWaves,
+  wavelengthNm,
+  wavesToMicrons,
   targetOptions,
   zernikeTerms
 } from './simulationConfig';
