@@ -14,7 +14,7 @@ The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the wor
 
 The worker converts the Zernike keys to Python `(n, m)` tuples and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
 
-The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
+The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns, using the configured 550 nm wavelength for conversion, but values sent to the worker remain in waves. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
 
 ## Supported Targets
 

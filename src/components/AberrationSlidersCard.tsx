@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Slider from '@mui/material/Slider';
@@ -9,14 +10,24 @@ import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
 import {
+  micronsToWaves,
   roundToTwoDecimals,
+  wavesToMicrons,
   zernikeCoefficientMax,
   zernikeCoefficientMin,
   zernikeCoefficientStep,
   zernikeTerms
 } from './simulationConfig';
 
-const zernikeRangeErrorText = `Value must be between ${zernikeCoefficientMin} and ${zernikeCoefficientMax}.`;
+type CoefficientDisplayUnit = 'wave' | 'micron';
+
+const coefficientDisplayUnits = [
+  { value: 'wave', label: 'Wave' },
+  { value: 'micron', label: 'Micron' }
+] as const satisfies readonly {
+  readonly value: CoefficientDisplayUnit;
+  readonly label: string;
+}[];
 
 interface AberrationSlidersCardProps {
   readonly values: Record<ZernikeCoefficientKey, number>;
@@ -29,13 +40,22 @@ export function AberrationSlidersCard({
   onValueChange,
   onReset
 }: AberrationSlidersCardProps) {
-  const [draftState, setDraftState] = useState(() => createDraftState(values));
+  const [displayUnit, setDisplayUnit] = useState<CoefficientDisplayUnit>('wave');
+  const [draftState, setDraftState] = useState(() => createDraftState(values, displayUnit));
 
   let draftValues = draftState.draftValues;
-  if (!areCommittedValuesEqual(draftState.committedValues, values)) {
-    draftValues = reconcileDraftValues(draftValues, values);
+  if (draftState.displayUnit !== displayUnit) {
+    draftValues = createDraftValues(values, displayUnit);
     setDraftState({
       committedValues: values,
+      displayUnit,
+      draftValues
+    });
+  } else if (!areCommittedValuesEqual(draftState.committedValues, values)) {
+    draftValues = reconcileDraftValues(draftValues, values, displayUnit);
+    setDraftState({
+      committedValues: values,
+      displayUnit,
       draftValues
     });
   }
@@ -52,10 +72,27 @@ export function AberrationSlidersCard({
               Reset
             </Button>
           </Box>
+          <Stack spacing={1}>
+            <Typography variant="body2">Coefficient Unit</Typography>
+            <ButtonGroup aria-label="Coefficient Unit" size="small" variant="outlined">
+              {coefficientDisplayUnits.map((unit) => (
+                <Button
+                  key={unit.value}
+                  aria-pressed={displayUnit === unit.value}
+                  variant={displayUnit === unit.value ? 'contained' : 'outlined'}
+                  onClick={() => {
+                    setDisplayUnit(unit.value);
+                  }}
+                >
+                  {unit.label}
+                </Button>
+              ))}
+            </ButtonGroup>
+          </Stack>
           {zernikeTerms.map((term) => {
             const label = `${term.label} Z(${term.n},${term.m})`;
             const coefficientLabel = `${label} coefficient`;
-            const hasDraftRangeError = isOutOfRangeDraft(draftValues[term.key]);
+            const hasDraftRangeError = isOutOfRangeDraft(draftValues[term.key], displayUnit);
             return (
               <Box key={term.key}>
                 <Box
@@ -71,7 +108,7 @@ export function AberrationSlidersCard({
                     data-testid={`zernike-value-${term.key}`}
                     autoComplete="off"
                     error={hasDraftRangeError}
-                    helperText={hasDraftRangeError ? zernikeRangeErrorText : undefined}
+                    helperText={hasDraftRangeError ? getRangeErrorText(displayUnit) : undefined}
                     inputMode="decimal"
                     size="small"
                     sx={{
@@ -91,13 +128,14 @@ export function AberrationSlidersCard({
 
                       setDraftState((currentState) => ({
                         committedValues: values,
+                        displayUnit,
                         draftValues: {
                           ...currentState.draftValues,
                           [term.key]: nextDraft
                         }
                       }));
 
-                      const nextValue = Number(nextDraft);
+                      const nextValue = getWaveValueFromDraft(nextDraft, displayUnit);
                       if (isValidCommittedDraft(nextDraft, nextValue)) {
                         onValueChange(term.key, nextValue);
                       }
@@ -106,8 +144,8 @@ export function AberrationSlidersCard({
                       htmlInput: {
                         'aria-label': coefficientLabel,
                         autoComplete: 'off',
-                        min: zernikeCoefficientMin,
-                        max: zernikeCoefficientMax,
+                        min: getDisplayValueFromWaves(zernikeCoefficientMin, displayUnit),
+                        max: getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit),
                         step: zernikeCoefficientStep
                       }
                     }}
@@ -120,6 +158,7 @@ export function AberrationSlidersCard({
                   step={zernikeCoefficientStep}
                   value={values[term.key]}
                   valueLabelDisplay="auto"
+                  valueLabelFormat={(value) => formatCommittedValue(value, displayUnit)}
                   onChange={(_, nextValue) => {
                     onValueChange(
                       term.key,
@@ -138,36 +177,44 @@ export function AberrationSlidersCard({
 
 interface DraftState {
   readonly committedValues: Record<ZernikeCoefficientKey, number>;
+  readonly displayUnit: CoefficientDisplayUnit;
   readonly draftValues: Record<ZernikeCoefficientKey, string>;
 }
 
-function createDraftState(values: Record<ZernikeCoefficientKey, number>): DraftState {
+function createDraftState(
+  values: Record<ZernikeCoefficientKey, number>,
+  displayUnit: CoefficientDisplayUnit
+): DraftState {
   return {
     committedValues: values,
-    draftValues: createDraftValues(values)
+    displayUnit,
+    draftValues: createDraftValues(values, displayUnit)
   };
 }
 
 function createDraftValues(
-  values: Record<ZernikeCoefficientKey, number>
+  values: Record<ZernikeCoefficientKey, number>,
+  displayUnit: CoefficientDisplayUnit
 ): Record<ZernikeCoefficientKey, string> {
   return Object.fromEntries(
-    zernikeTerms.map((term) => [term.key, formatCommittedValue(values[term.key])])
+    zernikeTerms.map((term) => [term.key, formatCommittedValue(values[term.key], displayUnit)])
   ) as Record<ZernikeCoefficientKey, string>;
 }
 
 function reconcileDraftValues(
   draftValues: Record<ZernikeCoefficientKey, string>,
-  values: Record<ZernikeCoefficientKey, number>
+  values: Record<ZernikeCoefficientKey, number>,
+  displayUnit: CoefficientDisplayUnit
 ): Record<ZernikeCoefficientKey, string> {
   return Object.fromEntries(
     zernikeTerms.map((term) => {
       const currentDraft = draftValues[term.key];
       const parsedDraft = Number(currentDraft);
+      const displayValue = getDisplayValueFromWaves(values[term.key], displayUnit);
       const nextDraft =
-        Number.isFinite(parsedDraft) && parsedDraft === values[term.key]
+        Number.isFinite(parsedDraft) && parsedDraft === displayValue
           ? currentDraft
-          : formatCommittedValue(values[term.key]);
+          : formatCommittedValue(values[term.key], displayUnit);
 
       return [term.key, nextDraft];
     })
@@ -181,8 +228,35 @@ function areCommittedValuesEqual(
   return zernikeTerms.every((term) => previousValues[term.key] === nextValues[term.key]);
 }
 
-function formatCommittedValue(value: number): string {
-  return roundToTwoDecimals(value).toFixed(2);
+function formatCommittedValue(value: number, displayUnit: CoefficientDisplayUnit): string {
+  return getDisplayValueFromWaves(value, displayUnit).toFixed(2);
+}
+
+function getDisplayValueFromWaves(value: number, displayUnit: CoefficientDisplayUnit): number {
+  if (displayUnit === 'micron') {
+    return roundToTwoDecimals(wavesToMicrons(value));
+  }
+
+  return roundToTwoDecimals(value);
+}
+
+function getWaveValueFromDraft(
+  draft: string,
+  displayUnit: CoefficientDisplayUnit
+): number {
+  const value = Number(draft);
+  if (displayUnit === 'micron') {
+    return roundToTwoDecimals(micronsToWaves(value));
+  }
+
+  return value;
+}
+
+function getRangeErrorText(displayUnit: CoefficientDisplayUnit): string {
+  return `Value must be between ${getDisplayValueFromWaves(
+    zernikeCoefficientMin,
+    displayUnit
+  )} and ${getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit)}.`;
 }
 
 function isValidCommittedDraft(draft: string, value: number): boolean {
@@ -194,8 +268,8 @@ function isValidCommittedDraft(draft: string, value: number): boolean {
   );
 }
 
-function isOutOfRangeDraft(draft: string): boolean {
-  const value = Number(draft);
+function isOutOfRangeDraft(draft: string, displayUnit: CoefficientDisplayUnit): boolean {
+  const value = getWaveValueFromDraft(draft, displayUnit);
   return (
     draft.trim() !== '' &&
     Number.isFinite(value) &&
