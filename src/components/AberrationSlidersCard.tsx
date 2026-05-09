@@ -28,7 +28,6 @@ const coefficientDisplayUnits = [
   readonly value: CoefficientDisplayUnit;
   readonly label: string;
 }[];
-const coefficientCommitDebounceMs = 150;
 
 interface AberrationSlidersCardProps {
   readonly values: Record<ZernikeCoefficientKey, number>;
@@ -111,24 +110,17 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
 }: AberrationCoefficientRowProps) {
   const [draftValue, setDraftValue] = useState(formatCommittedValue(value, displayUnit));
   const [sliderValue, setSliderValue] = useState(value);
-  const commitTimerRef = useRef<number | undefined>(undefined);
-  const sliderDraftRef = useRef(false);
+  const sliderValueRef = useRef(value);
   const keyboardSlidingRef = useRef(false);
-  const skipNextCommittedRef = useRef(false);
   const label = `${term.label} Z(${term.n},${term.m})`;
   const coefficientLabel = `${label} coefficient`;
   const hasDraftRangeError = isOutOfRangeDraft(draftValue, displayUnit);
 
   useEffect(() => {
-    sliderDraftRef.current = false;
     setDraftValue(formatCommittedValue(value, displayUnit));
     setSliderValue(value);
+    sliderValueRef.current = value;
   }, [displayUnit, resetVersion, value]);
-
-  const clearCommitTimer = useCallback(() => {
-    window.clearTimeout(commitTimerRef.current);
-    commitTimerRef.current = undefined;
-  }, []);
 
   const commitDraft = useCallback(
     (nextDraft: string) => {
@@ -140,35 +132,21 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
     [displayUnit, onValueChange, term.key, value]
   );
 
-  useEffect(() => {
-    clearCommitTimer();
-    const nextValue = getWaveValueFromDraft(draftValue, displayUnit);
-    if (
-      !sliderDraftRef.current &&
-      isValidCommittedDraft(draftValue, nextValue) &&
-      nextValue !== value
-    ) {
-      commitTimerRef.current = window.setTimeout(() => {
-        commitDraft(draftValue);
-      }, coefficientCommitDebounceMs);
-    }
-
-    return clearCommitTimer;
-  }, [clearCommitTimer, commitDraft, displayUnit, draftValue, value]);
-
   const flushDraft = useCallback(() => {
-    clearCommitTimer();
     commitDraft(draftValue);
-  }, [clearCommitTimer, commitDraft, draftValue]);
+  }, [commitDraft, draftValue]);
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
       const roundedValue = roundToTwoDecimals(nextValue);
+      setSliderValue(roundedValue);
+      sliderValueRef.current = roundedValue;
+      setDraftValue(formatCommittedValue(roundedValue, displayUnit));
       if (roundedValue !== value) {
         onValueChange(term.key, roundedValue);
       }
     },
-    [onValueChange, term.key, value]
+    [displayUnit, onValueChange, term.key, value]
   );
 
   return (
@@ -201,7 +179,6 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
           onChange={(event) => {
             const nextDraft = event.target.value;
             if (isSignedDecimalDraft(nextDraft)) {
-              sliderDraftRef.current = false;
               setDraftValue(nextDraft);
             }
           }}
@@ -237,13 +214,11 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
           if (event.type === 'keydown') {
             keyboardSlidingRef.current = true;
           }
-          sliderDraftRef.current = true;
+          sliderValueRef.current = roundedValue;
           setSliderValue(roundedValue);
-          setDraftValue(formatCommittedValue(roundedValue, displayUnit));
         }}
         onChangeCommitted={(_, nextValue) => {
-          if (keyboardSlidingRef.current || skipNextCommittedRef.current) {
-            skipNextCommittedRef.current = false;
+          if (keyboardSlidingRef.current) {
             return;
           }
 
@@ -255,8 +230,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
         onKeyUp={() => {
           if (keyboardSlidingRef.current) {
             keyboardSlidingRef.current = false;
-            skipNextCommittedRef.current = true;
-            commitSliderValue(sliderValue);
+            commitSliderValue(sliderValueRef.current);
           }
         }}
       />
