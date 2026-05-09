@@ -43,6 +43,8 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
 
+When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
+
 ## Rendered Outputs
 
 The worker renders three PNG outputs from each `OpticalSimulation`:

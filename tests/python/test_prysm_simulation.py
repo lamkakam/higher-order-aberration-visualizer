@@ -128,6 +128,7 @@ def test_snellen_e_20_20_keeps_pixel_size_with_fixed_angular_sampling() -> None:
 def test_snellen_e_20_20_default_height_tracks_image_samples(
     image_samples: int,
 ) -> None:
+    expected_height_fraction = 0.125
     simulation = compute_simulation(
         10,
         {},
@@ -139,19 +140,21 @@ def test_snellen_e_20_20_default_height_tracks_image_samples(
     height_px, width_px = _target_size_px(simulation.target)
     expected_block_px = max(
         1,
-        round(round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION) / 5),
+        round(round(image_samples * expected_height_fraction) / 5),
     )
 
     assert height_px == 5 * expected_block_px
     assert width_px == height_px
     assert height_px == pytest.approx(
-        image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
+        image_samples * expected_height_fraction,
         abs=3,
     )
+    assert SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION == expected_height_fraction
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
 def test_snellen_e_20_20_default_sampling_records_angular_spacing() -> None:
+    expected_height_fraction = 0.125
     simulation = compute_simulation(
         300,
         {},
@@ -162,13 +165,14 @@ def test_snellen_e_20_20_default_sampling_records_angular_spacing() -> None:
 
     expected_block_px = max(
         1,
-        round(round(128 * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION) / 5),
+        round(round(128 * expected_height_fraction) / 5),
     )
 
     assert _target_size_px(simulation.target) == (
         5 * expected_block_px,
         5 * expected_block_px,
     )
+    assert SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION == expected_height_fraction
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
