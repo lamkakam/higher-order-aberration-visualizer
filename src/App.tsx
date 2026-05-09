@@ -6,7 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AberrationSlidersCard,
   AppHeader,
@@ -137,12 +137,16 @@ export function App({ workerClient }: AppProps) {
     zernikeCoefficients
   ]);
 
-  const updateZernikeCoefficient = (key: ZernikeCoefficientKey, value: number) => {
+  const updateZernikeCoefficient = useCallback((key: ZernikeCoefficientKey, value: number) => {
     setZernikeCoefficients((currentValues) => ({
       ...currentValues,
       [key]: value
     }));
-  };
+  }, []);
+
+  const resetZernikeCoefficients = useCallback(() => {
+    setZernikeCoefficients(createDefaultZernikeCoefficients());
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
@@ -278,9 +282,7 @@ export function App({ workerClient }: AppProps) {
               <AberrationSlidersCard
                 values={zernikeCoefficients}
                 onValueChange={updateZernikeCoefficient}
-                onReset={() => {
-                  setZernikeCoefficients(createDefaultZernikeCoefficients());
-                }}
+                onReset={resetZernikeCoefficients}
               />
             </Stack>
           </Box>

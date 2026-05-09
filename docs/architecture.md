@@ -12,7 +12,7 @@ The browser entry point in [`src/main.tsx`](../src/main.tsx) mounts [`src/App.ts
 - wavefront legend unit
 - display mode and worker diagnostics
 
-When an input changes, `App` debounces the update and calls `computeConvolvedImage` on the worker API. The returned image URLs are passed to [`SimulatedImageCard`](../src/components/SimulatedImageCard.tsx) for display. In basic mode the UI shows the convolved target image. In advanced mode it also shows the PSF image and wavefront map, except the point-source target omits the separate PSF card.
+Input controls keep fast-moving draft text and slider positions local so typing and dragging stay responsive on slower devices. Text inputs commit valid values to `App` after a short pause, blur, or Enter. Zernike sliders update their visible row while moving and commit to `App` on release. After committed inputs change, `App` debounces the update and calls `computeConvolvedImage` on the worker API. The returned image URLs are passed to [`SimulatedImageCard`](../src/components/SimulatedImageCard.tsx) for display. In basic mode the UI shows the convolved target image. In advanced mode it also shows the PSF image and wavefront map, except the point-source target omits the separate PSF card.
 
 ## Worker Boundary
 

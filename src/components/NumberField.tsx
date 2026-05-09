@@ -3,7 +3,9 @@ import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import { useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+
+const inputCommitDebounceMs = 150;
 
 interface NumberFieldProps {
   readonly label: string;
@@ -46,33 +48,61 @@ function NumberFieldInput({
   error = false,
   onChange
 }: NumberFieldInputProps) {
-  const [draftState, setDraftState] = useState({
-    committedValue: value,
-    draftValue: String(value)
-  });
+  const [draftValue, setDraftValue] = useState(String(value));
+  const commitTimerRef = useRef<number | undefined>(undefined);
 
-  let draftValue = draftState.draftValue;
-  if (draftState.committedValue !== value) {
-    draftValue = String(value);
-    setDraftState({
-      committedValue: value,
-      draftValue
-    });
-  }
+  useEffect(() => {
+    setDraftValue(String(value));
+  }, [value]);
+
+  const clearCommitTimer = useCallback(() => {
+    window.clearTimeout(commitTimerRef.current);
+    commitTimerRef.current = undefined;
+  }, []);
+
+  const commitDraft = useCallback(
+    (nextDraft: string) => {
+      const parsedValue = Number(nextDraft);
+      if (
+        nextDraft.trim() !== '' &&
+        Number.isFinite(parsedValue) &&
+        parsedValue >= min &&
+        parsedValue !== value
+      ) {
+        onChange(parsedValue);
+      }
+    },
+    [min, onChange, value]
+  );
+
+  useEffect(() => {
+    clearCommitTimer();
+    const parsedValue = Number(draftValue);
+    if (
+      draftValue.trim() !== '' &&
+      Number.isFinite(parsedValue) &&
+      parsedValue >= min &&
+      parsedValue !== value
+    ) {
+      commitTimerRef.current = window.setTimeout(() => {
+        commitDraft(draftValue);
+      }, inputCommitDebounceMs);
+    }
+
+    return clearCommitTimer;
+  }, [clearCommitTimer, commitDraft, draftValue, min, value]);
+
+  const flushDraft = useCallback(() => {
+    clearCommitTimer();
+    commitDraft(draftValue);
+  }, [clearCommitTimer, commitDraft, draftValue]);
 
   const handleInputChange = (nextValue: string) => {
     if (!isDecimalText(nextValue)) {
       return;
     }
 
-    setDraftState({
-      committedValue: value,
-      draftValue: nextValue
-    });
-    const parsedValue = Number(nextValue);
-    if (Number.isFinite(parsedValue) && parsedValue >= min) {
-      onChange(parsedValue);
-    }
+    setDraftValue(nextValue);
   };
 
   return (
@@ -96,6 +126,12 @@ function NumberFieldInput({
           inputProps={{ inputMode: 'decimal', min, step: 0.1 }}
           onChange={(event) => {
             handleInputChange(event.target.value);
+          }}
+          onBlur={flushDraft}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              flushDraft();
+            }
           }}
         />
         {error ? <FormHelperText>Minimum value is {min}.</FormHelperText> : undefined}

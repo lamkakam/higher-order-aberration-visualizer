@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NumberField } from './NumberField';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('NumberField', () => {
   it('renders the initial committed value', () => {
@@ -10,7 +14,8 @@ describe('NumberField', () => {
     expect(screen.getByLabelText('Aperture')).toHaveValue('3');
   });
 
-  it('commits valid input changes', () => {
+  it('updates draft text immediately without committing before the debounce', async () => {
+    vi.useFakeTimers();
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
 
@@ -18,10 +23,34 @@ describe('NumberField', () => {
       target: { value: '4.2' }
     });
 
+    expect(screen.getByLabelText('Aperture')).toHaveValue('4.2');
+    expect(onChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(149);
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('commits valid input changes after the debounce', async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Aperture'), {
+      target: { value: '4.2' }
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
+    });
+
     expect(onChange).toHaveBeenCalledWith(4.2);
   });
 
-  it('commits leading-dot decimal input changes', () => {
+  it('commits leading-dot decimal input changes after the debounce', async () => {
+    vi.useFakeTimers();
     const onChange = vi.fn();
     render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
 
@@ -29,10 +58,43 @@ describe('NumberField', () => {
       target: { value: '.5' }
     });
 
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
+    });
+
     expect(onChange).toHaveBeenCalledWith(0.5);
   });
 
-  it('keeps focus after committing a change that rerenders the parent', () => {
+  it('flushes valid input changes on blur', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Aperture'), {
+      target: { value: '4.2' }
+    });
+    fireEvent.blur(screen.getByLabelText('Aperture'));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(4.2);
+  });
+
+  it('flushes valid input changes on Enter', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Aperture'), {
+      target: { value: '4.2' }
+    });
+    fireEvent.keyDown(screen.getByLabelText('Aperture'), { key: 'Enter' });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(4.2);
+  });
+
+  it('keeps focus after a draft change rerenders the parent on commit', async () => {
+    vi.useFakeTimers();
     function StatefulNumberField() {
       const [value, setValue] = useState(3);
 
@@ -47,6 +109,13 @@ describe('NumberField', () => {
     });
     fireEvent.change(input, {
       target: { value: '4' }
+    });
+
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('4');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
     });
 
     expect(input).toHaveFocus();
@@ -86,6 +155,23 @@ describe('NumberField', () => {
 
     fireEvent.change(screen.getByLabelText('Aperture'), {
       target: { value: '0.4' }
+    });
+
+    expect(screen.getByLabelText('Aperture')).toHaveValue('0.4');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not commit invalid or too-small drafts after the debounce', async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    render(<NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Aperture'), {
+      target: { value: '0.4' }
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
     });
 
     expect(screen.getByLabelText('Aperture')).toHaveValue('0.4');

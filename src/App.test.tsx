@@ -159,6 +159,7 @@ it('converts zernike textbox values when switching to microns', async () => {
   });
   await user.clear(sphericalCoefficient);
   await user.type(sphericalCoefficient, '1.00');
+  fireEvent.blur(sphericalCoefficient);
 
   await user.click(screen.getByRole('button', { name: 'Micron' }));
 
@@ -201,7 +202,19 @@ it('commits micron zernike textbox values to the worker payload in waves', async
   );
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(149);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(299);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
@@ -261,7 +274,19 @@ it('commits valid zernike textbox values to the worker payload', async () => {
   });
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(149);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(299);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
@@ -305,7 +330,7 @@ it('keeps temporary invalid zernike textbox drafts out of the worker payload', a
   expect(sphericalCoefficient).toHaveValue('');
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(450);
   });
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 
@@ -315,7 +340,7 @@ it('keeps temporary invalid zernike textbox drafts out of the worker payload', a
   expect(sphericalCoefficient).toHaveValue('-');
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(450);
   });
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 });
@@ -351,7 +376,7 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
   expect(screen.getByText('Value must be between -5 and 5.')).toBeInTheDocument();
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(450);
   });
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 
@@ -362,9 +387,115 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
   expect(screen.getByText('Value must be between -5 and 5.')).toBeInTheDocument();
 
   await act(async () => {
+    await vi.advanceTimersByTimeAsync(450);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+});
+
+it('keeps aperture typing out of the worker payload until textbox and worker debounces finish', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
+    target: { value: '4' }
+  });
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('4');
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(149);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(299);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 4,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('keeps slider movement local until release, then commits once to the worker payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  const sphericalSlider = screen.getByRole('slider', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  const sphericalCoefficient = screen.getByRole('textbox', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+
+  fireEvent.keyDown(sphericalSlider, { key: 'ArrowRight' });
+  expect(sphericalCoefficient).toHaveValue('0.05');
+
+  await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(computeConvolvedImage).not.toHaveBeenCalled();
+
+  fireEvent.keyUp(sphericalSlider, { key: 'ArrowRight' });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0.05
+    })
+  });
 });
 
 it('debounces worker calls using the current UI payload', async () => {
@@ -409,8 +540,19 @@ it('debounces worker calls using the current UI payload', async () => {
   fireEvent.keyDown(screen.getByRole('slider', { name: 'Defocus Z(2,0) coefficient' }), {
     key: 'ArrowRight'
   });
+  fireEvent.keyUp(screen.getByRole('slider', { name: 'Defocus Z(2,0) coefficient' }), {
+    key: 'ArrowRight'
+  });
 
   computeConvolvedImage.mockClear();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(149);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(299);
   });
