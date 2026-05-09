@@ -133,6 +133,7 @@ async function computeConvolvedImage(
     aperture_diameter_mm: input.apertureDiameterMm,
     show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
+    wavefront_legend_unit: input.wavefrontLegendUnit,
     zernike_coefficients: input.zernikeCoefficients
   });
 
@@ -165,7 +166,7 @@ simulation = compute_simulation(
   );
   const wavefrontImageBytes = await renderSimulationImage(
     globals,
-    'from hoa_visualizer_utils.rendering.wavefront import render_wavefront\nrender_wavefront(simulation)'
+    'from hoa_visualizer_utils.rendering.wavefront import render_wavefront\nrender_wavefront(simulation, unit=str(wavefront_legend_unit))'
   );
 
   return {

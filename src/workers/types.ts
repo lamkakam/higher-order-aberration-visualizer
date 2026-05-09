@@ -19,11 +19,13 @@ export const supportedTargetIds = [
 export type SupportedTargetId = (typeof supportedTargetIds)[number];
 
 export type ZernikeCoefficientKey = `${number},${number}`;
+export type WavefrontLegendUnit = 'wave' | 'micron';
 
 export interface ConvolvedImageInput {
   apertureDiameterMm: number;
   showScaleBar: boolean;
   targetId: SupportedTargetId;
+  wavefrontLegendUnit: WavefrontLegendUnit;
   zernikeCoefficients: Record<ZernikeCoefficientKey, number>;
 }
 

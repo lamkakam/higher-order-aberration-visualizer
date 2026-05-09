@@ -13,7 +13,8 @@ import {
   SimulatedImageCard,
   targetOptions,
   type DisplayMode,
-  type ThemeMode
+  type ThemeMode,
+  type WavefrontLegendUnit
 } from './components';
 import { useAppTheme } from './hooks/useAppTheme';
 import { useWorkerClient } from './hooks/useWorkerClient';
@@ -42,6 +43,8 @@ export function App({ workerClient }: AppProps) {
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
   const [showScaleBar, setShowScaleBar] = useState(false);
+  const [wavefrontLegendUnit, setWavefrontLegendUnit] =
+    useState<WavefrontLegendUnit>('wave');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficients, setZernikeCoefficients] = useState(
@@ -90,6 +93,7 @@ export function App({ workerClient }: AppProps) {
           apertureDiameterMm,
           showScaleBar,
           targetId,
+          wavefrontLegendUnit,
           zernikeCoefficients
         }),
         computeTimeoutMs
@@ -117,7 +121,14 @@ export function App({ workerClient }: AppProps) {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [apertureDiameterMm, client, showScaleBar, targetId, zernikeCoefficients]);
+  }, [
+    apertureDiameterMm,
+    client,
+    showScaleBar,
+    targetId,
+    wavefrontLegendUnit,
+    zernikeCoefficients
+  ]);
 
   const updateZernikeCoefficient = (key: ZernikeCoefficientKey, value: number) => {
     setZernikeCoefficients((currentValues) => ({
@@ -140,12 +151,14 @@ export function App({ workerClient }: AppProps) {
           mode={themeMode}
           displayMode={displayMode}
           showScaleBar={showScaleBar}
+          wavefrontLegendUnit={wavefrontLegendUnit}
           onClose={() => {
             setSettingsOpen(false);
           }}
           onModeChange={setThemeMode}
           onDisplayModeChange={setDisplayMode}
           onShowScaleBarChange={setShowScaleBar}
+          onWavefrontLegendUnitChange={setWavefrontLegendUnit}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
           <Box

@@ -9,6 +9,7 @@ The browser entry point in [`src/main.tsx`](../src/main.tsx) mounts [`src/App.ts
 - aperture diameter in millimeters
 - target id
 - Zernike coefficient values
+- wavefront legend unit
 - display mode and worker diagnostics
 
 When an input changes, `App` debounces the update and calls `computeConvolvedImage` on the worker API. The returned image URLs are passed to [`SimulatedImageCard`](../src/components/SimulatedImageCard.tsx) for display. In basic mode the UI shows the convolved target image. In advanced mode it also shows the PSF image and wavefront map, except the point-source target omits the separate PSF card.
@@ -17,7 +18,7 @@ When an input changes, `App` debounces the update and calls `computeConvolvedIma
 
 Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
 
-- `ConvolvedImageInput`: aperture diameter, scale-bar visibility, supported target id, and Zernike coefficients keyed as `"n,m"` strings
+- `ConvolvedImageInput`: aperture diameter, scale-bar visibility, supported target id, wavefront legend unit, and Zernike coefficients keyed as `"n,m"` strings
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `OpticsWorkerApi`: `initialize`, `getStatus`, and `computeConvolvedImage`
 

@@ -25,6 +25,9 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByText('Display')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Basic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
+  expect(screen.getByText('Wavefront legend unit')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Wave' })).toHaveClass('MuiButton-contained');
+  expect(screen.getByRole('button', { name: 'Micron' })).toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
@@ -168,6 +171,7 @@ it('commits valid zernike textbox values to the worker payload', async () => {
     apertureDiameterMm: 3,
     showScaleBar: false,
     targetId: 'snellen_e_20_20',
+    wavefrontLegendUnit: 'wave',
     zernikeCoefficients: expect.objectContaining({
       '4,0': -0.3
     })
@@ -291,6 +295,7 @@ it('debounces worker calls using the current UI payload', async () => {
     apertureDiameterMm: 3,
     showScaleBar: false,
     targetId: 'snellen_e_20_20',
+    wavefrontLegendUnit: 'wave',
     zernikeCoefficients: expect.objectContaining({
       '5,-5': 0,
       '6,0': 0,
@@ -321,6 +326,7 @@ it('debounces worker calls using the current UI payload', async () => {
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
     zernikeCoefficients: expect.objectContaining({
       '2,0': 0.05,
       '4,0': 0
@@ -360,6 +366,46 @@ it('sends enabled scale bar preference to the worker payload', async () => {
     apertureDiameterMm: 3,
     showScaleBar: true,
     targetId: 'snellen_e_20_20',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('sends selected wavefront legend unit to the worker payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Micron' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureDiameterMm: 3,
+    showScaleBar: false,
+    targetId: 'snellen_e_20_20',
+    wavefrontLegendUnit: 'micron',
     zernikeCoefficients: expect.objectContaining({
       '4,0': 0
     })

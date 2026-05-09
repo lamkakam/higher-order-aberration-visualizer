@@ -5,19 +5,23 @@ import Drawer from '@mui/material/Drawer';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
+import type { WavefrontLegendUnit } from '../workers/types';
 
 export type ThemeMode = 'light' | 'system' | 'dark';
 export type DisplayMode = 'basic' | 'advanced';
+export type { WavefrontLegendUnit };
 
 interface SettingsDrawerProps {
   readonly open: boolean;
   readonly mode: ThemeMode;
   readonly displayMode: DisplayMode;
   readonly showScaleBar: boolean;
+  readonly wavefrontLegendUnit: WavefrontLegendUnit;
   readonly onClose: () => void;
   readonly onModeChange: (mode: ThemeMode) => void;
   readonly onDisplayModeChange: (mode: DisplayMode) => void;
   readonly onShowScaleBarChange: (showScaleBar: boolean) => void;
+  readonly onWavefrontLegendUnitChange: (unit: WavefrontLegendUnit) => void;
 }
 
 const modeOptions = [
@@ -31,15 +35,22 @@ const displayModeOptions = [
   { value: 'advanced', label: 'Advanced' }
 ] as const;
 
+const wavefrontLegendUnitOptions = [
+  { value: 'wave', label: 'Wave' },
+  { value: 'micron', label: 'Micron' }
+] as const;
+
 export function SettingsDrawer({
   open,
   mode,
   displayMode,
   showScaleBar,
+  wavefrontLegendUnit,
   onClose,
   onModeChange,
   onDisplayModeChange,
-  onShowScaleBarChange
+  onShowScaleBarChange,
+  onWavefrontLegendUnitChange
 }: SettingsDrawerProps) {
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -72,6 +83,27 @@ export function SettingsDrawer({
               variant={displayMode === option.value ? 'contained' : 'outlined'}
               onClick={() => {
                 onDisplayModeChange(option.value);
+              }}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Typography
+          id="wavefront-legend-unit-button-group-label"
+          variant="subtitle2"
+          sx={{ mb: 1, mt: 3 }}
+        >
+          Wavefront legend unit
+        </Typography>
+        <ButtonGroup aria-labelledby="wavefront-legend-unit-button-group-label" fullWidth>
+          {wavefrontLegendUnitOptions.map((option) => (
+            <Button
+              key={option.value}
+              aria-label={option.label}
+              variant={wavefrontLegendUnit === option.value ? 'contained' : 'outlined'}
+              onClick={() => {
+                onWavefrontLegendUnitChange(option.value);
               }}
             >
               {option.label}

@@ -658,6 +658,58 @@ def test_wavefront_renderer_uses_waves_viridis_and_compact_tick_format(
         _load_pyplot().close(fig)
 
 
+def test_wavefront_renderer_can_use_microns(monkeypatch: pytest.MonkeyPatch) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.2},
+        "tiltedsquare",
+        wavelength_nm=500,
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_wavefront(simulation, image_format="png", unit="micron") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        image = fig.axes[0].images[0]
+        colorbar_axis = fig.axes[1]
+        plotted_wavefront = np.asarray(image.get_array())
+        expected_wavefront = np.where(
+            simulation.pupil_mask,
+            simulation.wavefront_nm / 1000,
+            np.nan,
+        )
+
+        assert plotted_wavefront == pytest.approx(expected_wavefront, nan_ok=True)
+        assert colorbar_axis.get_ylabel() == "microns"
+    finally:
+        _load_pyplot().close(fig)
+
+
+def test_wavefront_renderer_rejects_invalid_unit() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    with pytest.raises(ValueError, match="Unsupported wavefront unit"):
+        render_wavefront(simulation, unit="nanometer")
+
+
 def test_scale_bar_uses_arcsec_label_for_sub_arcminute_length() -> None:
     spec = _scale_bar_spec(image_width_px=100, image_dx_arcmin=0.005)
 
