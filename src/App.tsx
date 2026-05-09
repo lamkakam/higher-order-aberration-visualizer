@@ -177,7 +177,7 @@ export function App({ workerClient }: AppProps) {
             <Box
               sx={{
                 ...stickyImageCardMaskSx,
-                alignSelf: 'start',
+                alignSelf: { xs: 'start', sm: 'stretch' },
                 position: 'sticky',
                 top: { xs: mobileStickyTopPx, sm: desktopStickyTopPx },
                 zIndex: 3
@@ -195,7 +195,7 @@ export function App({ workerClient }: AppProps) {
               <Box
                 sx={{
                   ...desktopStickyImageCardMaskSx,
-                  alignSelf: 'start',
+                  alignSelf: { xs: 'start', sm: 'stretch' },
                   position: { xs: 'static', sm: 'sticky' },
                   top: { sm: desktopStickyTopPx },
                   zIndex: { sm: 2 }
@@ -216,7 +216,7 @@ export function App({ workerClient }: AppProps) {
               <Box
                 sx={{
                   ...desktopStickyImageCardMaskSx,
-                  alignSelf: 'start',
+                  alignSelf: { xs: 'start', sm: 'stretch' },
                   position: { xs: 'static', sm: 'sticky' },
                   top: { sm: desktopStickyTopPx },
                   zIndex: { sm: 2 }

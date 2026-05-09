@@ -12,6 +12,15 @@ async function getCardTopByHeading(page: Page, heading: string) {
   return card.evaluate((element) => element.getBoundingClientRect().top);
 }
 
+async function getCardHeightByHeading(page: Page, heading: string) {
+  const card = page
+    .getByRole('heading', { name: heading })
+    .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
+  await expect(card).toBeVisible();
+
+  return card.evaluate((element) => element.getBoundingClientRect().height);
+}
+
 async function expectCardIsTopmost(page: Page, heading: string) {
   const card = page
     .getByRole('heading', { name: heading })
@@ -184,6 +193,21 @@ test('keeps all advanced image cards sticky on desktop', async ({ page }) => {
   await expectCardSticks(page, 'PSF', psfTop);
   await expectCardSticks(page, 'Wavefront Map', wavefrontTop);
   await expectCardIsTopmost(page, 'Simulated Image');
+});
+
+test('keeps advanced image cards equal height on desktop', async ({ page }) => {
+  await page.goto('/');
+  await enableAdvancedMode(page);
+
+  const heights = await Promise.all(
+    ['Simulated Image', 'PSF', 'Wavefront Map'].map((heading) =>
+      getCardHeightByHeading(page, heading)
+    )
+  );
+  const tallestHeight = Math.max(...heights);
+  const shortestHeight = Math.min(...heights);
+
+  expect(tallestHeight - shortestHeight).toBeLessThanOrEqual(1);
 });
 
 test('masks the advanced sticky card gutters and top gaps on desktop', async ({ page }) => {
