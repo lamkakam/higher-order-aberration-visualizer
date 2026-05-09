@@ -4,7 +4,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 interface SimulatedImageCardProps {
   readonly imageUrl: string | undefined;
@@ -14,6 +14,7 @@ interface SimulatedImageCardProps {
   readonly title?: string;
   readonly description?: string;
   readonly altText?: string;
+  readonly bottomContent?: ReactNode;
 }
 
 interface PreviewableImageProps {
@@ -118,7 +119,8 @@ export function SimulatedImageCard({
   error,
   title = 'Simulated Image',
   description = 'This shows how the selected picture would look through the current optical settings.',
-  altText = 'Convolved simulated target'
+  altText = 'Convolved simulated target',
+  bottomContent
 }: SimulatedImageCardProps) {
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>
@@ -151,6 +153,7 @@ export function SimulatedImageCard({
         <Typography variant="body2" color="text.secondary">
           {description}
         </Typography>
+        {bottomContent}
       </CardContent>
     </Card>
   );

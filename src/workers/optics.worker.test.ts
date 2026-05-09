@@ -52,6 +52,7 @@ describe('optics worker', () => {
       apertureDiameterMm: 3,
       showScaleBar: true,
       targetId: 'siemensstar',
+      wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}
     });
 
@@ -85,6 +86,7 @@ describe('optics worker', () => {
       apertureDiameterMm: 3,
       showScaleBar: true,
       targetId: 'siemensstar',
+      wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}
     });
 
@@ -112,6 +114,7 @@ describe('optics worker', () => {
       apertureDiameterMm: 3,
       showScaleBar: true,
       targetId: 'siemensstar',
+      wavefrontLegendUnit: 'micron',
       zernikeCoefficients: {
         '2,0': 0.25,
         '4,0': 0
@@ -143,8 +146,12 @@ describe('optics worker', () => {
       expect.any(Object)
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
-      expect.stringContaining('render_wavefront(simulation)'),
-      expect.any(Object)
+      expect.stringContaining('render_wavefront(simulation, unit=str(wavefront_legend_unit))'),
+      expect.objectContaining({
+        globals: expect.objectContaining({
+          wavefront_legend_unit: 'micron'
+        })
+      })
     );
     expect(runPythonAsync).not.toHaveBeenCalledWith(
       expect.stringContaining('render_wavefront(simulation, show_scale_bar='),
@@ -161,6 +168,7 @@ describe('optics worker', () => {
       apertureDiameterMm: 3,
       showScaleBar: false,
       targetId: 'siemensstar',
+      wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}
     });
 

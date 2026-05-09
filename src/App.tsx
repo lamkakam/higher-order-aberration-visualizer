@@ -1,7 +1,10 @@
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
 import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { useEffect, useState } from 'react';
 import {
@@ -13,7 +16,8 @@ import {
   SimulatedImageCard,
   targetOptions,
   type DisplayMode,
-  type ThemeMode
+  type ThemeMode,
+  type WavefrontLegendUnit
 } from './components';
 import { useAppTheme } from './hooks/useAppTheme';
 import { useWorkerClient } from './hooks/useWorkerClient';
@@ -28,13 +32,17 @@ interface AppProps {
   readonly workerClient?: WorkerClient;
 }
 
-const defaultTargetId: SupportedTargetId = 'snellen_e_20_20';
-const defaultApertureDiameterMm = 3;
+const defaultTargetId: SupportedTargetId = 'logmar_chart';
+const defaultApertureDiameterMm = 6;
 const debounceMs = 300;
 const computeTimeoutMs = 60_000;
 const mobileStickyTopPx = 16;
 const desktopStickyTopPx = 24;
 const advancedGridHalfGapPx = 12;
+const wavefrontLegendUnitOptions = [
+  { value: 'wave', label: 'Wave' },
+  { value: 'micron', label: 'Micron' }
+] as const;
 
 export function App({ workerClient }: AppProps) {
   const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
@@ -42,6 +50,8 @@ export function App({ workerClient }: AppProps) {
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
   const [showScaleBar, setShowScaleBar] = useState(false);
+  const [wavefrontLegendUnit, setWavefrontLegendUnit] =
+    useState<WavefrontLegendUnit>('wave');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficients, setZernikeCoefficients] = useState(
@@ -90,6 +100,7 @@ export function App({ workerClient }: AppProps) {
           apertureDiameterMm,
           showScaleBar,
           targetId,
+          wavefrontLegendUnit,
           zernikeCoefficients
         }),
         computeTimeoutMs
@@ -117,7 +128,14 @@ export function App({ workerClient }: AppProps) {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [apertureDiameterMm, client, showScaleBar, targetId, zernikeCoefficients]);
+  }, [
+    apertureDiameterMm,
+    client,
+    showScaleBar,
+    targetId,
+    wavefrontLegendUnit,
+    zernikeCoefficients
+  ]);
 
   const updateZernikeCoefficient = (key: ZernikeCoefficientKey, value: number) => {
     setZernikeCoefficients((currentValues) => ({
@@ -164,7 +182,7 @@ export function App({ workerClient }: AppProps) {
             <Box
               sx={{
                 ...stickyImageCardMaskSx,
-                alignSelf: 'start',
+                alignSelf: { xs: 'start', sm: 'stretch' },
                 position: 'sticky',
                 top: { xs: mobileStickyTopPx, sm: desktopStickyTopPx },
                 zIndex: 3
@@ -182,7 +200,7 @@ export function App({ workerClient }: AppProps) {
               <Box
                 sx={{
                   ...desktopStickyImageCardMaskSx,
-                  alignSelf: 'start',
+                  alignSelf: { xs: 'start', sm: 'stretch' },
                   position: { xs: 'static', sm: 'sticky' },
                   top: { sm: desktopStickyTopPx },
                   zIndex: { sm: 2 }
@@ -203,7 +221,7 @@ export function App({ workerClient }: AppProps) {
               <Box
                 sx={{
                   ...desktopStickyImageCardMaskSx,
-                  alignSelf: 'start',
+                  alignSelf: { xs: 'start', sm: 'stretch' },
                   position: { xs: 'static', sm: 'sticky' },
                   top: { sm: desktopStickyTopPx },
                   zIndex: { sm: 2 }
@@ -217,6 +235,36 @@ export function App({ workerClient }: AppProps) {
                   title="Wavefront Map"
                   description="The rendered wavefront map for the current Zernike aberration values."
                   altText="Rendered wavefront map"
+                  bottomContent={
+                    <Box>
+                      <Typography
+                        id="wavefront-legend-unit-button-group-label"
+                        variant="subtitle1"
+                        sx={{ mb: 1 }}
+                      >
+                        Legend Unit
+                      </Typography>
+                      <ButtonGroup
+                        aria-labelledby="wavefront-legend-unit-button-group-label"
+                        fullWidth
+                      >
+                        {wavefrontLegendUnitOptions.map((option) => (
+                          <Button
+                            key={option.value}
+                            aria-label={option.label}
+                            variant={
+                              wavefrontLegendUnit === option.value ? 'contained' : 'outlined'
+                            }
+                            onClick={() => {
+                              setWavefrontLegendUnit(option.value);
+                            }}
+                          >
+                            {option.label}
+                          </Button>
+                        ))}
+                      </ButtonGroup>
+                    </Box>
+                  }
                 />
               </Box>
             ) : undefined}

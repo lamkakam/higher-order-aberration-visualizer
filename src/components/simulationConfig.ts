@@ -2,15 +2,15 @@ import type { SupportedTargetId, ZernikeCoefficientKey } from '../workers/types'
 
 export const targetOptions = [
   {
+    id: 'logmar_chart',
+    label: 'Eye Chart (logMAR)',
+    description: 'The first six lines of an eye chart, with letters arranged in rows.'
+  },
+  {
     id: 'snellen_e_20_20',
     label: 'Snellen Chart Letter E on 20/20',
     description:
       'An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target.'
-  },
-  {
-    id: 'logmar_chart',
-    label: 'LogMAR Chart',
-    description: 'The first six lines of an eye chart, with letters arranged in rows.'
   },
   {
     id: 'jupiter_502nm',
@@ -63,11 +63,24 @@ export const zernikeTerms = [
   { key: '4,-2', n: 4, m: -2, label: 'Secondary Astigmatism (Oblique)' },
   { key: '4,0', n: 4, m: 0, label: 'Primary Spherical Aberration' },
   { key: '4,2', n: 4, m: 2, label: 'Secondary Astigmatism (Vertical)' },
-  { key: '4,4', n: 4, m: 4, label: 'Quadrafoil (Vertical)' }
+  { key: '4,4', n: 4, m: 4, label: 'Quadrafoil (Vertical)' },
+  { key: '5,-5', n: 5, m: -5, label: 'Pentafoil (Vertical)' },
+  { key: '5,-3', n: 5, m: -3, label: 'Secondary Trefoil (Vertical)' },
+  { key: '5,-1', n: 5, m: -1, label: 'Secondary Coma (Vertical)' },
+  { key: '5,1', n: 5, m: 1, label: 'Secondary Coma (Horizontal)' },
+  { key: '5,3', n: 5, m: 3, label: 'Secondary Trefoil (Oblique)' },
+  { key: '5,5', n: 5, m: 5, label: 'Pentafoil (Oblique)' },
+  { key: '6,-6', n: 6, m: -6, label: 'Hexafoil (Oblique)' },
+  { key: '6,-4', n: 6, m: -4, label: 'Secondary Quadrafoil (Oblique)' },
+  { key: '6,-2', n: 6, m: -2, label: 'Tertiary Astigmatism (Oblique)' },
+  { key: '6,0', n: 6, m: 0, label: 'Secondary Spherical Aberration' },
+  { key: '6,2', n: 6, m: 2, label: 'Tertiary Astigmatism (Vertical)' },
+  { key: '6,4', n: 6, m: 4, label: 'Secondary Quadrafoil (Vertical)' },
+  { key: '6,6', n: 6, m: 6, label: 'Hexafoil (Vertical)' }
 ] as const satisfies readonly ZernikeTerm[];
 
-export const zernikeCoefficientMin = -2;
-export const zernikeCoefficientMax = 2;
+export const zernikeCoefficientMin = -5;
+export const zernikeCoefficientMax = 5;
 export const zernikeCoefficientStep = 0.05;
 
 export function roundToTwoDecimals(value: number): number {

@@ -105,4 +105,24 @@ describe('SimulatedImageCard', () => {
     expect(screen.queryByRole('dialog', { name: 'Simulated Image enlarged image' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open enlarged Simulated Image image' })).toBeInTheDocument();
   });
+
+  it('renders bottom content after the description', () => {
+    render(
+      <SimulatedImageCard
+        imageUrl={undefined}
+        statusText="Waiting for image"
+        isLoading={false}
+        error={undefined}
+        description="Card description"
+        bottomContent={<div>Bottom controls</div>}
+      />
+    );
+
+    const description = screen.getByText('Card description');
+    const bottomContent = screen.getByText('Bottom controls');
+
+    expect(
+      description.compareDocumentPosition(bottomContent) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
 });

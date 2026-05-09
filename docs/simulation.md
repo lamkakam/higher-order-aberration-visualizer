@@ -9,6 +9,7 @@ The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the wor
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `targetId`: one of the supported target ids
+- `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
 - `zernikeCoefficients`: a record keyed by `"n,m"` strings with coefficient values in waves
 
 The worker converts the Zernike keys to Python `(n, m)` tuples and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
@@ -50,7 +51,7 @@ The worker renders three PNG outputs from each `OpticalSimulation`:
 - log-scaled PSF image from [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - wavefront OPD map from [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
 
-By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars.
+By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`.
 
 The worker returns these as `imageUrl`, `psfImageUrl`, and `wavefrontImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
 

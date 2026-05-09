@@ -16,6 +16,8 @@ import {
   zernikeTerms
 } from './simulationConfig';
 
+const zernikeRangeErrorText = `Value must be between ${zernikeCoefficientMin} and ${zernikeCoefficientMax}.`;
+
 interface AberrationSlidersCardProps {
   readonly values: Record<ZernikeCoefficientKey, number>;
   readonly onValueChange: (key: ZernikeCoefficientKey, value: number) => void;
@@ -69,7 +71,7 @@ export function AberrationSlidersCard({
                     data-testid={`zernike-value-${term.key}`}
                     autoComplete="off"
                     error={hasDraftRangeError}
-                    helperText={hasDraftRangeError ? 'Value must be between -2 and 2.' : undefined}
+                    helperText={hasDraftRangeError ? zernikeRangeErrorText : undefined}
                     inputMode="decimal"
                     size="small"
                     sx={{

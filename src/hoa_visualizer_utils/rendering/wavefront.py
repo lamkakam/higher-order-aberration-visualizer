@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 from matplotlib.ticker import ScalarFormatter
 
@@ -13,19 +15,28 @@ def render_wavefront(
     simulation: OpticalSimulation,
     *,
     image_format: ImageFormat = "png",
+    unit: Literal["wave", "micron"] = "wave",
 ) -> bytes:
     """Render the wavefront OPD map."""
 
     plt = _load_pyplot()
-    wavefront_waves = simulation.wavefront_nm / simulation.sampling.wavelength_nm
-    masked_wavefront = np.where(simulation.pupil_mask, wavefront_waves, np.nan)
+    if unit == "wave":
+        wavefront = simulation.wavefront_nm / simulation.sampling.wavelength_nm
+        label = "waves"
+    elif unit == "micron":
+        wavefront = simulation.wavefront_nm / 1000
+        label = "microns"
+    else:
+        raise ValueError(f"Unsupported wavefront unit: {unit}")
+
+    masked_wavefront = np.where(simulation.pupil_mask, wavefront, np.nan)
     fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
     image = ax.imshow(masked_wavefront, cmap="viridis")
     ax.set_axis_off()
     fig.colorbar(
         image,
         ax=ax,
-        label="waves",
+        label=label,
         format=_WavefrontTickFormatter(),
     )
     return _figure_to_bytes(fig, image_format)
