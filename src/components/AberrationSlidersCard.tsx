@@ -73,8 +73,8 @@ export function AberrationSlidersCard({
             </Button>
           </Box>
           <Stack spacing={1}>
-            <Typography variant="body2">Coefficient Unit</Typography>
-            <ButtonGroup aria-label="Coefficient Unit" size="small" variant="outlined">
+            <Typography variant="body2">Coefficient Unit (RMS)</Typography>
+            <ButtonGroup aria-label="Coefficient Unit (RMS)" size="small" variant="outlined">
               {coefficientDisplayUnits.map((unit) => (
                 <Button
                   key={unit.value}

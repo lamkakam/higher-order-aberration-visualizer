@@ -145,7 +145,7 @@ it('shows the zernike coefficient unit selector defaulting to wave', async () =>
     await vi.advanceTimersByTimeAsync(300);
   });
 
-  expect(screen.getByText('Coefficient Unit')).toBeInTheDocument();
+  expect(screen.getByText('Coefficient Unit (RMS)')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Wave' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('button', { name: 'Micron' })).toHaveAttribute('aria-pressed', 'false');
 });
