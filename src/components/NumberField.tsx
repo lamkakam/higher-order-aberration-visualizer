@@ -3,7 +3,7 @@ import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 
 const inputCommitDebounceMs = 150;
 
@@ -48,12 +48,35 @@ function NumberFieldInput({
   error = false,
   onChange
 }: NumberFieldInputProps) {
-  const [draftValue, setDraftValue] = useState(String(value));
+  const [draftState, setDraftState] = useState({
+    committedValue: value,
+    draftValue: String(value),
+    draftVersion: 0
+  });
   const commitTimerRef = useRef<number | undefined>(undefined);
+  let currentDraftState = draftState;
 
-  useEffect(() => {
-    setDraftValue(String(value));
-  }, [value]);
+  if (currentDraftState.committedValue !== value) {
+    currentDraftState = {
+      committedValue: value,
+      draftValue: String(value),
+      draftVersion: currentDraftState.draftVersion + 1
+    };
+    setDraftState(currentDraftState);
+  }
+
+  const latestCommitInputsRef = useRef({
+    draftVersion: currentDraftState.draftVersion,
+    min,
+    onChange,
+    value
+  });
+  latestCommitInputsRef.current = {
+    draftVersion: currentDraftState.draftVersion,
+    min,
+    onChange,
+    value
+  };
 
   const clearCommitTimer = useCallback(() => {
     window.clearTimeout(commitTimerRef.current);
@@ -62,47 +85,76 @@ function NumberFieldInput({
 
   const commitDraft = useCallback(
     (nextDraft: string) => {
+      const {
+        min: latestMin,
+        onChange: latestOnChange,
+        value: latestValue
+      } = latestCommitInputsRef.current;
       const parsedValue = Number(nextDraft);
       if (
         nextDraft.trim() !== '' &&
         Number.isFinite(parsedValue) &&
-        parsedValue >= min &&
-        parsedValue !== value
+        parsedValue >= latestMin &&
+        parsedValue !== latestValue
       ) {
-        onChange(parsedValue);
+        latestOnChange(parsedValue);
       }
     },
-    [min, onChange, value]
+    []
   );
 
-  useEffect(() => {
-    clearCommitTimer();
-    const parsedValue = Number(draftValue);
-    if (
-      draftValue.trim() !== '' &&
-      Number.isFinite(parsedValue) &&
-      parsedValue >= min &&
-      parsedValue !== value
-    ) {
-      commitTimerRef.current = window.setTimeout(() => {
-        commitDraft(draftValue);
-      }, inputCommitDebounceMs);
-    }
+  const scheduleDraftCommit = useCallback(
+    (nextDraft: string, nextDraftVersion: number) => {
+      const {
+        min: latestMin,
+        value: latestValue
+      } = latestCommitInputsRef.current;
+      const parsedValue = Number(nextDraft);
 
-    return clearCommitTimer;
-  }, [clearCommitTimer, commitDraft, draftValue, min, value]);
+      clearCommitTimer();
+      if (
+        nextDraft.trim() !== '' &&
+        Number.isFinite(parsedValue) &&
+        parsedValue >= latestMin &&
+        parsedValue !== latestValue
+      ) {
+        commitTimerRef.current = window.setTimeout(() => {
+          if (latestCommitInputsRef.current.draftVersion === nextDraftVersion) {
+            commitDraft(nextDraft);
+          }
+        }, inputCommitDebounceMs);
+      }
+    },
+    [clearCommitTimer, commitDraft]
+  );
 
   const flushDraft = useCallback(() => {
     clearCommitTimer();
-    commitDraft(draftValue);
-  }, [clearCommitTimer, commitDraft, draftValue]);
+    commitDraft(currentDraftState.draftValue);
+  }, [clearCommitTimer, commitDraft, currentDraftState.draftValue]);
+
+  const handleInputRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      if (node === null) {
+        clearCommitTimer();
+      }
+    },
+    [clearCommitTimer]
+  );
 
   const handleInputChange = (nextValue: string) => {
     if (!isDecimalText(nextValue)) {
       return;
     }
 
-    setDraftValue(nextValue);
+    const nextDraftVersion = currentDraftState.draftVersion + 1;
+    setDraftState({
+      committedValue: value,
+      draftValue: nextValue,
+      draftVersion: nextDraftVersion
+    });
+    latestCommitInputsRef.current.draftVersion = nextDraftVersion;
+    scheduleDraftCommit(nextValue, nextDraftVersion);
   };
 
   return (
@@ -122,8 +174,9 @@ function NumberFieldInput({
           id={id}
           label={label}
           type="text"
-          value={draftValue}
+          value={currentDraftState.draftValue}
           inputProps={{ inputMode: 'decimal', min, step: 0.1 }}
+          inputRef={handleInputRef}
           onChange={(event) => {
             handleInputChange(event.target.value);
           }}

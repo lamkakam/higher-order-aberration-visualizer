@@ -190,4 +190,24 @@ describe('NumberField', () => {
 
     expect(screen.getByLabelText('Aperture')).toHaveValue('4');
   });
+
+  it('cancels a pending debounced commit when the committed value changes', async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <NumberField label="Aperture" value={3} min={0.5} onChange={onChange} />
+    );
+
+    fireEvent.change(screen.getByLabelText('Aperture'), {
+      target: { value: '4.2' }
+    });
+    rerender(<NumberField label="Aperture" value={5} min={0.5} onChange={onChange} />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
+    });
+
+    expect(screen.getByLabelText('Aperture')).toHaveValue('5');
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

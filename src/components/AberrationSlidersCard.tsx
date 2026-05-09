@@ -7,7 +7,7 @@ import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
 import {
   micronsToWaves,
@@ -108,19 +108,36 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   resetVersion,
   onValueChange
 }: AberrationCoefficientRowProps) {
-  const [draftValue, setDraftValue] = useState(formatCommittedValue(value, displayUnit));
-  const [sliderValue, setSliderValue] = useState(value);
+  const [rowState, setRowState] = useState({
+    committedValue: value,
+    displayUnit,
+    draftValue: formatCommittedValue(value, displayUnit),
+    resetVersion,
+    sliderValue: value
+  });
   const sliderValueRef = useRef(value);
   const keyboardSlidingRef = useRef(false);
+  let currentRowState = rowState;
+
+  if (
+    currentRowState.committedValue !== value ||
+    currentRowState.displayUnit !== displayUnit ||
+    currentRowState.resetVersion !== resetVersion
+  ) {
+    currentRowState = {
+      committedValue: value,
+      displayUnit,
+      draftValue: formatCommittedValue(value, displayUnit),
+      resetVersion,
+      sliderValue: value
+    };
+    sliderValueRef.current = value;
+    setRowState(currentRowState);
+  }
+
   const label = `${term.label} Z(${term.n},${term.m})`;
   const coefficientLabel = `${label} coefficient`;
-  const hasDraftRangeError = isOutOfRangeDraft(draftValue, displayUnit);
-
-  useEffect(() => {
-    setDraftValue(formatCommittedValue(value, displayUnit));
-    setSliderValue(value);
-    sliderValueRef.current = value;
-  }, [displayUnit, resetVersion, value]);
+  const hasDraftRangeError = isOutOfRangeDraft(currentRowState.draftValue, displayUnit);
 
   const commitDraft = useCallback(
     (nextDraft: string) => {
@@ -133,15 +150,18 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   );
 
   const flushDraft = useCallback(() => {
-    commitDraft(draftValue);
-  }, [commitDraft, draftValue]);
+    commitDraft(currentRowState.draftValue);
+  }, [commitDraft, currentRowState.draftValue]);
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
       const roundedValue = roundToTwoDecimals(nextValue);
-      setSliderValue(roundedValue);
       sliderValueRef.current = roundedValue;
-      setDraftValue(formatCommittedValue(roundedValue, displayUnit));
+      setRowState((previousState) => ({
+        ...previousState,
+        draftValue: formatCommittedValue(roundedValue, displayUnit),
+        sliderValue: roundedValue
+      }));
       if (roundedValue !== value) {
         onValueChange(term.key, roundedValue);
       }
@@ -175,11 +195,14 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
             }
           }}
           type="text"
-          value={draftValue}
+          value={currentRowState.draftValue}
           onChange={(event) => {
             const nextDraft = event.target.value;
             if (isSignedDecimalDraft(nextDraft)) {
-              setDraftValue(nextDraft);
+              setRowState((previousState) => ({
+                ...previousState,
+                draftValue: nextDraft
+              }));
             }
           }}
           onBlur={flushDraft}
@@ -204,7 +227,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
         min={zernikeCoefficientMin}
         max={zernikeCoefficientMax}
         step={zernikeCoefficientStep}
-        value={sliderValue}
+        value={currentRowState.sliderValue}
         valueLabelDisplay="auto"
         valueLabelFormat={(nextValue) => formatCommittedValue(nextValue, displayUnit)}
         onChange={(event, nextValue) => {
@@ -215,7 +238,10 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
             keyboardSlidingRef.current = true;
           }
           sliderValueRef.current = roundedValue;
-          setSliderValue(roundedValue);
+          setRowState((previousState) => ({
+            ...previousState,
+            sliderValue: roundedValue
+          }));
         }}
         onChangeCommitted={(_, nextValue) => {
           if (keyboardSlidingRef.current) {
