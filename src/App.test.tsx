@@ -96,6 +96,14 @@ it('shows zernike textbox values and resets changed values', async () => {
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('textbox', { name: 'Pentafoil (Vertical) Z(5,-5) coefficient' })
+  ).toHaveValue('0.00');
+  expect(
+    screen.getByRole('textbox', {
+      name: 'Secondary Spherical Aberration Z(6,0) coefficient'
+    })
+  ).toHaveValue('0.00');
   const sphericalCoefficient = screen.getByRole('textbox', {
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
   });
@@ -284,6 +292,8 @@ it('debounces worker calls using the current UI payload', async () => {
     showScaleBar: false,
     targetId: 'snellen_e_20_20',
     zernikeCoefficients: expect.objectContaining({
+      '5,-5': 0,
+      '6,0': 0,
       '4,0': 0
     })
   });
