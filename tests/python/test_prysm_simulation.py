@@ -561,6 +561,46 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
 
 
+@pytest.mark.parametrize(
+    ("renderer", "figure_to_bytes_path"),
+    [
+        (
+            render_convolved_image,
+            "hoa_visualizer_utils.rendering.convolved_image._figure_to_bytes",
+        ),
+        (render_psf, "hoa_visualizer_utils.rendering.psf._figure_to_bytes"),
+        (render_wavefront, "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes"),
+    ],
+)
+def test_render_helpers_use_large_default_figure_size(
+    monkeypatch: pytest.MonkeyPatch,
+    renderer,
+    figure_to_bytes_path: str,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(figure_to_bytes_path, figure_to_bytes)
+
+    assert renderer(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        assert tuple(fig.get_size_inches()) == pytest.approx((10, 9))
+    finally:
+        _load_pyplot().close(fig)
+
+
 def test_psf_renderer_uses_viridis_log_normalized_intensity_colorbar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
