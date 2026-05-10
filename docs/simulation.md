@@ -44,7 +44,7 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
 
-The aperture helper currently accepts only `shape="circle"` and `0 <= central_obstruction_ratio < 1`. A ratio of `0` is the default unobstructed circular pupil. A nonzero ratio subtracts a centered circular obstruction from the outer circular aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`.
+The aperture helper currently accepts only `shape="circle"` and `0 <= central_obstruction_ratio < 1`. A ratio of `0` is the default unobstructed circular pupil. A nonzero ratio subtracts a centered circular obstruction from the outer circular aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`. In advanced display mode, the UI exposes these aperture settings through an aperture mask modal under Target.
 
 When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
 
@@ -61,6 +61,8 @@ The Python renderers use a default 10 by 9 inch Matplotlib figure size, which pr
 By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`.
 
 The worker returns these as `imageUrl`, `psfImageUrl`, and `wavefrontImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
+
+The worker can also render a standalone aperture mask preview with `renderApertureMask`. That path validates the same `ApertureSpec` settings and returns an `ApertureMaskResult` PNG data URL without running `compute_simulation`.
 
 ## Pyodide Wheel Rationale
 

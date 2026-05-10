@@ -193,6 +193,31 @@ describe('optics worker', () => {
     );
   });
 
+  it('renders an aperture mask preview through Pyodide using serializable inputs', async () => {
+    const { expose } = await import('comlink');
+    await import('./optics.worker');
+
+    const api = vi.mocked(expose).mock.calls[0][0];
+    const result = await api.renderApertureMask({
+      shape: 'circle',
+      centralObstructionRatio: 0.35
+    });
+
+    expect(result.imageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
+    expect(result.diagnostics.status).toBe('ready');
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('render_aperture_mask(aperture)'),
+      expect.objectContaining({
+        globals: expect.objectContaining({
+          aperture_settings: {
+            shape: 'circle',
+            centralObstructionRatio: 0.35
+          }
+        })
+      })
+    );
+  });
+
   it('passes disabled scale bar preference to image and PSF renderers only', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');

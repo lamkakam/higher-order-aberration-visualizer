@@ -7,6 +7,7 @@ import pytest
 from scipy import ndimage
 
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
+from hoa_visualizer_utils.rendering.aperture_mask import render_aperture_mask
 from hoa_visualizer_utils.rendering.psf import render_psf
 from hoa_visualizer_utils.rendering.scale_bar import _scale_bar_spec, add_scale_bar
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
@@ -153,6 +154,20 @@ def test_central_obstruction_masks_center_and_keeps_outputs_valid() -> None:
 def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:
     with pytest.raises(ValueError):
         aperture.validated()
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(),
+        ApertureSpec(central_obstruction_ratio=0.35),
+    ],
+)
+def test_render_aperture_mask_returns_png_bytes(aperture: ApertureSpec) -> None:
+    image_bytes = render_aperture_mask(aperture)
+
+    assert image_bytes.startswith(b"\x89PNG")
+    assert len(image_bytes) > 1000
 
 
 def test_snellen_e_20_20_uses_five_arcminute_height() -> None:

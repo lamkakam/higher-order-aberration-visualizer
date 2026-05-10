@@ -43,8 +43,14 @@ export interface ConvolvedImageResult {
   diagnostics: WorkerDiagnostics;
 }
 
+export interface ApertureMaskResult {
+  imageUrl: string;
+  diagnostics: WorkerDiagnostics;
+}
+
 export interface OpticsWorkerApi {
   initialize(): Promise<WorkerDiagnostics>;
   getStatus(): Promise<WorkerDiagnostics>;
   computeConvolvedImage(input: ConvolvedImageInput): Promise<ConvolvedImageResult>;
+  renderApertureMask(input: ApertureSettings): Promise<ApertureMaskResult>;
 }

@@ -5,6 +5,7 @@ import type { PyodideInterface } from 'pyodide';
 import type { PyProxy } from 'pyodide/ffi';
 import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
 import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
+import apertureMaskSource from '../hoa_visualizer_utils/rendering/aperture_mask.py?raw';
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
 import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
 import scaleBarSource from '../hoa_visualizer_utils/rendering/scale_bar.py?raw';
@@ -19,6 +20,8 @@ import targetsSource from '../hoa_visualizer_utils/simulation/targets.py?raw';
 import utilsInitSource from '../hoa_visualizer_utils/utils/__init__.py?raw';
 import figuresSource from '../hoa_visualizer_utils/utils/figures.py?raw';
 import type {
+  ApertureMaskResult,
+  ApertureSettings,
   ConvolvedImageInput,
   ConvolvedImageResult,
   OpticsWorkerApi,
@@ -32,6 +35,7 @@ const pythonPackageRoot = '/home/pyodide';
 const pythonSources = [
   ['hoa_visualizer_utils/__init__.py', packageInitSource],
   ['hoa_visualizer_utils/rendering/__init__.py', renderingInitSource],
+  ['hoa_visualizer_utils/rendering/aperture_mask.py', apertureMaskSource],
   ['hoa_visualizer_utils/rendering/convolved_image.py', convolvedImageSource],
   ['hoa_visualizer_utils/rendering/psf.py', psfSource],
   ['hoa_visualizer_utils/rendering/scale_bar.py', scaleBarSource],
@@ -186,10 +190,40 @@ simulation = compute_simulation(
   };
 }
 
+async function renderApertureMask(input: ApertureSettings): Promise<ApertureMaskResult> {
+  await ensureInitialized();
+  if (!pyodide || diagnostics.status !== 'ready') {
+    throw new Error(diagnostics.message);
+  }
+
+  const globals = pyodide.toPy({
+    aperture_settings: input
+  });
+  const imageBytes = await renderSimulationImage(
+    globals,
+    `
+from hoa_visualizer_utils.rendering.aperture_mask import render_aperture_mask
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
+
+aperture = ApertureSpec(
+    shape=str(aperture_settings["shape"]),
+    central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+)
+render_aperture_mask(aperture)
+`
+  );
+
+  return {
+    imageUrl: `data:image/png;base64,${bytesToBase64(imageBytes)}`,
+    diagnostics
+  };
+}
+
 const api: OpticsWorkerApi = {
   initialize,
   getStatus,
-  computeConvolvedImage
+  computeConvolvedImage,
+  renderApertureMask
 };
 
 expose(api);

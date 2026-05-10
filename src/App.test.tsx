@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { createMockWorkerClient } from './test/workerMock';
-import type { ConvolvedImageInput, ConvolvedImageResult } from './workers/types';
+import type {
+  ApertureMaskResult,
+  ConvolvedImageInput,
+  ConvolvedImageResult
+} from './workers/types';
 
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
@@ -83,6 +87,166 @@ it('renders default aperture and supported target options', async () => {
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
+});
+
+it('shows aperture mask controls only in advanced mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByRole('button', { name: 'Edit aperture mask' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.getByRole('button', { name: 'Edit aperture mask' })).toBeInTheDocument();
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+});
+
+it('opens an aperture mask modal that only closes through confirm or cancel', async () => {
+  const user = userEvent.setup();
+  let resolvePreview: (value: ApertureMaskResult) => void = () => {};
+  const renderApertureMask = vi.fn(
+    () =>
+      new Promise<ApertureMaskResult>((resolve) => {
+        resolvePreview = resolve;
+      })
+  );
+  render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  expect(within(modal).getByLabelText('Aperture Shape')).toHaveValue('circle');
+  expect(within(modal).getByLabelText('Central Obstruction Ratio')).toHaveValue('0');
+  expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
+  expect(within(modal).getByRole('button', { name: 'Confirm aperture mask' })).toBeInTheDocument();
+  expect(within(modal).getByRole('button', { name: 'Cancel aperture mask' })).toBeInTheDocument();
+
+  fireEvent.keyDown(modal, { key: 'Escape' });
+  expect(screen.getByRole('dialog', { name: 'Aperture Mask' })).toBeInTheDocument();
+
+  const backdrop = document.querySelector('.MuiBackdrop-root') as HTMLElement;
+  fireEvent.click(backdrop);
+  expect(screen.getByRole('dialog', { name: 'Aperture Mask' })).toBeInTheDocument();
+
+  await act(async () => {
+    resolvePreview({
+      imageUrl: `data:image/png;base64,${window.btoa('mask')}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    });
+  });
+  expect(await within(modal).findByAltText('Aperture mask preview')).toBeInTheDocument();
+  await user.click(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
+  expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
+});
+
+it('cancels draft aperture mask changes and preserves previous simulation settings', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(screen.getByLabelText('Central Obstruction Ratio'), {
+    target: { value: '0.35' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
+    target: { value: '5' }
+  });
+  fireEvent.blur(screen.getByLabelText('Aperture Diameter (mm)'));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
+    apertureDiameterMm: 5,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('confirms aperture mask changes and sends them in the next simulation payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(screen.getByLabelText('Central Obstruction Ratio'), {
+    target: { value: '0.35' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
+  expect(screen.getByText('Circle, 35% obstruction')).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: {
+      shape: 'circle',
+      centralObstructionRatio: 0.35
+    },
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
 });
 
 it('describes the default simulated image target in plain language', async () => {

@@ -61,6 +61,7 @@ export function App({ workerClient }: AppProps) {
   const [wavefrontLegendUnit, setWavefrontLegendUnit] =
     useState<WavefrontLegendUnit>('wave');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
+  const [apertureSettings, setApertureSettings] = useState(defaultApertureSettings);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficients, setZernikeCoefficients] = useState(
     createDefaultZernikeCoefficients
@@ -108,7 +109,7 @@ export function App({ workerClient }: AppProps) {
 
       withTimeout(
         client.api.computeConvolvedImage({
-          apertureSettings: defaultApertureSettings,
+          apertureSettings,
           apertureDiameterMm,
           showScaleBar,
           targetId,
@@ -142,6 +143,7 @@ export function App({ workerClient }: AppProps) {
     };
   }, [
     apertureDiameterMm,
+    apertureSettings,
     client,
     showScaleBar,
     targetId,
@@ -159,6 +161,12 @@ export function App({ workerClient }: AppProps) {
   const resetZernikeCoefficients = useCallback(() => {
     setZernikeCoefficients(createDefaultZernikeCoefficients());
   }, []);
+
+  const renderApertureMask = useCallback(
+    (nextApertureSettings: ApertureSettings) =>
+      client.api.renderApertureMask(nextApertureSettings),
+    [client]
+  );
 
   return (
     <ThemeProvider theme={theme}>
@@ -288,8 +296,12 @@ export function App({ workerClient }: AppProps) {
             <Stack spacing={3} sx={{ gridColumn: '1 / -1' }}>
               <OpticalSystemConfigCard
                 apertureDiameterMm={apertureDiameterMm}
+                apertureSettings={apertureSettings}
+                displayMode={displayMode}
                 targetId={targetId}
                 onApertureChange={setApertureDiameterMm}
+                onApertureSettingsChange={setApertureSettings}
+                onRenderApertureMask={renderApertureMask}
                 onTargetChange={setTargetId}
               />
               <AberrationSlidersCard
