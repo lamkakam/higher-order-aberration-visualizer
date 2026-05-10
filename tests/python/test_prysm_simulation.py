@@ -128,6 +128,7 @@ def test_snellen_e_20_20_keeps_pixel_size_with_fixed_angular_sampling() -> None:
 def test_snellen_e_20_20_default_height_tracks_image_samples(
     image_samples: int,
 ) -> None:
+    expected_height_fraction = 0.125
     simulation = compute_simulation(
         10,
         {},
@@ -139,19 +140,21 @@ def test_snellen_e_20_20_default_height_tracks_image_samples(
     height_px, width_px = _target_size_px(simulation.target)
     expected_block_px = max(
         1,
-        round(round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION) / 5),
+        round(round(image_samples * expected_height_fraction) / 5),
     )
 
     assert height_px == 5 * expected_block_px
     assert width_px == height_px
     assert height_px == pytest.approx(
-        image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
+        image_samples * expected_height_fraction,
         abs=3,
     )
+    assert SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION == expected_height_fraction
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
 def test_snellen_e_20_20_default_sampling_records_angular_spacing() -> None:
+    expected_height_fraction = 0.125
     simulation = compute_simulation(
         300,
         {},
@@ -162,13 +165,14 @@ def test_snellen_e_20_20_default_sampling_records_angular_spacing() -> None:
 
     expected_block_px = max(
         1,
-        round(round(128 * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION) / 5),
+        round(round(128 * expected_height_fraction) / 5),
     )
 
     assert _target_size_px(simulation.target) == (
         5 * expected_block_px,
         5 * expected_block_px,
     )
+    assert SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION == expected_height_fraction
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
@@ -559,6 +563,46 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_wavefront(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_psf(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
+
+
+@pytest.mark.parametrize(
+    ("renderer", "figure_to_bytes_path"),
+    [
+        (
+            render_convolved_image,
+            "hoa_visualizer_utils.rendering.convolved_image._figure_to_bytes",
+        ),
+        (render_psf, "hoa_visualizer_utils.rendering.psf._figure_to_bytes"),
+        (render_wavefront, "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes"),
+    ],
+)
+def test_render_helpers_use_large_default_figure_size(
+    monkeypatch: pytest.MonkeyPatch,
+    renderer,
+    figure_to_bytes_path: str,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(figure_to_bytes_path, figure_to_bytes)
+
+    assert renderer(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        assert tuple(fig.get_size_inches()) == pytest.approx((10, 9))
+    finally:
+        _load_pyplot().close(fig)
 
 
 def test_psf_renderer_uses_viridis_log_normalized_intensity_colorbar(

@@ -8,7 +8,12 @@ from matplotlib.ticker import LogFormatterSciNotation
 
 from hoa_visualizer_utils.rendering.scale_bar import add_scale_bar
 from hoa_visualizer_utils.simulation.models import OpticalSimulation
-from hoa_visualizer_utils.utils.figures import ImageFormat, _figure_to_bytes, _load_pyplot
+from hoa_visualizer_utils.utils.figures import (
+    DEFAULT_FIGURE_SIZE_INCHES,
+    ImageFormat,
+    _figure_to_bytes,
+    _load_pyplot,
+)
 
 
 def render_psf(
@@ -21,7 +26,10 @@ def render_psf(
 
     plt = _load_pyplot()
     psf_view = np.clip(simulation.psf / simulation.psf.max(), 1e-6, 1)
-    fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
+    fig, ax = plt.subplots(
+        figsize=DEFAULT_FIGURE_SIZE_INCHES,
+        constrained_layout=True,
+    )
     image = ax.imshow(psf_view, cmap="viridis", norm=LogNorm(vmin=1e-6, vmax=1))
     if show_scale_bar:
         add_scale_bar(ax, simulation)

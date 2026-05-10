@@ -8,7 +8,12 @@ import numpy as np
 from matplotlib.ticker import ScalarFormatter
 
 from hoa_visualizer_utils.simulation.models import OpticalSimulation
-from hoa_visualizer_utils.utils.figures import ImageFormat, _figure_to_bytes, _load_pyplot
+from hoa_visualizer_utils.utils.figures import (
+    DEFAULT_FIGURE_SIZE_INCHES,
+    ImageFormat,
+    _figure_to_bytes,
+    _load_pyplot,
+)
 
 
 def render_wavefront(
@@ -30,7 +35,10 @@ def render_wavefront(
         raise ValueError(f"Unsupported wavefront unit: {unit}")
 
     masked_wavefront = np.where(simulation.pupil_mask, wavefront, np.nan)
-    fig, ax = plt.subplots(figsize=(5, 4.5), constrained_layout=True)
+    fig, ax = plt.subplots(
+        figsize=DEFAULT_FIGURE_SIZE_INCHES,
+        constrained_layout=True,
+    )
     image = ax.imshow(masked_wavefront, cmap="viridis")
     ax.set_axis_off()
     fig.colorbar(

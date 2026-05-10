@@ -43,6 +43,8 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
 
+When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
+
 ## Rendered Outputs
 
 The worker renders three PNG outputs from each `OpticalSimulation`:
@@ -50,6 +52,8 @@ The worker renders three PNG outputs from each `OpticalSimulation`:
 - convolved target image from [`render_convolved_image`](../src/hoa_visualizer_utils/rendering/convolved_image.py)
 - log-scaled PSF image from [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - wavefront OPD map from [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
+
+The Python renderers use a default 10 by 9 inch Matplotlib figure size, which produces approximately 1000 by 900 pixel PNG outputs at Matplotlib's default 100 DPI.
 
 By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`.
 

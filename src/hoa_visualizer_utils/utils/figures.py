@@ -7,6 +7,7 @@ import os
 from typing import Literal
 
 ImageFormat = Literal["png", "svg"]
+DEFAULT_FIGURE_SIZE_INCHES = (10, 9)
 
 
 def _load_pyplot():

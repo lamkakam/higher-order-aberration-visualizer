@@ -3,6 +3,12 @@ import { expect, type Page, test } from '@playwright/test';
 const stickyTopTolerancePx = 2;
 const scrollMovementThresholdPx = 40;
 
+async function waitForWorkerInitialization(page: Page) {
+  await expect(page.getByRole('status', { name: 'Worker initialization' })).toBeHidden({
+    timeout: 60_000
+  });
+}
+
 async function getCardTopByHeading(page: Page, heading: string) {
   const card = page
     .getByRole('heading', { name: heading })
@@ -22,6 +28,7 @@ async function getCardHeightByHeading(page: Page, heading: string) {
 }
 
 async function expectCardIsTopmost(page: Page, heading: string) {
+  await waitForWorkerInitialization(page);
   const card = page
     .getByRole('heading', { name: heading })
     .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
@@ -46,6 +53,7 @@ async function expectCardIsTopmost(page: Page, heading: string) {
 }
 
 async function expectPrimaryStickyGapIsMasked(page: Page) {
+  await waitForWorkerInitialization(page);
   const card = page
     .getByRole('heading', { name: 'Simulated Image' })
     .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
@@ -132,6 +140,7 @@ async function expectCardSticks(page: Page, heading: string, initialTop: number)
 }
 
 async function enableAdvancedMode(page: Page) {
+  await waitForWorkerInitialization(page);
   await page.getByRole('button', { name: 'Setting' }).click();
   await page.getByRole('button', { name: 'Advanced' }).click();
   await page.mouse.click(20, 20);
