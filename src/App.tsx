@@ -16,6 +16,7 @@ import {
   OpticalSystemConfigCard,
   SettingsDrawer,
   SimulatedImageCard,
+  supplementalChartDescriptions,
   targetOptions,
   type DisplayMode,
   type ThemeMode,
@@ -68,6 +69,8 @@ export function App({ workerClient }: AppProps) {
   const isImageLoading = isLoading && !isWorkerInitializing;
   const selectedTarget = targetOptions.find((target) => target.id === targetId) ?? targetOptions[0];
   const simulatedImageDescription = `This shows how the selected picture would look through the current optical settings. Current target: ${selectedTarget.description}`;
+  const psfSupplementalDescription =
+    targetId === 'logmar_chart' ? supplementalChartDescriptions.psf : undefined;
   const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
   const desktopAdvancedMaskOffset = displayMode === 'advanced' ? `-${advancedGridHalfGapPx}px` : 0;
   const stickyImageCardMaskSx = {
@@ -221,6 +224,7 @@ export function App({ workerClient }: AppProps) {
                   error={error}
                   title="PSF"
                   description="The rendered point spread function for the current optical system."
+                  supplementalDescription={psfSupplementalDescription}
                   altText="Rendered point spread function"
                 />
               </Box>

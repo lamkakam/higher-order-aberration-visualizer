@@ -13,6 +13,7 @@ interface SimulatedImageCardProps {
   readonly error: string | undefined;
   readonly title?: string;
   readonly description?: string;
+  readonly supplementalDescription?: string;
   readonly altText?: string;
   readonly bottomContent?: ReactNode;
 }
@@ -119,10 +120,12 @@ export function SimulatedImageCard({
   error,
   title = 'Simulated Image',
   description = 'This shows how the selected picture would look through the current optical settings.',
+  supplementalDescription,
   altText = 'Convolved simulated target',
   bottomContent
 }: SimulatedImageCardProps) {
   const previewImageUrl = imageUrl && !error && !isLoading ? imageUrl : undefined;
+  const shouldShowEnlargementHint = !error && (Boolean(previewImageUrl) || isLoading);
 
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>
@@ -155,7 +158,12 @@ export function SimulatedImageCard({
         <Typography variant="body2" color="text.secondary">
           {description}
         </Typography>
-        {previewImageUrl ? (
+        {supplementalDescription ? (
+          <Typography variant="body2" color="text.secondary">
+            {supplementalDescription}
+          </Typography>
+        ) : undefined}
+        {shouldShowEnlargementHint ? (
           <Typography variant="body2" color="text.secondary">
             Click the image to view it enlarged.
           </Typography>

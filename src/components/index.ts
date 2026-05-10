@@ -11,6 +11,7 @@ export { SimulatedImageCard } from './SimulatedImageCard';
 export {
   createDefaultZernikeCoefficients,
   micronsToWaves,
+  supplementalChartDescriptions,
   wavelengthNm,
   wavesToMicrons,
   targetOptions,
