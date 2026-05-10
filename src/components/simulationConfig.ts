@@ -44,8 +44,9 @@ export const targetOptions = [
   readonly description: string;
 }[];
 
-export const supplementalChartDescriptions = {
-  psf: 'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.'
+export const supplementalDescriptions: Partial<Record<SupportedTargetId, string>> = {
+  logmar_chart:
+    'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.'
 } as const;
 
 export interface ZernikeTerm {
