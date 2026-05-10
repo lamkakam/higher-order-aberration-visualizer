@@ -5,6 +5,7 @@ import { SimulatedImageCard } from './SimulatedImageCard';
 
 const imageUrl = 'data:image/png;base64,preview';
 const enlargementHint = 'Click the image to view it enlarged.';
+const supplementalDescription = 'Additional chart context.';
 
 describe('SimulatedImageCard', () => {
   it('opens the enlarged image when the preview image is clicked', async () => {
@@ -133,7 +134,7 @@ describe('SimulatedImageCard', () => {
     expect(screen.queryByText(enlargementHint)).not.toBeInTheDocument();
   });
 
-  it('hides an existing image and preview controls while loading', () => {
+  it('hides an existing image and preview controls while loading while keeping the enlargement hint visible', () => {
     render(
       <SimulatedImageCard
         imageUrl={imageUrl}
@@ -148,7 +149,7 @@ describe('SimulatedImageCard', () => {
     expect(
       screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(enlargementHint)).not.toBeInTheDocument();
+    expect(screen.getByText(enlargementHint)).toBeInTheDocument();
   });
 
   it('does not show an enlargement hint when an error is shown', () => {
@@ -216,6 +217,31 @@ describe('SimulatedImageCard', () => {
     const bottomContent = screen.getByText('Bottom controls');
 
     expect(description.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(hint.compareDocumentPosition(bottomContent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('renders supplemental description between the description and enlargement hint', () => {
+    render(
+      <SimulatedImageCard
+        imageUrl={imageUrl}
+        statusText="Ready"
+        isLoading={false}
+        error={undefined}
+        description="Card description"
+        supplementalDescription={supplementalDescription}
+        bottomContent={<div>Bottom controls</div>}
+      />
+    );
+
+    const description = screen.getByText('Card description');
+    const supplemental = screen.getByText(supplementalDescription);
+    const hint = screen.getByText(enlargementHint);
+    const bottomContent = screen.getByText('Bottom controls');
+
+    expect(
+      description.compareDocumentPosition(supplemental) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(supplemental.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(hint.compareDocumentPosition(bottomContent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -5,6 +5,9 @@ import { App } from './App';
 import { createMockWorkerClient } from './test/workerMock';
 import type { ConvolvedImageInput, ConvolvedImageResult } from './workers/types';
 
+const psfCutoffNote =
+  'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -84,6 +87,7 @@ it('describes the default simulated image target in plain language', async () =>
     render(<App workerClient={createMockWorkerClient()} />);
   });
 
+  expect(screen.queryByText(psfCutoffNote)).not.toBeInTheDocument();
   expect(
     screen.getByText(
       'This shows how the selected picture would look through the current optical settings. Current target: The first six lines of an eye chart, with letters arranged in rows.'
@@ -120,6 +124,7 @@ it('updates the simulated image description when the target changes', async () =
       'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
     )
   ).toBeInTheDocument();
+  expect(screen.queryByText(psfCutoffNote)).not.toBeInTheDocument();
 });
 
 it('shows zernike textbox values and resets changed values', async () => {
@@ -1033,6 +1038,16 @@ it('shows PSF and wavefront cards in advanced display mode', async () => {
 
   expect(screen.getByRole('heading', { name: 'PSF' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Wavefront Map' })).toBeInTheDocument();
+
+  const psfCardContent = screen.getByRole('heading', { name: 'PSF' }).closest('.MuiCardContent-root');
+  expect(psfCardContent).not.toBeNull();
+  expect(within(psfCardContent as HTMLElement).getByText(psfCutoffNote)).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText('Target'), {
+    target: { value: 'siemensstar' }
+  });
+
+  expect(within(psfCardContent as HTMLElement).queryByText(psfCutoffNote)).not.toBeInTheDocument();
 });
 
 it('shows the legend unit selector at the bottom of the wavefront map card in advanced display mode', async () => {
