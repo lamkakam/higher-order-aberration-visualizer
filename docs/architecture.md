@@ -7,6 +7,7 @@ HOA Visualizer is a Vite React app that runs the optics computation in a Web Wor
 The browser entry point in [`src/main.tsx`](../src/main.tsx) mounts [`src/App.tsx`](../src/App.tsx). `App` owns the current optical inputs:
 
 - aperture diameter in millimeters
+- hidden aperture settings, currently a default unobstructed circle
 - target id
 - Zernike coefficient values
 - wavefront legend unit
@@ -18,7 +19,7 @@ Input controls keep fast-moving draft text and slider positions local so typing 
 
 Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
 
-- `ConvolvedImageInput`: aperture diameter, scale-bar visibility, supported target id, wavefront legend unit, and Zernike coefficients keyed as `"n,m"` strings
+- `ConvolvedImageInput`: aperture diameter, aperture settings, scale-bar visibility, supported target id, wavefront legend unit, and Zernike coefficients keyed as `"n,m"` strings
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `OpticsWorkerApi`: `initialize`, `getStatus`, and `computeConvolvedImage`
 
@@ -32,7 +33,7 @@ The worker imports Python package files with Vite `?raw` imports and writes them
 
 ## Result Data Flow
 
-`computeConvolvedImage` converts the TypeScript input into Python globals, converts Zernike keys from `"n,m"` strings to `(n, m)` tuples, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py). The returned `OpticalSimulation` object is rendered by:
+`computeConvolvedImage` converts the TypeScript input into Python globals, converts Zernike keys from `"n,m"` strings to `(n, m)` tuples, converts aperture settings to an `ApertureSpec`, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py). The returned `OpticalSimulation` object is rendered by:
 
 - [`render_convolved_image`](../src/hoa_visualizer_utils/rendering/convolved_image.py)
 - [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)

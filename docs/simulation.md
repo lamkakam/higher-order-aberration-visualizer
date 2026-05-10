@@ -7,12 +7,13 @@ The optics simulation is implemented in the Python package under [`src/hoa_visua
 The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the worker:
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
+- `apertureSettings`: aperture mask settings; currently supports only `{ shape: "circle", centralObstructionRatio: number }`
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `targetId`: one of the supported target ids
 - `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
 - `zernikeCoefficients`: a record keyed by `"n,m"` strings with coefficient values in waves
 
-The worker converts the Zernike keys to Python `(n, m)` tuples and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
+The worker converts the Zernike keys to Python `(n, m)` tuples, converts `apertureSettings` to an [`ApertureSpec`](../src/hoa_visualizer_utils/simulation/aperture.py), and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
 
 The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns, using the configured 550 nm wavelength for conversion, but values sent to the worker remain in waves. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
 
@@ -34,7 +35,7 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) validates inputs, resolves target-specific angular sampling, and uses Prysm to:
 
-1. build the pupil grid and circular aperture
+1. build the pupil grid and circular aperture mask, optionally with a centered obstruction
 2. sum normalized Zernike terms into a wavefront OPD map
 3. propagate the pupil to a fixed-sampling focal-plane PSF
 4. normalize the PSF energy
@@ -42,6 +43,8 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 6. convolve the target with the PSF, or use the normalized PSF directly for `point_source`
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
+
+The aperture helper currently accepts only `shape="circle"` and `0 <= central_obstruction_ratio < 1`. A ratio of `0` is the default unobstructed circular pupil. A nonzero ratio subtracts a centered circular obstruction from the outer circular aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`.
 
 When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
 

@@ -20,8 +20,15 @@ export type SupportedTargetId = (typeof supportedTargetIds)[number];
 
 export type ZernikeCoefficientKey = `${number},${number}`;
 export type WavefrontLegendUnit = 'wave' | 'micron';
+export type ApertureShape = 'circle';
+
+export interface ApertureSettings {
+  shape: ApertureShape;
+  centralObstructionRatio: number;
+}
 
 export interface ConvolvedImageInput {
+  apertureSettings: ApertureSettings;
   apertureDiameterMm: number;
   showScaleBar: boolean;
   targetId: SupportedTargetId;

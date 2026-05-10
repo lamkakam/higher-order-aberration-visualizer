@@ -12,6 +12,7 @@ import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw'
 import jupiter502nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz?url';
 import simulationAssetsInitSource from '../hoa_visualizer_utils/simulation/assets/__init__.py?raw';
 import simulationInitSource from '../hoa_visualizer_utils/simulation/__init__.py?raw';
+import apertureSource from '../hoa_visualizer_utils/simulation/aperture.py?raw';
 import computeSource from '../hoa_visualizer_utils/simulation/compute.py?raw';
 import modelsSource from '../hoa_visualizer_utils/simulation/models.py?raw';
 import targetsSource from '../hoa_visualizer_utils/simulation/targets.py?raw';
@@ -37,6 +38,7 @@ const pythonSources = [
   ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
   ['hoa_visualizer_utils/simulation/__init__.py', simulationInitSource],
   ['hoa_visualizer_utils/simulation/assets/__init__.py', simulationAssetsInitSource],
+  ['hoa_visualizer_utils/simulation/aperture.py', apertureSource],
   ['hoa_visualizer_utils/simulation/compute.py', computeSource],
   ['hoa_visualizer_utils/simulation/models.py', modelsSource],
   ['hoa_visualizer_utils/simulation/targets.py', targetsSource],
@@ -130,6 +132,7 @@ async function computeConvolvedImage(
   }
 
   const globals = pyodide.toPy({
+    aperture_settings: input.apertureSettings,
     aperture_diameter_mm: input.apertureDiameterMm,
     show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
@@ -140,17 +143,23 @@ async function computeConvolvedImage(
   await pyodide.runPythonAsync(
     `
 from hoa_visualizer_utils.simulation.compute import compute_simulation
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 
 coefficients = {
     tuple(int(index) for index in key.split(",")): float(value)
     for key, value in zernike_coefficients.items()
 }
+aperture = ApertureSpec(
+    shape=str(aperture_settings["shape"]),
+    central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+)
 simulation = compute_simulation(
     entrance_pupil_diameter_mm=float(aperture_diameter_mm),
     zernike_coefficients=coefficients,
     target_id=str(target_id),
     pupil_samples=256,
     image_samples=512,
+    aperture=aperture,
 )
 `,
     { globals }

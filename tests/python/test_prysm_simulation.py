@@ -21,6 +21,7 @@ from hoa_visualizer_utils.simulation.compute import (
     SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
     compute_simulation,
 )
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
 
 
@@ -89,6 +90,69 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.sampling.image_samples == 64
     assert simulation.sampling.image_dx_arcmin == image_dx_arcmin
     assert simulation.sampling.wavelength_nm == 550.0
+    assert simulation.inputs.aperture == ApertureSpec()
+
+
+def test_default_aperture_is_unobstructed_circle() -> None:
+    default_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    explicit_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(central_obstruction_ratio=0),
+    )
+
+    assert default_simulation.inputs.aperture == ApertureSpec(
+        shape="circle",
+        central_obstruction_ratio=0,
+    )
+    assert np.array_equal(default_simulation.pupil_mask, explicit_simulation.pupil_mask)
+    assert np.array_equal(default_simulation.wavefront_nm, explicit_simulation.wavefront_nm)
+
+
+def test_central_obstruction_masks_center_and_keeps_outputs_valid() -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(central_obstruction_ratio=0.35),
+    )
+
+    center = simulation.pupil_mask.shape[0] // 2
+
+    assert not simulation.pupil_mask[center, center]
+    assert simulation.inputs.aperture == ApertureSpec(
+        shape="circle",
+        central_obstruction_ratio=0.35,
+    )
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+    assert simulation.wavefront_nm[center, center] == 0
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(shape="hex"),
+        ApertureSpec(central_obstruction_ratio=-0.1),
+        ApertureSpec(central_obstruction_ratio=1),
+        ApertureSpec(central_obstruction_ratio=math.inf),
+    ],
+)
+def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:
+    with pytest.raises(ValueError):
+        aperture.validated()
 
 
 def test_snellen_e_20_20_uses_five_arcminute_height() -> None:

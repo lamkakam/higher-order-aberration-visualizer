@@ -35,6 +35,11 @@ vi.mock('pyodide', () => ({
 }));
 
 describe('optics worker', () => {
+  const defaultApertureSettings = {
+    shape: 'circle',
+    centralObstructionRatio: 0
+  } as const;
+
   it('exposes the Jupiter HST target id', () => {
     expect(supportedTargetIds).toContain('jupiter_502nm');
   });
@@ -49,6 +54,7 @@ describe('optics worker', () => {
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
+      apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
       showScaleBar: true,
       targetId: 'siemensstar',
@@ -83,6 +89,7 @@ describe('optics worker', () => {
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
+      apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
       showScaleBar: true,
       targetId: 'siemensstar',
@@ -94,6 +101,10 @@ describe('optics worker', () => {
     expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/simulation/compute.py',
       expect.stringContaining('def compute_simulation(')
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      '/home/pyodide/hoa_visualizer_utils/simulation/aperture.py',
+      expect.stringContaining('class ApertureSpec')
     );
     expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/rendering/scale_bar.py',
@@ -111,6 +122,10 @@ describe('optics worker', () => {
 
     const api = vi.mocked(expose).mock.calls[0][0];
     const result = await api.computeConvolvedImage({
+      apertureSettings: {
+        shape: 'circle',
+        centralObstructionRatio: 0.25
+      },
       apertureDiameterMm: 3,
       showScaleBar: true,
       targetId: 'siemensstar',
@@ -125,6 +140,25 @@ describe('optics worker', () => {
     expect(result.psfImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.wavefrontImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.diagnostics.status).toBe('ready');
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('simulation = compute_simulation('),
+      expect.objectContaining({
+        globals: expect.objectContaining({
+          aperture_settings: {
+            shape: 'circle',
+            centralObstructionRatio: 0.25
+          }
+        })
+      })
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('ApertureSpec('),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('aperture=aperture'),
+      expect.any(Object)
+    );
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('simulation = compute_simulation('),
       expect.objectContaining({
@@ -165,6 +199,7 @@ describe('optics worker', () => {
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
+      apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
       showScaleBar: false,
       targetId: 'siemensstar',

@@ -7,6 +7,10 @@ import type { ConvolvedImageInput, ConvolvedImageResult } from './workers/types'
 
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
+const defaultApertureSettings = {
+  shape: 'circle',
+  centralObstructionRatio: 0
+} as const;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -251,6 +255,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -317,6 +322,7 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -366,6 +372,7 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -508,6 +515,7 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
     await vi.advanceTimersByTimeAsync(1);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -558,6 +566,7 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
     await vi.advanceTimersByTimeAsync(1);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -612,6 +621,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -682,6 +692,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -717,6 +728,7 @@ it('debounces worker calls using the current UI payload', async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -752,6 +764,7 @@ it('debounces worker calls using the current UI payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -792,6 +805,7 @@ it('sends enabled scale bar preference to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: true,
     targetId: 'logmar_chart',
@@ -838,6 +852,7 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',

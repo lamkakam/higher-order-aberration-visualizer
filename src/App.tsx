@@ -26,6 +26,7 @@ import { useAppTheme } from './hooks/useAppTheme';
 import { useWorkerClient } from './hooks/useWorkerClient';
 import type { WorkerClient } from './workers/client';
 import type {
+  ApertureSettings,
   ConvolvedImageResult,
   SupportedTargetId,
   ZernikeCoefficientKey
@@ -37,6 +38,10 @@ interface AppProps {
 
 const defaultTargetId: SupportedTargetId = 'logmar_chart';
 const defaultApertureDiameterMm = 6;
+const defaultApertureSettings: ApertureSettings = {
+  shape: 'circle',
+  centralObstructionRatio: 0
+};
 const debounceMs = 300;
 const computeTimeoutMs = 60_000;
 const mobileStickyTopPx = 16;
@@ -103,6 +108,7 @@ export function App({ workerClient }: AppProps) {
 
       withTimeout(
         client.api.computeConvolvedImage({
+          apertureSettings: defaultApertureSettings,
           apertureDiameterMm,
           showScaleBar,
           targetId,

@@ -7,6 +7,7 @@ from typing import Mapping, cast
 
 import numpy as np
 
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 from hoa_visualizer_utils.simulation.models import (
     OpticalSimulation,
     SimulationInputs,
@@ -41,9 +42,11 @@ def compute_simulation(
         float | None,
         _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL,
     ),
+    aperture: ApertureSpec | None = None,
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
+    resolved_aperture = (aperture or ApertureSpec()).validated()
     resolved_image_dx_arcmin = _resolve_image_dx_arcmin(
         target_id,
         image_samples,
@@ -65,13 +68,13 @@ def compute_simulation(
         resolved_image_dx_arcmin,
     )
 
-    from prysm import coordinates, convolution, geometry, polynomials, propagation
+    from prysm import coordinates, convolution, polynomials, propagation
 
     xi, eta = coordinates.make_xy_grid(pupil_samples, diameter=entrance_pupil_diameter_mm)
     r, t = coordinates.cart_to_polar(xi, eta)
     pupil_dx_mm = float(xi[0, 1] - xi[0, 0])
     aperture_radius_mm = entrance_pupil_diameter_mm / 2
-    amp = geometry.circle(aperture_radius_mm, r)
+    amp = resolved_aperture.amplitude(aperture_radius_mm, r)
     pupil_mask = amp > 0
 
     normalized_radius = r / aperture_radius_mm
@@ -141,6 +144,7 @@ def compute_simulation(
             effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
             zernike_coefficients=dict(coefficients),
             target_id=target_id,
+            aperture=resolved_aperture,
         ),
     )
 
