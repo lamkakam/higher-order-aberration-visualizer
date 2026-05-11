@@ -244,6 +244,11 @@ it('keeps aperture mask modal actions outside the scrollable content', async () 
 
   expect(content.style.overflowY).toBe('auto');
   expect(content.style.minHeight).toBe('0');
+  expect(content).toHaveStyle({
+    paddingLeft: '16px',
+    paddingRight: '20px',
+    scrollbarGutter: 'stable'
+  });
   expect(footer.style.flexShrink).toBe('0');
   expect(content).not.toContainElement(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
   expect(footer).toContainElement(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));

@@ -448,7 +448,15 @@ function ApertureMaskModal({
         </Typography>
         <Box
           data-testid="aperture-mask-modal-content"
-          style={{ minHeight: 0, overflowY: 'auto' }}
+          style={{
+            marginLeft: -16,
+            marginRight: -8,
+            minHeight: 0,
+            overflowY: 'auto',
+            paddingLeft: 16,
+            paddingRight: 20,
+            scrollbarGutter: 'stable'
+          }}
           sx={{
             display: 'flex',
             flexDirection: 'column',
