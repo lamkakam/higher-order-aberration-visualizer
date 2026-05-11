@@ -203,6 +203,7 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   ).not.toBeInTheDocument();
   expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+  expect(within(modal).getByText('Preview')).toBeInTheDocument();
   expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
   expect(within(modal).getByRole('button', { name: 'Confirm aperture mask' })).toBeInTheDocument();
   expect(within(modal).getByRole('button', { name: 'Cancel aperture mask' })).toBeInTheDocument();
@@ -226,6 +227,27 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(await within(modal).findByAltText('Aperture mask preview')).toBeInTheDocument();
   await user.click(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
   expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
+});
+
+it('keeps aperture mask modal actions outside the scrollable content', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  const content = within(modal).getByTestId('aperture-mask-modal-content');
+  const footer = within(modal).getByTestId('aperture-mask-modal-footer');
+
+  expect(content.style.overflowY).toBe('auto');
+  expect(content.style.minHeight).toBe('0');
+  expect(footer.style.flexShrink).toBe('0');
+  expect(content).not.toContainElement(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
+  expect(footer).toContainElement(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
+  expect(footer).toContainElement(within(modal).getByRole('button', { name: 'Confirm aperture mask' }));
 });
 
 it('shows Gaussian apodization SD controls only when enabled', async () => {

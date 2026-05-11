@@ -423,23 +423,39 @@ function ApertureMaskModal({
         aria-labelledby={titleId}
         sx={{
           bgcolor: 'background.paper',
-          borderRadius: 1,
+          borderRadius: { xs: 0, sm: 1 },
           boxShadow: 24,
-          left: '50%',
-          maxHeight: 'calc(100vh - 48px)',
-          maxWidth: 520,
-          overflowY: 'auto',
-          p: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          height: { xs: '100vh', sm: 'auto' },
+          left: { xs: 0, sm: '50%' },
+          maxHeight: { xs: '100vh', sm: 'calc(100vh - 48px)' },
+          maxWidth: { xs: 'none', sm: 520 },
+          overflow: 'hidden',
+          p: { xs: 2, sm: 3 },
           position: 'absolute',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 'calc(100% - 32px)'
+          top: { xs: 0, sm: '50%' },
+          transform: { xs: 'none', sm: 'translate(-50%, -50%)' },
+          width: { xs: '100%', sm: 'calc(100% - 32px)' },
+          '@supports (height: 100dvh)': {
+            height: { xs: '100dvh', sm: 'auto' },
+            maxHeight: { xs: '100dvh', sm: 'calc(100dvh - 48px)' }
+          }
         }}
       >
-        <Stack spacing={2}>
-          <Typography id={titleId} variant="h5" component="h2">
-            Aperture Mask
-          </Typography>
+        <Typography id={titleId} variant="h5" component="h2" sx={{ flexShrink: 0 }}>
+          Aperture Mask
+        </Typography>
+        <Box
+          data-testid="aperture-mask-modal-content"
+          style={{ minHeight: 0, overflowY: 'auto' }}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            py: 2
+          }}
+        >
           <FormControl fullWidth size="small">
             <InputLabel htmlFor={shapeId}>Aperture Shape</InputLabel>
             <NativeSelect
@@ -590,6 +606,9 @@ function ApertureMaskModal({
               onCommit={setDraftGaussianSigmaRatio}
             />
           ) : undefined}
+          <Typography variant="subtitle2" component="p">
+            Preview
+          </Typography>
           <Box
             data-testid="aperture-mask-preview-panel"
             sx={{
@@ -629,32 +648,38 @@ function ApertureMaskModal({
               <Typography variant="body2">Preparing aperture mask...</Typography>
             )}
           </Box>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1}
-            sx={{ justifyContent: 'flex-end' }}
+        </Box>
+        <Box
+          data-testid="aperture-mask-modal-footer"
+          style={{ flexShrink: 0 }}
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1,
+            justifyContent: 'flex-end',
+            pt: 2
+          }}
+        >
+          <Button
+            aria-label="Cancel aperture mask"
+            variant="outlined"
+            onClick={onCancel}
           >
-            <Button
-              aria-label="Cancel aperture mask"
-              variant="outlined"
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              aria-label="Confirm aperture mask"
-              variant="contained"
-              disabled={!draftSettings}
-              onClick={() => {
-                if (draftSettings) {
-                  onConfirm(draftSettings);
-                }
-              }}
-            >
-              Confirm
-            </Button>
-          </Stack>
-        </Stack>
+            Cancel
+          </Button>
+          <Button
+            aria-label="Confirm aperture mask"
+            variant="contained"
+            disabled={!draftSettings}
+            onClick={() => {
+              if (draftSettings) {
+                onConfirm(draftSettings);
+              }
+            }}
+          >
+            Confirm
+          </Button>
+        </Box>
       </Box>
     </Modal>
   );
