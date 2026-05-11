@@ -161,6 +161,7 @@ aperture = ApertureSpec(
     central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
     spider_vane_count=float(aperture_settings["spiderVaneCount"]),
     spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"]),
+    spider_vane_rotation_degrees=float(aperture_settings["spiderVaneRotationDegrees"]),
     gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
     gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
 )
@@ -220,6 +221,7 @@ aperture = ApertureSpec(
     central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
     spider_vane_count=float(aperture_settings["spiderVaneCount"]),
     spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"]),
+    spider_vane_rotation_degrees=float(aperture_settings["spiderVaneRotationDegrees"]),
     gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
     gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
 )

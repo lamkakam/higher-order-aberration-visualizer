@@ -19,6 +19,7 @@ const defaultApertureSettings = {
   centralObstructionRatio: 0,
   spiderVaneCount: 0,
   spiderVaneWidthRatio: 0,
+  spiderVaneRotationDegrees: 0,
   gaussianApodizationEnabled: false,
   gaussianApodizationSigmaRatio: 0.5
 } as const;
@@ -53,6 +54,14 @@ function getSpiderVaneWidthSlider(container: HTMLElement = document.body) {
   return within(container).getByRole('slider', {
     name: 'Vane Width (x Aperture Diameter)'
   });
+}
+
+function getSpiderVaneRotationTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', { name: 'Vane Rotation' });
+}
+
+function getSpiderVaneRotationSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', { name: 'Vane Rotation' });
 }
 
 function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
@@ -176,8 +185,14 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(getSpiderVanesSlider(modal)).toBeInTheDocument();
   expect(getSpiderVaneWidthTextbox(modal)).toHaveValue('0');
   expect(getSpiderVaneWidthSlider(modal)).toBeInTheDocument();
+  expect(getSpiderVaneRotationTextbox(modal)).toHaveValue('0');
+  expect(getSpiderVaneRotationSlider(modal)).toBeInTheDocument();
   expect(
-    getSpiderVaneWidthSlider(modal).compareDocumentPosition(getGaussianApodizationSwitch(modal)) &
+    getSpiderVaneWidthSlider(modal).compareDocumentPosition(getSpiderVaneRotationSlider(modal)) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    getSpiderVaneRotationSlider(modal).compareDocumentPosition(getGaussianApodizationSwitch(modal)) &
       Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
   expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
@@ -365,6 +380,7 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
       centralObstructionRatio: 0,
       spiderVaneCount: 0,
       spiderVaneWidthRatio: 0,
+      spiderVaneRotationDegrees: 0,
       gaussianApodizationEnabled: false,
       gaussianApodizationSigmaRatio: 0.5
     },
@@ -554,9 +570,17 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
     target: { value: '0.02' }
   });
   fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.change(getSpiderVaneRotationTextbox(), {
+    target: { value: '30' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox());
   fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
 
-  expect(screen.getByText('Circle, 0% obstruction, 4-vane spider, each vane 0.02D wide')).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      'Circle, 0% obstruction, 4-vane spider rotated 30 deg, each vane 0.02D wide'
+    )
+  ).toBeInTheDocument();
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -570,6 +594,7 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
       centralObstructionRatio: 0,
       spiderVaneCount: 4,
       spiderVaneWidthRatio: 0.02,
+      spiderVaneRotationDegrees: 30,
       gaussianApodizationEnabled: false,
       gaussianApodizationSigmaRatio: 0.5
     },
@@ -615,6 +640,10 @@ it('omits spider vane settings from the aperture summary when count is zero', as
     target: { value: '0.02' }
   });
   fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.change(getSpiderVaneRotationTextbox(), {
+    target: { value: '30' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox());
   fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
 
   expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
@@ -664,6 +693,10 @@ it('confirms aperture mask changes and sends them in the next simulation payload
     target: { value: '0.02' }
   });
   fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.change(getSpiderVaneRotationTextbox(), {
+    target: { value: '30' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox());
   fireEvent.click(getGaussianApodizationSwitch());
   fireEvent.change(getGaussianSigmaRatioTextbox(), {
     target: { value: '0.75' }
@@ -674,7 +707,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
   expect(
     screen.getByText(
-      'Square, 35% regular hexagon obstruction, 4-vane spider, each vane 0.02D wide, Gaussian apodization with 0.75D sigma'
+      'Square, 35% regular hexagon obstruction, 4-vane spider rotated 30 deg, each vane 0.02D wide, Gaussian apodization with 0.75D sigma'
     )
   ).toBeInTheDocument();
 
@@ -690,6 +723,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
       centralObstructionRatio: 0.35,
       spiderVaneCount: 4,
       spiderVaneWidthRatio: 0.02,
+      spiderVaneRotationDegrees: 30,
       gaussianApodizationEnabled: true,
       gaussianApodizationSigmaRatio: 0.75
     },

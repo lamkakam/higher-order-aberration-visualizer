@@ -22,6 +22,7 @@ class ApertureSpec:
     central_obstruction_ratio: float = 0.0
     spider_vane_count: int = 0
     spider_vane_width_ratio: float = 0.0
+    spider_vane_rotation_degrees: float = 0.0
     gaussian_apodization_enabled: bool = False
     gaussian_apodization_sigma_ratio: float = 0.5
 
@@ -33,6 +34,7 @@ class ApertureSpec:
         obstruction_rotation = float(self.central_obstruction_rotation_degrees)
         spider_vane_count = float(self.spider_vane_count)
         spider_vane_width_ratio = float(self.spider_vane_width_ratio)
+        spider_vane_rotation = float(self.spider_vane_rotation_degrees)
         gaussian_sigma_ratio = float(self.gaussian_apodization_sigma_ratio)
         if self.shape not in APERTURE_SHAPES:
             raise ValueError("aperture shape is not supported")
@@ -68,6 +70,15 @@ class ApertureSpec:
             raise ValueError(
                 "spider_vane_width_ratio must be finite and satisfy 0 <= ratio <= 0.25"
             )
+        if (
+            not math.isfinite(spider_vane_rotation)
+            or spider_vane_rotation < 0
+            or spider_vane_rotation > 360
+        ):
+            raise ValueError(
+                "spider_vane_rotation_degrees must be finite and satisfy "
+                "0 <= rotation <= 360"
+            )
         if self.gaussian_apodization_enabled and (
             not math.isfinite(gaussian_sigma_ratio)
             or gaussian_sigma_ratio < 0.05
@@ -85,6 +96,7 @@ class ApertureSpec:
             central_obstruction_ratio=ratio,
             spider_vane_count=int(spider_vane_count),
             spider_vane_width_ratio=spider_vane_width_ratio,
+            spider_vane_rotation_degrees=spider_vane_rotation % 360,
             gaussian_apodization_enabled=bool(self.gaussian_apodization_enabled),
             gaussian_apodization_sigma_ratio=gaussian_sigma_ratio,
         )
@@ -130,7 +142,7 @@ class ApertureSpec:
                     width_mm,
                     x,
                     y,
-                    rotation=0,
+                    rotation=spec.spider_vane_rotation_degrees,
                     center=(0, 0),
                 ),
                 dtype=float,

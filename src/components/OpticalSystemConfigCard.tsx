@@ -275,6 +275,9 @@ function ApertureMaskModal({
   const [draftSpiderVaneWidthRatio, setDraftSpiderVaneWidthRatio] = useState(
     apertureSettings.spiderVaneWidthRatio
   );
+  const [draftSpiderVaneRotationDegrees, setDraftSpiderVaneRotationDegrees] = useState(
+    apertureSettings.spiderVaneRotationDegrees
+  );
   const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
   const [previewError, setPreviewError] = useState<string | undefined>(undefined);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -308,12 +311,17 @@ function ApertureMaskModal({
     Number.isFinite(draftSpiderVaneWidthRatio) &&
     draftSpiderVaneWidthRatio >= 0 &&
     draftSpiderVaneWidthRatio <= 0.25;
+  const spiderVaneRotationIsValid =
+    Number.isFinite(draftSpiderVaneRotationDegrees) &&
+    draftSpiderVaneRotationDegrees >= 0 &&
+    draftSpiderVaneRotationDegrees <= 360;
   const draftIsValid =
     obstructionRatioIsValid &&
     apertureRotationIsValid &&
     obstructionRotationIsValid &&
     spiderVaneCountIsValid &&
     spiderVaneWidthRatioIsValid &&
+    spiderVaneRotationIsValid &&
     gaussianSigmaRatioIsValid;
   const draftSettings = useMemo<ApertureSettings | undefined>(
     () =>
@@ -330,6 +338,7 @@ function ApertureMaskModal({
             centralObstructionRatio: draftObstructionRatio,
             spiderVaneCount: draftSpiderVaneCount,
             spiderVaneWidthRatio: draftSpiderVaneWidthRatio,
+            spiderVaneRotationDegrees: draftSpiderVaneRotationDegrees,
             gaussianApodizationEnabled: draftGaussianApodizationEnabled,
             gaussianApodizationSigmaRatio: draftGaussianSigmaRatio
           }
@@ -343,6 +352,7 @@ function ApertureMaskModal({
       draftObstructionRatio,
       draftSpiderVaneCount,
       draftSpiderVaneWidthRatio,
+      draftSpiderVaneRotationDegrees,
       draftGaussianApodizationEnabled,
       draftGaussianSigmaRatio
     ]
@@ -367,6 +377,7 @@ function ApertureMaskModal({
     setDraftGaussianSigmaRatio(apertureSettings.gaussianApodizationSigmaRatio);
     setDraftSpiderVaneCount(apertureSettings.spiderVaneCount);
     setDraftSpiderVaneWidthRatio(apertureSettings.spiderVaneWidthRatio);
+    setDraftSpiderVaneRotationDegrees(apertureSettings.spiderVaneRotationDegrees);
   }, [apertureSettings, open]);
 
   useEffect(() => {
@@ -540,6 +551,19 @@ function ApertureMaskModal({
             roundValue={roundRatioValue}
             onCommit={setDraftSpiderVaneWidthRatio}
           />
+          <CommitSlider
+            ariaLabel="Vane Rotation"
+            label="Vane Rotation"
+            min={0}
+            max={360}
+            step={1}
+            value={draftSpiderVaneRotationDegrees}
+            input={rotationSliderInput}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
+            roundValue={Math.round}
+            onCommit={setDraftSpiderVaneRotationDegrees}
+          />
           <FormControlLabel
             control={
               <Switch
@@ -648,7 +672,9 @@ function formatApertureSummary(settings: ApertureSettings): string {
   const effects = [maskSummary];
   if (settings.spiderVaneCount > 0 && settings.spiderVaneWidthRatio > 0) {
     effects.push(
-      `${settings.spiderVaneCount}-vane spider, each vane ${formatRatioValue(
+      `${settings.spiderVaneCount}-vane spider rotated ${Math.round(
+        settings.spiderVaneRotationDegrees
+      )} deg, each vane ${formatRatioValue(
         settings.spiderVaneWidthRatio
       )}D wide`
     );

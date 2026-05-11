@@ -197,6 +197,34 @@ def test_spider_vanes_mask_aperture_pixels_and_keep_outputs_valid() -> None:
     assert np.isfinite(simulation.wavefront_nm).all()
 
 
+def test_spider_vane_rotation_changes_aperture_mask() -> None:
+    default_aperture = ApertureSpec(
+        spider_vane_count=4,
+        spider_vane_width_ratio=0.02,
+    )
+    rotated_aperture = ApertureSpec(
+        spider_vane_count=4,
+        spider_vane_width_ratio=0.02,
+        spider_vane_rotation_degrees=30,
+    )
+    axis = np.linspace(-5, 5, 128)
+    x, y = np.meshgrid(axis, axis)
+    radius = np.sqrt(x**2 + y**2)
+
+    default_amplitude = default_aperture.amplitude(5, x, y, radius)
+    rotated_amplitude = rotated_aperture.amplitude(5, x, y, radius)
+
+    assert not np.array_equal(default_amplitude, rotated_amplitude)
+    assert default_aperture.validated().spider_vane_rotation_degrees == 0
+    assert rotated_aperture.validated().spider_vane_rotation_degrees == 30
+    assert (
+        ApertureSpec(spider_vane_rotation_degrees=360)
+        .validated()
+        .spider_vane_rotation_degrees
+        == 0
+    )
+
+
 @pytest.mark.parametrize(
     "aperture",
     [
@@ -388,6 +416,9 @@ def test_apodized_shaped_central_obstructions_mask_center_and_keep_outputs_valid
         ApertureSpec(spider_vane_width_ratio=-0.01),
         ApertureSpec(spider_vane_width_ratio=0.26),
         ApertureSpec(spider_vane_width_ratio=math.inf),
+        ApertureSpec(spider_vane_rotation_degrees=-1),
+        ApertureSpec(spider_vane_rotation_degrees=361),
+        ApertureSpec(spider_vane_rotation_degrees=math.inf),
     ],
 )
 def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:

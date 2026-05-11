@@ -46,6 +46,7 @@ const defaultApertureSettings: ApertureSettings = {
   centralObstructionRatio: 0,
   spiderVaneCount: 0,
   spiderVaneWidthRatio: 0,
+  spiderVaneRotationDegrees: 0,
   gaussianApodizationEnabled: false,
   gaussianApodizationSigmaRatio: 0.5
 };
