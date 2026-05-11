@@ -3,11 +3,9 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
-import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import Modal from '@mui/material/Modal';
 import NativeSelect from '@mui/material/NativeSelect';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ChangeEvent } from 'react';
@@ -31,6 +29,48 @@ const apertureShapeOptions = [
   readonly value: ApertureShape;
   readonly label: string;
 }[];
+
+const rotationSliderInput = {
+  formatValue: (value: number) => String(Math.round(value)),
+  parseDraft: (draft: string) => Number(draft),
+  isDraftAllowed: (draft: string) => draft === '' || /^\d*$/.test(draft),
+  isValidDraft: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    parsedValue >= 0 &&
+    parsedValue <= 360,
+  getErrorText: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    (parsedValue < 0 || parsedValue > 360)
+      ? 'Value must be between 0 and 360.'
+      : undefined,
+  inputMode: 'numeric' as const,
+  inputMin: 0,
+  inputMax: 360,
+  inputStep: 1
+};
+
+const ratioSliderInput = {
+  formatValue: formatRatioValue,
+  parseDraft: (draft: string) => Number(draft),
+  isDraftAllowed: isRatioText,
+  isValidDraft: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    parsedValue >= 0 &&
+    parsedValue < 1,
+  getErrorText: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    (parsedValue < 0 || parsedValue >= 1)
+      ? 'Value must be at least 0 and less than 1.'
+      : undefined,
+  inputMode: 'decimal' as const,
+  inputMin: 0,
+  inputMax: 0.999,
+  inputStep: 0.01
+};
 
 interface OpticalSystemConfigCardProps {
   readonly apertureDiameterMm: number;
@@ -145,16 +185,13 @@ function ApertureMaskModal({
 }: ApertureMaskModalProps) {
   const titleId = useId();
   const shapeId = useId();
-  const rotationId = useId();
-  const obstructionId = useId();
   const obstructionShapeId = useId();
-  const obstructionRotationId = useId();
   const [draftShape, setDraftShape] = useState<ApertureShape>(apertureSettings.shape);
   const [draftRotationDegrees, setDraftRotationDegrees] = useState(
     apertureSettings.rotationDegrees
   );
   const [draftObstructionRatio, setDraftObstructionRatio] = useState(
-    String(apertureSettings.centralObstructionRatio)
+    apertureSettings.centralObstructionRatio
   );
   const [draftObstructionShape, setDraftObstructionShape] = useState<ApertureShape>(
     apertureSettings.centralObstructionShape
@@ -164,12 +201,10 @@ function ApertureMaskModal({
   const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
   const [previewError, setPreviewError] = useState<string | undefined>(undefined);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const parsedObstructionRatio = Number(draftObstructionRatio);
   const obstructionRatioIsValid =
-    draftObstructionRatio.trim() !== '' &&
-    Number.isFinite(parsedObstructionRatio) &&
-    parsedObstructionRatio >= 0 &&
-    parsedObstructionRatio < 1;
+    Number.isFinite(draftObstructionRatio) &&
+    draftObstructionRatio >= 0 &&
+    draftObstructionRatio < 1;
   const apertureRotationIsValid =
     draftShape === 'circle' ||
     (Number.isFinite(draftRotationDegrees) &&
@@ -177,7 +212,7 @@ function ApertureMaskModal({
       draftRotationDegrees <= 360);
   const obstructionRotationIsValid =
     !obstructionRatioIsValid ||
-    parsedObstructionRatio === 0 ||
+    draftObstructionRatio === 0 ||
     draftObstructionShape === 'circle' ||
     (Number.isFinite(draftObstructionRotationDegrees) &&
       draftObstructionRotationDegrees >= 0 &&
@@ -193,12 +228,12 @@ function ApertureMaskModal({
             shape: draftShape,
             rotationDegrees: draftShape === 'circle' ? 0 : draftRotationDegrees,
             centralObstructionShape:
-              parsedObstructionRatio > 0 ? draftObstructionShape : 'circle',
+              draftObstructionRatio > 0 ? draftObstructionShape : 'circle',
             centralObstructionRotationDegrees:
-              parsedObstructionRatio > 0 && draftObstructionShape !== 'circle'
+              draftObstructionRatio > 0 && draftObstructionShape !== 'circle'
                 ? draftObstructionRotationDegrees
                 : 0,
-            centralObstructionRatio: parsedObstructionRatio
+            centralObstructionRatio: draftObstructionRatio
           }
         : undefined,
     [
@@ -207,11 +242,11 @@ function ApertureMaskModal({
       draftRotationDegrees,
       draftObstructionShape,
       draftObstructionRotationDegrees,
-      parsedObstructionRatio
+      draftObstructionRatio
     ]
   );
   const showApertureRotation = draftShape !== 'circle';
-  const showObstructionControls = draftIsValid && parsedObstructionRatio > 0;
+  const showObstructionControls = draftIsValid && draftObstructionRatio > 0;
   const showObstructionRotation = showObstructionControls && draftObstructionShape !== 'circle';
 
   useEffect(() => {
@@ -221,7 +256,7 @@ function ApertureMaskModal({
 
     setDraftShape(apertureSettings.shape);
     setDraftRotationDegrees(apertureSettings.rotationDegrees);
-    setDraftObstructionRatio(String(apertureSettings.centralObstructionRatio));
+    setDraftObstructionRatio(apertureSettings.centralObstructionRatio);
     setDraftObstructionShape(apertureSettings.centralObstructionShape);
     setDraftObstructionRotationDegrees(
       apertureSettings.centralObstructionRotationDegrees
@@ -308,46 +343,33 @@ function ApertureMaskModal({
             </NativeSelect>
           </FormControl>
           {showApertureRotation ? (
-            <Stack spacing={1}>
-              <Typography id={rotationId} variant="body2">
-                Aperture Rotation
-              </Typography>
-              <CommitSlider
-                ariaLabel="Aperture Rotation"
-                min={0}
-                max={360}
-                step={1}
-                value={draftRotationDegrees}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
-                roundValue={Math.round}
-                onPreview={setDraftRotationDegrees}
-                onCommit={setDraftRotationDegrees}
-              />
-            </Stack>
-          ) : undefined}
-          <FormControl fullWidth size="small" error={!draftIsValid}>
-            <InputLabel htmlFor={obstructionId}>Central Obstruction Ratio</InputLabel>
-            <OutlinedInput
-              id={obstructionId}
-              label="Central Obstruction Ratio"
-              value={draftObstructionRatio}
-              inputProps={{
-                inputMode: 'decimal',
-                min: 0,
-                max: 0.999,
-                step: 0.01
-              }}
-              onChange={(event) => {
-                if (isRatioText(event.target.value)) {
-                  setDraftObstructionRatio(event.target.value);
-                }
-              }}
+            <CommitSlider
+              ariaLabel="Aperture Rotation"
+              label="Aperture Rotation"
+              min={0}
+              max={360}
+              step={1}
+              value={draftRotationDegrees}
+              input={rotationSliderInput}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
+              roundValue={Math.round}
+              onCommit={setDraftRotationDegrees}
             />
-            {!draftIsValid ? (
-              <FormHelperText>Value must be at least 0 and less than 1.</FormHelperText>
-            ) : undefined}
-          </FormControl>
+          ) : undefined}
+          <CommitSlider
+            ariaLabel="Central Obstruction Ratio"
+            label="Central Obstruction Ratio"
+            min={0}
+            max={0.99}
+            step={0.01}
+            value={draftObstructionRatio}
+            input={ratioSliderInput}
+            valueLabelDisplay="auto"
+            valueLabelFormat={formatRatioValue}
+            roundValue={roundRatioValue}
+            onCommit={setDraftObstructionRatio}
+          />
           {showObstructionControls ? (
             <>
               <FormControl fullWidth size="small">
@@ -370,27 +392,24 @@ function ApertureMaskModal({
                 </NativeSelect>
               </FormControl>
               {showObstructionRotation ? (
-                <Stack spacing={1}>
-                  <Typography id={obstructionRotationId} variant="body2">
-                    Obstruction Rotation
-                  </Typography>
-                  <CommitSlider
-                    ariaLabel="Obstruction Rotation"
-                    min={0}
-                    max={360}
-                    step={1}
-                    value={draftObstructionRotationDegrees}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
-                    roundValue={Math.round}
-                    onPreview={setDraftObstructionRotationDegrees}
-                    onCommit={setDraftObstructionRotationDegrees}
-                  />
-                </Stack>
+                <CommitSlider
+                  ariaLabel="Obstruction Rotation"
+                  label="Obstruction Rotation"
+                  min={0}
+                  max={360}
+                  step={1}
+                  value={draftObstructionRotationDegrees}
+                  input={rotationSliderInput}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
+                  roundValue={Math.round}
+                  onCommit={setDraftObstructionRotationDegrees}
+                />
               ) : undefined}
             </>
           ) : undefined}
           <Box
+            data-testid="aperture-mask-preview-panel"
             sx={{
               alignItems: 'center',
               bgcolor: 'background.default',
@@ -398,8 +417,9 @@ function ApertureMaskModal({
               borderColor: 'divider',
               borderRadius: 1,
               display: 'flex',
+              height: 280,
               justifyContent: 'center',
-              minHeight: 240,
+              minHeight: 280,
               overflow: 'hidden',
               p: 2
             }}
@@ -471,6 +491,19 @@ function formatApertureSummary(settings: ApertureSettings): string {
 
 function isRatioText(value: string) {
   return value === '' || /^(?:\d+\.?\d*|\.\d+)$/.test(value);
+}
+
+function roundRatioValue(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function formatRatioValue(value: number): string {
+  const roundedValue = roundRatioValue(value);
+  if (roundedValue === 0) {
+    return '0';
+  }
+
+  return roundedValue.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function formatShapeLabel(shape: ApertureShape): string {

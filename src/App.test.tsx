@@ -19,6 +19,14 @@ const defaultApertureSettings = {
   centralObstructionRatio: 0
 } as const;
 
+function getCentralObstructionRatioTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', { name: 'Central Obstruction Ratio' });
+}
+
+function getCentralObstructionRatioSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', { name: 'Central Obstruction Ratio' });
+}
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -128,7 +136,8 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(within(modal).getByRole('option', { name: 'Square' })).toBeInTheDocument();
   expect(within(modal).getByRole('option', { name: 'Regular Hexagon' })).toBeInTheDocument();
   expect(within(modal).queryByRole('option', { name: 'Ellipse' })).not.toBeInTheDocument();
-  expect(within(modal).getByLabelText('Central Obstruction Ratio')).toHaveValue('0');
+  expect(getCentralObstructionRatioTextbox(modal)).toHaveValue('0');
+  expect(getCentralObstructionRatioSlider(modal)).toBeInTheDocument();
   expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
   expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
@@ -170,6 +179,7 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
     target: { value: 'square' }
   });
   expect(within(modal).getByRole('slider', { name: 'Aperture Rotation' })).toBeInTheDocument();
+  expect(within(modal).getByRole('textbox', { name: 'Aperture Rotation' })).toBeInTheDocument();
   expect(within(modal).queryByLabelText('Aperture Ellipse Minor-Axis Ratio')).not.toBeInTheDocument();
 
   fireEvent.change(within(modal).getByLabelText('Aperture Shape'), {
@@ -177,9 +187,10 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
   });
   expect(within(modal).getByRole('slider', { name: 'Aperture Rotation' })).toBeInTheDocument();
 
-  fireEvent.change(within(modal).getByLabelText('Central Obstruction Ratio'), {
+  fireEvent.change(getCentralObstructionRatioTextbox(modal), {
     target: { value: '0.25' }
   });
+  fireEvent.blur(getCentralObstructionRatioTextbox(modal));
   expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
   expect(within(modal).getAllByRole('option', { name: 'Circle' })).toHaveLength(2);
   expect(within(modal).getAllByRole('option', { name: 'Square' })).toHaveLength(2);
@@ -190,12 +201,130 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
     target: { value: 'square' }
   });
   expect(within(modal).getByRole('slider', { name: 'Obstruction Rotation' })).toBeInTheDocument();
+  expect(within(modal).getByRole('textbox', { name: 'Obstruction Rotation' })).toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Ellipse Minor-Axis Ratio')).not.toBeInTheDocument();
 
-  fireEvent.change(within(modal).getByLabelText('Central Obstruction Ratio'), {
+  fireEvent.change(getCentralObstructionRatioTextbox(modal), {
     target: { value: '0' }
   });
+  fireEvent.blur(getCentralObstructionRatioTextbox(modal));
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+});
+
+it('toggles aperture obstruction controls from the ratio slider and textbox', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  const ratioSlider = getCentralObstructionRatioSlider(modal);
+
+  fireEvent.keyDown(ratioSlider, { key: 'ArrowRight' });
+  expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+  fireEvent.keyUp(ratioSlider, { key: 'ArrowRight' });
+  expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
+
+  fireEvent.change(getCentralObstructionRatioTextbox(modal), {
+    target: { value: '0' }
+  });
+  fireEvent.blur(getCentralObstructionRatioTextbox(modal));
+  expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+});
+
+it('commits aperture rotation textbox values to the confirmed payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(screen.getByLabelText('Aperture Shape'), {
+    target: { value: 'square' }
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Aperture Rotation' }), {
+    target: { value: '45' }
+  });
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'Aperture Rotation' }), {
+    key: 'Enter'
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: {
+      shape: 'square',
+      rotationDegrees: 45,
+      centralObstructionShape: 'circle',
+      centralObstructionRotationDegrees: 0,
+      centralObstructionRatio: 0
+    },
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('keeps the aperture preview panel height stable while loading and loaded', async () => {
+  const user = userEvent.setup();
+  let resolvePreview: (value: ApertureMaskResult) => void = () => {};
+  const renderApertureMask = vi.fn(
+    () =>
+      new Promise<ApertureMaskResult>((resolve) => {
+        resolvePreview = resolve;
+      })
+  );
+  render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const panel = screen.getByTestId('aperture-mask-preview-panel');
+  expect(panel).toHaveStyle({ height: '280px', minHeight: '280px' });
+  expect(within(panel).getByText('Preparing aperture mask...')).toBeInTheDocument();
+
+  await act(async () => {
+    resolvePreview({
+      imageUrl: `data:image/png;base64,${window.btoa('mask')}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    });
+  });
+
+  expect(within(panel).getByAltText('Aperture mask preview')).toBeInTheDocument();
+  expect(panel).toHaveStyle({ height: '280px', minHeight: '280px' });
 });
 
 it('cancels draft aperture mask changes and preserves previous simulation settings', async () => {
@@ -223,9 +352,10 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
-  fireEvent.change(screen.getByLabelText('Central Obstruction Ratio'), {
+  fireEvent.change(getCentralObstructionRatioTextbox(), {
     target: { value: '0.35' }
   });
+  fireEvent.blur(getCentralObstructionRatioTextbox());
   fireEvent.change(screen.getByLabelText('Aperture Shape'), {
     target: { value: 'square' }
   });
@@ -277,9 +407,10 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
-  fireEvent.change(screen.getByLabelText('Central Obstruction Ratio'), {
+  fireEvent.change(getCentralObstructionRatioTextbox(), {
     target: { value: '0.35' }
   });
+  fireEvent.blur(getCentralObstructionRatioTextbox());
   fireEvent.change(screen.getByLabelText('Aperture Shape'), {
     target: { value: 'square' }
   });
