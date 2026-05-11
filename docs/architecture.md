@@ -7,7 +7,7 @@ HOA Visualizer is a Vite React app that runs the optics computation in a Web Wor
 The browser entry point in [`src/main.tsx`](../src/main.tsx) mounts [`src/App.tsx`](../src/App.tsx). `App` owns the current optical inputs:
 
 - aperture diameter in millimeters
-- aperture settings for circle, square, or regular hexagon masks with optional central obstruction exposed in advanced mode
+- aperture settings for circle, square, or regular hexagon masks with optional central obstruction and Gaussian apodization exposed in advanced mode
 - target id
 - Zernike coefficient values
 - wavefront legend unit
@@ -44,4 +44,4 @@ Each renderer returns PNG bytes. The worker base64-encodes those bytes into `dat
 
 `renderApertureMask` converts aperture settings to an `ApertureSpec` and calls [`render_aperture_mask`](../src/hoa_visualizer_utils/rendering/aperture_mask.py) without computing a full simulation. It returns a non-enlargeable PNG preview for the advanced aperture mask modal.
 
-`ApertureSettings` carries the outer aperture shape, rotation, central obstruction ratio, obstruction shape, and obstruction rotation. The worker maps those serializable fields directly into the Python `ApertureSpec` used by both full simulations and aperture preview rendering.
+`ApertureSettings` carries the outer aperture shape, rotation, central obstruction ratio, obstruction shape, obstruction rotation, Gaussian apodization enabled state, and Gaussian standard-deviation ratio. The worker maps those serializable fields directly into the Python `ApertureSpec` used by both full simulations and aperture preview rendering.

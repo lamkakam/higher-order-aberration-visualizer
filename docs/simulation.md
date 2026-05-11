@@ -7,7 +7,7 @@ The optics simulation is implemented in the Python package under [`src/hoa_visua
 The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the worker:
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
-- `apertureSettings`: aperture mask settings for circle, square, or regular hexagon apertures and optional matching central obstructions
+- `apertureSettings`: aperture mask settings for circle, square, or regular hexagon apertures, optional matching central obstructions, and optional Gaussian apodization
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `targetId`: one of the supported target ids
 - `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
@@ -35,7 +35,7 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) validates inputs, resolves target-specific angular sampling, and uses Prysm to:
 
-1. build the pupil grid and aperture mask, optionally with a centered obstruction
+1. build the pupil grid and aperture mask, optionally with a centered obstruction and Gaussian apodization
 2. sum normalized Zernike terms into a wavefront OPD map
 3. propagate the pupil to a fixed-sampling focal-plane PSF
 4. normalize the PSF energy
@@ -47,6 +47,8 @@ The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/mo
 The aperture helper accepts `circle`, `square`, and `regular_hexagon` for both the outer aperture and central obstruction. The UI-facing aperture diameter remains the outer diameter. Square and regular hexagon masks use Prysm's `regular_polygon` helper. Non-circular shapes accept rotation values from 0 to 360 degrees.
 
 `centralObstructionRatio` must satisfy `0 <= ratio < 1`. A ratio of `0` is the default unobstructed pupil and hides obstruction shape controls in the UI. A nonzero ratio subtracts a centered obstruction from the outer aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`. In advanced display mode, the UI exposes these aperture settings through an aperture mask modal under Target.
+
+Gaussian apodization is disabled by default. When enabled, `gaussianApodizationSigmaRatio` must satisfy `0.05 <= ratio <= 1.0` and is interpreted as a true Gaussian standard deviation divided by the outer aperture diameter. The Python aperture helper first builds the geometric aperture and central obstruction, then multiplies that amplitude by `exp(-r^2 / (2 * sigma_mm^2))`, where `sigma_mm = gaussianApodizationSigmaRatio * apertureDiameterMm`. The pupil mask remains `amp > 0`, so wavefront support still follows the geometric aperture and obstruction while the PSF uses the softened amplitude.
 
 When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
 
@@ -64,7 +66,7 @@ By default, the convolved target image and PSF renderings omit scale bars. When 
 
 The worker returns these as `imageUrl`, `psfImageUrl`, and `wavefrontImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
 
-The worker can also render a standalone aperture mask preview with `renderApertureMask`. That path validates the same `ApertureSpec` settings and returns an `ApertureMaskResult` PNG data URL without running `compute_simulation`.
+The worker can also render a standalone aperture mask preview with `renderApertureMask`. That path validates the same `ApertureSpec` settings, including Gaussian apodization, and returns an `ApertureMaskResult` PNG data URL without running `compute_simulation`.
 
 ## Pyodide Wheel Rationale
 

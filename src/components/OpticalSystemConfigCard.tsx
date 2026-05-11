@@ -3,10 +3,12 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
 import Modal from '@mui/material/Modal';
 import NativeSelect from '@mui/material/NativeSelect';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import type { ChangeEvent } from 'react';
 import { useEffect, useId, useMemo, useState } from 'react';
@@ -69,6 +71,27 @@ const ratioSliderInput = {
   inputMode: 'decimal' as const,
   inputMin: 0,
   inputMax: 0.999,
+  inputStep: 0.01
+};
+
+const gaussianSigmaRatioSliderInput = {
+  formatValue: formatRatioValue,
+  parseDraft: (draft: string) => Number(draft),
+  isDraftAllowed: isRatioText,
+  isValidDraft: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    parsedValue >= 0.05 &&
+    parsedValue <= 1,
+  getErrorText: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    (parsedValue < 0.05 || parsedValue > 1)
+      ? 'Value must be between 0.05 and 1.'
+      : undefined,
+  inputMode: 'decimal' as const,
+  inputMin: 0.05,
+  inputMax: 1,
   inputStep: 0.01
 };
 
@@ -198,6 +221,11 @@ function ApertureMaskModal({
   );
   const [draftObstructionRotationDegrees, setDraftObstructionRotationDegrees] =
     useState(apertureSettings.centralObstructionRotationDegrees);
+  const [draftGaussianApodizationEnabled, setDraftGaussianApodizationEnabled] =
+    useState(apertureSettings.gaussianApodizationEnabled);
+  const [draftGaussianSigmaRatio, setDraftGaussianSigmaRatio] = useState(
+    apertureSettings.gaussianApodizationSigmaRatio
+  );
   const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
   const [previewError, setPreviewError] = useState<string | undefined>(undefined);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -217,10 +245,16 @@ function ApertureMaskModal({
     (Number.isFinite(draftObstructionRotationDegrees) &&
       draftObstructionRotationDegrees >= 0 &&
       draftObstructionRotationDegrees <= 360);
+  const gaussianSigmaRatioIsValid =
+    !draftGaussianApodizationEnabled ||
+    (Number.isFinite(draftGaussianSigmaRatio) &&
+      draftGaussianSigmaRatio >= 0.05 &&
+      draftGaussianSigmaRatio <= 1);
   const draftIsValid =
     obstructionRatioIsValid &&
     apertureRotationIsValid &&
-    obstructionRotationIsValid;
+    obstructionRotationIsValid &&
+    gaussianSigmaRatioIsValid;
   const draftSettings = useMemo<ApertureSettings | undefined>(
     () =>
       draftIsValid
@@ -233,7 +267,9 @@ function ApertureMaskModal({
               draftObstructionRatio > 0 && draftObstructionShape !== 'circle'
                 ? draftObstructionRotationDegrees
                 : 0,
-            centralObstructionRatio: draftObstructionRatio
+            centralObstructionRatio: draftObstructionRatio,
+            gaussianApodizationEnabled: draftGaussianApodizationEnabled,
+            gaussianApodizationSigmaRatio: draftGaussianSigmaRatio
           }
         : undefined,
     [
@@ -242,7 +278,9 @@ function ApertureMaskModal({
       draftRotationDegrees,
       draftObstructionShape,
       draftObstructionRotationDegrees,
-      draftObstructionRatio
+      draftObstructionRatio,
+      draftGaussianApodizationEnabled,
+      draftGaussianSigmaRatio
     ]
   );
   const showApertureRotation = draftShape !== 'circle';
@@ -261,6 +299,8 @@ function ApertureMaskModal({
     setDraftObstructionRotationDegrees(
       apertureSettings.centralObstructionRotationDegrees
     );
+    setDraftGaussianApodizationEnabled(apertureSettings.gaussianApodizationEnabled);
+    setDraftGaussianSigmaRatio(apertureSettings.gaussianApodizationSigmaRatio);
   }, [apertureSettings, open]);
 
   useEffect(() => {
@@ -408,6 +448,32 @@ function ApertureMaskModal({
               ) : undefined}
             </>
           ) : undefined}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={draftGaussianApodizationEnabled}
+                onChange={(event) => {
+                  setDraftGaussianApodizationEnabled(event.target.checked);
+                }}
+              />
+            }
+            label="Gaussian Apodization"
+          />
+          {draftGaussianApodizationEnabled ? (
+            <CommitSlider
+              ariaLabel="Standard Deviation (x Aperture Diameter)"
+              label="Standard Deviation (x Aperture Diameter)"
+              min={0.05}
+              max={1}
+              step={0.01}
+              value={draftGaussianSigmaRatio}
+              input={gaussianSigmaRatioSliderInput}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(value) => `${formatRatioValue(value)}D`}
+              roundValue={roundRatioValue}
+              onCommit={setDraftGaussianSigmaRatio}
+            />
+          ) : undefined}
           <Box
             data-testid="aperture-mask-preview-panel"
             sx={{
@@ -484,9 +550,16 @@ function formatApertureSummary(settings: ApertureSettings): string {
     settings.centralObstructionRatio > 0
       ? ` ${formatShapeLabel(settings.centralObstructionShape).toLowerCase()}`
       : '';
-  return `${formatShapeLabel(settings.shape)}, ${obstructionPercent.toLocaleString(undefined, {
+  const maskSummary = `${formatShapeLabel(settings.shape)}, ${obstructionPercent.toLocaleString(undefined, {
     maximumFractionDigits: 1
   })}%${obstructionLabel} obstruction`;
+  if (!settings.gaussianApodizationEnabled) {
+    return maskSummary;
+  }
+
+  return `${maskSummary}, ${formatRatioValue(
+    settings.gaussianApodizationSigmaRatio
+  )}D sigmas Gaussian Apodization`;
 }
 
 function isRatioText(value: string) {

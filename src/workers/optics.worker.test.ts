@@ -40,7 +40,9 @@ describe('optics worker', () => {
     rotationDegrees: 0,
     centralObstructionShape: 'circle',
     centralObstructionRotationDegrees: 0,
-    centralObstructionRatio: 0
+    centralObstructionRatio: 0,
+    gaussianApodizationEnabled: false,
+    gaussianApodizationSigmaRatio: 0.5
   } as const;
 
   it('exposes the Jupiter HST target id', () => {
@@ -130,7 +132,9 @@ describe('optics worker', () => {
         rotationDegrees: 0,
         centralObstructionShape: 'circle',
         centralObstructionRotationDegrees: 0,
-        centralObstructionRatio: 0.25
+        centralObstructionRatio: 0.25,
+        gaussianApodizationEnabled: true,
+        gaussianApodizationSigmaRatio: 0.5
       },
       apertureDiameterMm: 3,
       showScaleBar: true,
@@ -155,7 +159,9 @@ describe('optics worker', () => {
             rotationDegrees: 0,
             centralObstructionShape: 'circle',
             centralObstructionRotationDegrees: 0,
-            centralObstructionRatio: 0.25
+            centralObstructionRatio: 0.25,
+            gaussianApodizationEnabled: true,
+            gaussianApodizationSigmaRatio: 0.5
           }
         })
       })
@@ -212,7 +218,9 @@ describe('optics worker', () => {
       rotationDegrees: 0,
       centralObstructionShape: 'circle',
       centralObstructionRotationDegrees: 0,
-      centralObstructionRatio: 0.35
+      centralObstructionRatio: 0.35,
+      gaussianApodizationEnabled: true,
+      gaussianApodizationSigmaRatio: 0.75
     });
 
     expect(result.imageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
@@ -226,7 +234,9 @@ describe('optics worker', () => {
             rotationDegrees: 0,
             centralObstructionShape: 'circle',
             centralObstructionRotationDegrees: 0,
-            centralObstructionRatio: 0.35
+            centralObstructionRatio: 0.35,
+            gaussianApodizationEnabled: true,
+            gaussianApodizationSigmaRatio: 0.75
           }
         })
       })
@@ -244,7 +254,9 @@ describe('optics worker', () => {
         rotationDegrees: 25,
         centralObstructionShape: 'regular_hexagon',
         centralObstructionRotationDegrees: 30,
-        centralObstructionRatio: 0.2
+        centralObstructionRatio: 0.2,
+        gaussianApodizationEnabled: true,
+        gaussianApodizationSigmaRatio: 0.6
       },
       apertureDiameterMm: 3,
       showScaleBar: true,
@@ -262,10 +274,20 @@ describe('optics worker', () => {
             rotationDegrees: 25,
             centralObstructionShape: 'regular_hexagon',
             centralObstructionRotationDegrees: 30,
-            centralObstructionRatio: 0.2
+            centralObstructionRatio: 0.2,
+            gaussianApodizationEnabled: true,
+            gaussianApodizationSigmaRatio: 0.6
           }
         })
       })
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"])'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"])'),
+      expect.any(Object)
     );
   });
 
@@ -279,7 +301,9 @@ describe('optics worker', () => {
       rotationDegrees: 45,
       centralObstructionShape: 'regular_hexagon',
       centralObstructionRotationDegrees: 20,
-      centralObstructionRatio: 0.25
+      centralObstructionRatio: 0.25,
+      gaussianApodizationEnabled: true,
+      gaussianApodizationSigmaRatio: 0.4
     });
 
     expect(runPythonAsync).toHaveBeenCalledWith(
@@ -291,10 +315,20 @@ describe('optics worker', () => {
             rotationDegrees: 45,
             centralObstructionShape: 'regular_hexagon',
             centralObstructionRotationDegrees: 20,
-            centralObstructionRatio: 0.25
+            centralObstructionRatio: 0.25,
+            gaussianApodizationEnabled: true,
+            gaussianApodizationSigmaRatio: 0.4
           }
         })
       })
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"])'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"])'),
+      expect.any(Object)
     );
   });
 

@@ -43,7 +43,9 @@ const defaultApertureSettings: ApertureSettings = {
   rotationDegrees: 0,
   centralObstructionShape: 'circle',
   centralObstructionRotationDegrees: 0,
-  centralObstructionRatio: 0
+  centralObstructionRatio: 0,
+  gaussianApodizationEnabled: false,
+  gaussianApodizationSigmaRatio: 0.5
 };
 const debounceMs = 300;
 const computeTimeoutMs = 60_000;

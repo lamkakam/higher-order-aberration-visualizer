@@ -159,6 +159,8 @@ aperture = ApertureSpec(
     central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
     central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
     central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+    gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
+    gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
 )
 simulation = compute_simulation(
     entrance_pupil_diameter_mm=float(aperture_diameter_mm),
@@ -214,6 +216,8 @@ aperture = ApertureSpec(
     central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
     central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
     central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+    gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
+    gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
 )
 render_aperture_mask(aperture)
 `

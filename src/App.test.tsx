@@ -16,7 +16,9 @@ const defaultApertureSettings = {
   rotationDegrees: 0,
   centralObstructionShape: 'circle',
   centralObstructionRotationDegrees: 0,
-  centralObstructionRatio: 0
+  centralObstructionRatio: 0,
+  gaussianApodizationEnabled: false,
+  gaussianApodizationSigmaRatio: 0.5
 } as const;
 
 function getCentralObstructionRatioTextbox(container: HTMLElement = document.body) {
@@ -25,6 +27,16 @@ function getCentralObstructionRatioTextbox(container: HTMLElement = document.bod
 
 function getCentralObstructionRatioSlider(container: HTMLElement = document.body) {
   return within(container).getByRole('slider', { name: 'Central Obstruction Ratio' });
+}
+
+function getGaussianApodizationSwitch(container: HTMLElement = document.body) {
+  return within(container).getByRole('switch', { name: 'Gaussian Apodization' });
+}
+
+function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', {
+    name: 'Standard Deviation (x Aperture Diameter)'
+  });
 }
 
 afterEach(() => {
@@ -138,6 +150,12 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(within(modal).queryByRole('option', { name: 'Ellipse' })).not.toBeInTheDocument();
   expect(getCentralObstructionRatioTextbox(modal)).toHaveValue('0');
   expect(getCentralObstructionRatioSlider(modal)).toBeInTheDocument();
+  expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
+  expect(
+    within(modal).queryByRole('slider', {
+      name: 'Standard Deviation (x Aperture Diameter)'
+    })
+  ).not.toBeInTheDocument();
   expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
   expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
@@ -163,6 +181,34 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(await within(modal).findByAltText('Aperture mask preview')).toBeInTheDocument();
   await user.click(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
   expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
+});
+
+it('shows Gaussian apodization SD controls only when enabled', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
+  expect(
+    within(modal).queryByRole('textbox', {
+      name: 'Standard Deviation (x Aperture Diameter)'
+    })
+  ).not.toBeInTheDocument();
+
+  await user.click(getGaussianApodizationSwitch(modal));
+
+  expect(getGaussianApodizationSwitch(modal)).toBeChecked();
+  expect(
+    within(modal).getByRole('slider', {
+      name: 'Standard Deviation (x Aperture Diameter)'
+    })
+  ).toBeInTheDocument();
+  expect(getGaussianSigmaRatioTextbox(modal)).toHaveValue('0.5');
 });
 
 it('shows aperture shape controls conditionally in the aperture mask modal', async () => {
@@ -192,6 +238,11 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
   });
   fireEvent.blur(getCentralObstructionRatioTextbox(modal));
   expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
+  expect(
+    within(modal).getByLabelText('Obstruction Shape').compareDocumentPosition(
+      getGaussianApodizationSwitch(modal)
+    ) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
   expect(within(modal).getAllByRole('option', { name: 'Circle' })).toHaveLength(2);
   expect(within(modal).getAllByRole('option', { name: 'Square' })).toHaveLength(2);
   expect(within(modal).getAllByRole('option', { name: 'Regular Hexagon' })).toHaveLength(2);
@@ -281,7 +332,9 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
       rotationDegrees: 45,
       centralObstructionShape: 'circle',
       centralObstructionRotationDegrees: 0,
-      centralObstructionRatio: 0
+      centralObstructionRatio: 0,
+      gaussianApodizationEnabled: false,
+      gaussianApodizationSigmaRatio: 0.5
     },
     apertureDiameterMm: 6,
     showScaleBar: false,
@@ -359,6 +412,60 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
   fireEvent.change(screen.getByLabelText('Aperture Shape'), {
     target: { value: 'square' }
   });
+  fireEvent.click(getGaussianApodizationSwitch());
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
+    target: { value: '5' }
+  });
+  fireEvent.blur(screen.getByLabelText('Aperture Diameter (mm)'));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
+    apertureDiameterMm: 5,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('cancels draft Gaussian apodization changes and preserves previous simulation settings', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.click(getGaussianApodizationSwitch());
+  fireEvent.change(getGaussianSigmaRatioTextbox(), {
+    target: { value: '0.25' }
+  });
+  fireEvent.blur(getGaussianSigmaRatioTextbox());
   fireEvent.click(screen.getByRole('button', { name: 'Cancel aperture mask' }));
 
   expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
@@ -417,10 +524,19 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   fireEvent.change(screen.getByLabelText('Obstruction Shape'), {
     target: { value: 'regular_hexagon' }
   });
+  fireEvent.click(getGaussianApodizationSwitch());
+  fireEvent.change(getGaussianSigmaRatioTextbox(), {
+    target: { value: '0.75' }
+  });
+  fireEvent.blur(getGaussianSigmaRatioTextbox());
   fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
 
   expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
-  expect(screen.getByText('Square, 35% regular hexagon obstruction')).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      'Square, 35% regular hexagon obstruction, 0.75D sigmas Gaussian Apodization'
+    )
+  ).toBeInTheDocument();
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -431,7 +547,9 @@ it('confirms aperture mask changes and sends them in the next simulation payload
       rotationDegrees: 0,
       centralObstructionShape: 'regular_hexagon',
       centralObstructionRotationDegrees: 0,
-      centralObstructionRatio: 0.35
+      centralObstructionRatio: 0.35,
+      gaussianApodizationEnabled: true,
+      gaussianApodizationSigmaRatio: 0.75
     },
     apertureDiameterMm: 6,
     showScaleBar: false,

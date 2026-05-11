@@ -28,6 +28,8 @@ export interface ApertureSettings {
   centralObstructionShape: ApertureShape;
   centralObstructionRotationDegrees: number;
   centralObstructionRatio: number;
+  gaussianApodizationEnabled: boolean;
+  gaussianApodizationSigmaRatio: number;
 }
 
 export interface ConvolvedImageInput {
