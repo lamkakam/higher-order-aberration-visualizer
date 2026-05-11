@@ -7,7 +7,7 @@ The optics simulation is implemented in the Python package under [`src/hoa_visua
 The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the worker:
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
-- `apertureSettings`: aperture mask settings for circle, square, regular hexagon, or ellipse apertures and optional matching central obstructions
+- `apertureSettings`: aperture mask settings for circle, square, or regular hexagon apertures and optional matching central obstructions
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `targetId`: one of the supported target ids
 - `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
@@ -44,7 +44,7 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
 
-The aperture helper accepts `circle`, `square`, `regular_hexagon`, and `ellipse` for both the outer aperture and central obstruction. The UI-facing aperture diameter remains the outer diameter; for ellipses it is the major-axis diameter, with `ellipseMinorAxisRatio` controlling the minor axis. Square and regular hexagon masks use Prysm's `regular_polygon` helper, while ellipses use `rotated_ellipse`. Non-circular shapes accept rotation values from 0 to 360 degrees.
+The aperture helper accepts `circle`, `square`, and `regular_hexagon` for both the outer aperture and central obstruction. The UI-facing aperture diameter remains the outer diameter. Square and regular hexagon masks use Prysm's `regular_polygon` helper. Non-circular shapes accept rotation values from 0 to 360 degrees.
 
 `centralObstructionRatio` must satisfy `0 <= ratio < 1`. A ratio of `0` is the default unobstructed pupil and hides obstruction shape controls in the UI. A nonzero ratio subtracts a centered obstruction from the outer aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`. In advanced display mode, the UI exposes these aperture settings through an aperture mask modal under Target.
 

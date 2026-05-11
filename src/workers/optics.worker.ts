@@ -156,10 +156,8 @@ coefficients = {
 aperture = ApertureSpec(
     shape=str(aperture_settings["shape"]),
     rotation_degrees=float(aperture_settings["rotationDegrees"]),
-    ellipse_minor_axis_ratio=float(aperture_settings["ellipseMinorAxisRatio"]),
     central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
     central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
-    central_obstruction_ellipse_minor_axis_ratio=float(aperture_settings["centralObstructionEllipseMinorAxisRatio"]),
     central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
 )
 simulation = compute_simulation(
@@ -213,10 +211,8 @@ from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 aperture = ApertureSpec(
     shape=str(aperture_settings["shape"]),
     rotation_degrees=float(aperture_settings["rotationDegrees"]),
-    ellipse_minor_axis_ratio=float(aperture_settings["ellipseMinorAxisRatio"]),
     central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
     central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
-    central_obstruction_ellipse_minor_axis_ratio=float(aperture_settings["centralObstructionEllipseMinorAxisRatio"]),
     central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
 )
 render_aperture_mask(aperture)

@@ -20,15 +20,13 @@ export type SupportedTargetId = (typeof supportedTargetIds)[number];
 
 export type ZernikeCoefficientKey = `${number},${number}`;
 export type WavefrontLegendUnit = 'wave' | 'micron';
-export type ApertureShape = 'circle' | 'square' | 'regular_hexagon' | 'ellipse';
+export type ApertureShape = 'circle' | 'square' | 'regular_hexagon';
 
 export interface ApertureSettings {
   shape: ApertureShape;
   rotationDegrees: number;
-  ellipseMinorAxisRatio: number;
   centralObstructionShape: ApertureShape;
   centralObstructionRotationDegrees: number;
-  centralObstructionEllipseMinorAxisRatio: number;
   centralObstructionRatio: number;
 }
 

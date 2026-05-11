@@ -14,10 +14,8 @@ const psfCutoffNote =
 const defaultApertureSettings = {
   shape: 'circle',
   rotationDegrees: 0,
-  ellipseMinorAxisRatio: 1,
   centralObstructionShape: 'circle',
   centralObstructionRotationDegrees: 0,
-  centralObstructionEllipseMinorAxisRatio: 1,
   centralObstructionRatio: 0
 } as const;
 
@@ -129,7 +127,7 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(within(modal).getByRole('option', { name: 'Circle' })).toBeInTheDocument();
   expect(within(modal).getByRole('option', { name: 'Square' })).toBeInTheDocument();
   expect(within(modal).getByRole('option', { name: 'Regular Hexagon' })).toBeInTheDocument();
-  expect(within(modal).getByRole('option', { name: 'Ellipse' })).toBeInTheDocument();
+  expect(within(modal).queryByRole('option', { name: 'Ellipse' })).not.toBeInTheDocument();
   expect(within(modal).getByLabelText('Central Obstruction Ratio')).toHaveValue('0');
   expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
@@ -179,22 +177,20 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
   });
   expect(within(modal).getByRole('slider', { name: 'Aperture Rotation' })).toBeInTheDocument();
 
-  fireEvent.change(within(modal).getByLabelText('Aperture Shape'), {
-    target: { value: 'ellipse' }
-  });
-  expect(within(modal).getByRole('slider', { name: 'Aperture Rotation' })).toBeInTheDocument();
-  expect(within(modal).getByLabelText('Aperture Ellipse Minor-Axis Ratio')).toHaveValue('1');
-
   fireEvent.change(within(modal).getByLabelText('Central Obstruction Ratio'), {
     target: { value: '0.25' }
   });
   expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
+  expect(within(modal).getAllByRole('option', { name: 'Circle' })).toHaveLength(2);
+  expect(within(modal).getAllByRole('option', { name: 'Square' })).toHaveLength(2);
+  expect(within(modal).getAllByRole('option', { name: 'Regular Hexagon' })).toHaveLength(2);
+  expect(within(modal).queryAllByRole('option', { name: 'Ellipse' })).toHaveLength(0);
 
   fireEvent.change(within(modal).getByLabelText('Obstruction Shape'), {
-    target: { value: 'ellipse' }
+    target: { value: 'square' }
   });
   expect(within(modal).getByRole('slider', { name: 'Obstruction Rotation' })).toBeInTheDocument();
-  expect(within(modal).getByLabelText('Obstruction Ellipse Minor-Axis Ratio')).toHaveValue('1');
+  expect(within(modal).queryByLabelText('Obstruction Ellipse Minor-Axis Ratio')).not.toBeInTheDocument();
 
   fireEvent.change(within(modal).getByLabelText('Central Obstruction Ratio'), {
     target: { value: '0' }
@@ -285,30 +281,25 @@ it('confirms aperture mask changes and sends them in the next simulation payload
     target: { value: '0.35' }
   });
   fireEvent.change(screen.getByLabelText('Aperture Shape'), {
-    target: { value: 'ellipse' }
-  });
-  fireEvent.change(screen.getByLabelText('Aperture Ellipse Minor-Axis Ratio'), {
-    target: { value: '0.6' }
+    target: { value: 'square' }
   });
   fireEvent.change(screen.getByLabelText('Obstruction Shape'), {
-    target: { value: 'square' }
+    target: { value: 'regular_hexagon' }
   });
   fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
 
   expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
-  expect(screen.getByText('Ellipse, 35% square obstruction')).toBeInTheDocument();
+  expect(screen.getByText('Square, 35% regular hexagon obstruction')).toBeInTheDocument();
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: {
-      shape: 'ellipse',
+      shape: 'square',
       rotationDegrees: 0,
-      ellipseMinorAxisRatio: 0.6,
-      centralObstructionShape: 'square',
+      centralObstructionShape: 'regular_hexagon',
       centralObstructionRotationDegrees: 0,
-      centralObstructionEllipseMinorAxisRatio: 1,
       centralObstructionRatio: 0.35
     },
     apertureDiameterMm: 6,

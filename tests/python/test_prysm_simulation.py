@@ -193,26 +193,6 @@ def test_regular_hexagon_aperture_uses_polygon_path_and_keeps_outputs_valid(
     assert np.isfinite(simulation.wavefront_nm).all()
 
 
-def test_ellipse_aperture_respects_minor_axis_ratio_and_rotation() -> None:
-    axis = np.linspace(-1, 1, 64)
-    x, y = np.meshgrid(axis, axis)
-    radius = np.sqrt(x**2 + y**2)
-    vertical = ApertureSpec(
-        shape="ellipse",
-        rotation_degrees=90,
-        ellipse_minor_axis_ratio=0.5,
-    ).amplitude(1, x, y, radius)
-    horizontal = ApertureSpec(
-        shape="ellipse",
-        rotation_degrees=0,
-        ellipse_minor_axis_ratio=0.5,
-    ).amplitude(1, x, y, radius)
-
-    assert vertical.sum(axis=0).max() > vertical.sum(axis=1).max()
-    assert horizontal.sum(axis=1).max() > horizontal.sum(axis=0).max()
-    assert not np.array_equal(vertical, horizontal)
-
-
 @pytest.mark.parametrize(
     "aperture",
     [
@@ -227,13 +207,6 @@ def test_ellipse_aperture_respects_minor_axis_ratio_and_rotation() -> None:
             central_obstruction_ratio=0.35,
             central_obstruction_shape="regular_hexagon",
             central_obstruction_rotation_degrees=30,
-        ),
-        ApertureSpec(
-            shape="ellipse",
-            ellipse_minor_axis_ratio=0.7,
-            central_obstruction_ratio=0.35,
-            central_obstruction_shape="ellipse",
-            central_obstruction_ellipse_minor_axis_ratio=0.5,
         ),
     ],
 )
@@ -267,14 +240,8 @@ def test_shaped_central_obstructions_mask_center_and_keep_outputs_valid(
         ApertureSpec(central_obstruction_ratio=math.inf),
         ApertureSpec(rotation_degrees=-1),
         ApertureSpec(rotation_degrees=math.inf),
-        ApertureSpec(ellipse_minor_axis_ratio=0),
-        ApertureSpec(ellipse_minor_axis_ratio=1.1),
         ApertureSpec(central_obstruction_shape="hex"),
         ApertureSpec(central_obstruction_ratio=0.2, central_obstruction_rotation_degrees=-1),
-        ApertureSpec(
-            central_obstruction_ratio=0.2,
-            central_obstruction_ellipse_minor_axis_ratio=0,
-        ),
     ],
 )
 def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:

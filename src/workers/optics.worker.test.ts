@@ -38,10 +38,8 @@ describe('optics worker', () => {
   const defaultApertureSettings = {
     shape: 'circle',
     rotationDegrees: 0,
-    ellipseMinorAxisRatio: 1,
     centralObstructionShape: 'circle',
     centralObstructionRotationDegrees: 0,
-    centralObstructionEllipseMinorAxisRatio: 1,
     centralObstructionRatio: 0
   } as const;
 
@@ -130,10 +128,8 @@ describe('optics worker', () => {
       apertureSettings: {
         shape: 'circle',
         rotationDegrees: 0,
-        ellipseMinorAxisRatio: 1,
         centralObstructionShape: 'circle',
         centralObstructionRotationDegrees: 0,
-        centralObstructionEllipseMinorAxisRatio: 1,
         centralObstructionRatio: 0.25
       },
       apertureDiameterMm: 3,
@@ -157,10 +153,8 @@ describe('optics worker', () => {
           aperture_settings: {
             shape: 'circle',
             rotationDegrees: 0,
-            ellipseMinorAxisRatio: 1,
             centralObstructionShape: 'circle',
             centralObstructionRotationDegrees: 0,
-            centralObstructionEllipseMinorAxisRatio: 1,
             centralObstructionRatio: 0.25
           }
         })
@@ -216,10 +210,8 @@ describe('optics worker', () => {
     const result = await api.renderApertureMask({
       shape: 'circle',
       rotationDegrees: 0,
-      ellipseMinorAxisRatio: 1,
       centralObstructionShape: 'circle',
       centralObstructionRotationDegrees: 0,
-      centralObstructionEllipseMinorAxisRatio: 1,
       centralObstructionRatio: 0.35
     });
 
@@ -232,10 +224,8 @@ describe('optics worker', () => {
           aperture_settings: {
             shape: 'circle',
             rotationDegrees: 0,
-            ellipseMinorAxisRatio: 1,
             centralObstructionShape: 'circle',
             centralObstructionRotationDegrees: 0,
-            centralObstructionEllipseMinorAxisRatio: 1,
             centralObstructionRatio: 0.35
           }
         })
@@ -250,12 +240,10 @@ describe('optics worker', () => {
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
       apertureSettings: {
-        shape: 'ellipse',
+        shape: 'square',
         rotationDegrees: 25,
-        ellipseMinorAxisRatio: 0.6,
         centralObstructionShape: 'regular_hexagon',
         centralObstructionRotationDegrees: 30,
-        centralObstructionEllipseMinorAxisRatio: 1,
         centralObstructionRatio: 0.2
       },
       apertureDiameterMm: 3,
@@ -270,12 +258,10 @@ describe('optics worker', () => {
       expect.objectContaining({
         globals: expect.objectContaining({
           aperture_settings: {
-            shape: 'ellipse',
+            shape: 'square',
             rotationDegrees: 25,
-            ellipseMinorAxisRatio: 0.6,
             centralObstructionShape: 'regular_hexagon',
             centralObstructionRotationDegrees: 30,
-            centralObstructionEllipseMinorAxisRatio: 1,
             centralObstructionRatio: 0.2
           }
         })
@@ -291,24 +277,20 @@ describe('optics worker', () => {
     await api.renderApertureMask({
       shape: 'square',
       rotationDegrees: 45,
-      ellipseMinorAxisRatio: 1,
-      centralObstructionShape: 'ellipse',
+      centralObstructionShape: 'regular_hexagon',
       centralObstructionRotationDegrees: 20,
-      centralObstructionEllipseMinorAxisRatio: 0.5,
       centralObstructionRatio: 0.25
     });
 
     expect(runPythonAsync).toHaveBeenCalledWith(
-      expect.stringContaining('central_obstruction_ellipse_minor_axis_ratio=float(aperture_settings["centralObstructionEllipseMinorAxisRatio"])'),
+      expect.stringContaining('central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"])'),
       expect.objectContaining({
         globals: expect.objectContaining({
           aperture_settings: {
             shape: 'square',
             rotationDegrees: 45,
-            ellipseMinorAxisRatio: 1,
-            centralObstructionShape: 'ellipse',
+            centralObstructionShape: 'regular_hexagon',
             centralObstructionRotationDegrees: 20,
-            centralObstructionEllipseMinorAxisRatio: 0.5,
             centralObstructionRatio: 0.25
           }
         })
