@@ -142,6 +142,122 @@ def test_central_obstruction_masks_center_and_keeps_outputs_valid() -> None:
     assert simulation.wavefront_nm[center, center] == 0
 
 
+def test_square_aperture_differs_from_circle_and_keeps_outputs_valid() -> None:
+    circle = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    square = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(shape="square", rotation_degrees=45),
+    )
+
+    assert not np.array_equal(circle.pupil_mask, square.pupil_mask)
+    assert np.isclose(square.psf.sum(), 1)
+    assert np.isfinite(square.convolved_image).all()
+    assert np.isfinite(square.wavefront_nm).all()
+
+
+def test_regular_hexagon_aperture_uses_polygon_path_and_keeps_outputs_valid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from prysm import geometry
+
+    calls: list[tuple[int, float]] = []
+    original_regular_polygon = geometry.regular_polygon
+
+    def recording_regular_polygon(*args, **kwargs):
+        calls.append((args[0], kwargs["rotation"]))
+        return original_regular_polygon(*args, **kwargs)
+
+    monkeypatch.setattr(geometry, "regular_polygon", recording_regular_polygon)
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(shape="regular_hexagon", rotation_degrees=30),
+    )
+
+    assert calls == [(6, 30)]
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+
+
+def test_ellipse_aperture_respects_minor_axis_ratio_and_rotation() -> None:
+    axis = np.linspace(-1, 1, 64)
+    x, y = np.meshgrid(axis, axis)
+    radius = np.sqrt(x**2 + y**2)
+    vertical = ApertureSpec(
+        shape="ellipse",
+        rotation_degrees=90,
+        ellipse_minor_axis_ratio=0.5,
+    ).amplitude(1, x, y, radius)
+    horizontal = ApertureSpec(
+        shape="ellipse",
+        rotation_degrees=0,
+        ellipse_minor_axis_ratio=0.5,
+    ).amplitude(1, x, y, radius)
+
+    assert vertical.sum(axis=0).max() > vertical.sum(axis=1).max()
+    assert horizontal.sum(axis=1).max() > horizontal.sum(axis=0).max()
+    assert not np.array_equal(vertical, horizontal)
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(
+            shape="square",
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="square",
+            central_obstruction_rotation_degrees=45,
+        ),
+        ApertureSpec(
+            shape="regular_hexagon",
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="regular_hexagon",
+            central_obstruction_rotation_degrees=30,
+        ),
+        ApertureSpec(
+            shape="ellipse",
+            ellipse_minor_axis_ratio=0.7,
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="ellipse",
+            central_obstruction_ellipse_minor_axis_ratio=0.5,
+        ),
+    ],
+)
+def test_shaped_central_obstructions_mask_center_and_keep_outputs_valid(
+    aperture: ApertureSpec,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    center = simulation.pupil_mask.shape[0] // 2
+
+    assert not simulation.pupil_mask[center, center]
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+    assert simulation.wavefront_nm[center, center] == 0
+
+
 @pytest.mark.parametrize(
     "aperture",
     [
@@ -149,6 +265,16 @@ def test_central_obstruction_masks_center_and_keeps_outputs_valid() -> None:
         ApertureSpec(central_obstruction_ratio=-0.1),
         ApertureSpec(central_obstruction_ratio=1),
         ApertureSpec(central_obstruction_ratio=math.inf),
+        ApertureSpec(rotation_degrees=-1),
+        ApertureSpec(rotation_degrees=math.inf),
+        ApertureSpec(ellipse_minor_axis_ratio=0),
+        ApertureSpec(ellipse_minor_axis_ratio=1.1),
+        ApertureSpec(central_obstruction_shape="hex"),
+        ApertureSpec(central_obstruction_ratio=0.2, central_obstruction_rotation_degrees=-1),
+        ApertureSpec(
+            central_obstruction_ratio=0.2,
+            central_obstruction_ellipse_minor_axis_ratio=0,
+        ),
     ],
 )
 def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:

@@ -40,6 +40,11 @@ const defaultTargetId: SupportedTargetId = 'logmar_chart';
 const defaultApertureDiameterMm = 6;
 const defaultApertureSettings: ApertureSettings = {
   shape: 'circle',
+  rotationDegrees: 0,
+  ellipseMinorAxisRatio: 1,
+  centralObstructionShape: 'circle',
+  centralObstructionRotationDegrees: 0,
+  centralObstructionEllipseMinorAxisRatio: 1,
   centralObstructionRatio: 0
 };
 const debounceMs = 300;

@@ -74,7 +74,7 @@ def compute_simulation(
     r, t = coordinates.cart_to_polar(xi, eta)
     pupil_dx_mm = float(xi[0, 1] - xi[0, 0])
     aperture_radius_mm = entrance_pupil_diameter_mm / 2
-    amp = resolved_aperture.amplitude(aperture_radius_mm, r)
+    amp = resolved_aperture.amplitude(aperture_radius_mm, xi, eta, r)
     pupil_mask = amp > 0
 
     normalized_radius = r / aperture_radius_mm

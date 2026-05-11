@@ -1,5 +1,6 @@
 export { AberrationSlidersCard } from './AberrationSlidersCard';
 export { AppHeader } from './AppHeader';
+export { CommitSlider } from './CommitSlider';
 export { NumberField } from './NumberField';
 export { OpticalSystemConfigCard } from './OpticalSystemConfigCard';
 export {

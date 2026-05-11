@@ -3,12 +3,12 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
+import { CommitSlider } from './CommitSlider';
 import {
   micronsToWaves,
   roundToTwoDecimals,
@@ -115,8 +115,6 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
     resetVersion,
     sliderValue: value
   });
-  const sliderValueRef = useRef(value);
-  const keyboardSlidingRef = useRef(false);
   let currentRowState = rowState;
 
   if (
@@ -131,7 +129,6 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
       resetVersion,
       sliderValue: value
     };
-    sliderValueRef.current = value;
     setRowState(currentRowState);
   }
 
@@ -156,7 +153,6 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   const commitSliderValue = useCallback(
     (nextValue: number) => {
       const roundedValue = roundToTwoDecimals(nextValue);
-      sliderValueRef.current = roundedValue;
       setRowState((previousState) => ({
         ...previousState,
         draftValue: formatCommittedValue(roundedValue, displayUnit),
@@ -222,43 +218,22 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
           }}
         />
       </Box>
-      <Slider
-        aria-label={coefficientLabel}
+      <CommitSlider
+        ariaLabel={coefficientLabel}
         min={zernikeCoefficientMin}
         max={zernikeCoefficientMax}
         step={zernikeCoefficientStep}
         value={currentRowState.sliderValue}
         valueLabelDisplay="auto"
         valueLabelFormat={(nextValue) => formatCommittedValue(nextValue, displayUnit)}
-        onChange={(event, nextValue) => {
-          const roundedValue = roundToTwoDecimals(
-            Array.isArray(nextValue) ? nextValue[0] : nextValue
-          );
-          if (event.type === 'keydown') {
-            keyboardSlidingRef.current = true;
-          }
-          sliderValueRef.current = roundedValue;
+        roundValue={roundToTwoDecimals}
+        onPreview={(roundedValue) => {
           setRowState((previousState) => ({
             ...previousState,
             sliderValue: roundedValue
           }));
         }}
-        onChangeCommitted={(_, nextValue) => {
-          if (keyboardSlidingRef.current) {
-            return;
-          }
-
-          commitSliderValue(Array.isArray(nextValue) ? nextValue[0] : nextValue);
-        }}
-        onKeyDown={() => {
-          keyboardSlidingRef.current = true;
-        }}
-        onKeyUp={() => {
-          if (keyboardSlidingRef.current) {
-            keyboardSlidingRef.current = false;
-            commitSliderValue(sliderValueRef.current);
-          }
-        }}
+        onCommit={commitSliderValue}
       />
     </Box>
   );

@@ -28,7 +28,7 @@ def render_aperture_mask(
     axis = np.linspace(-1, 1, samples)
     x, y = np.meshgrid(axis, axis)
     radius = np.sqrt(x**2 + y**2)
-    mask = spec.amplitude(1, radius)
+    mask = spec.amplitude(1, x, y, radius)
 
     plt = _load_pyplot()
     fig, ax = plt.subplots(
