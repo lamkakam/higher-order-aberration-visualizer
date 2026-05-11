@@ -170,6 +170,63 @@ def test_gaussian_apodization_produces_non_binary_amplitude_and_valid_psf() -> N
     assert np.isfinite(simulation.wavefront_nm).all()
 
 
+def test_spider_vanes_mask_aperture_pixels_and_keep_outputs_valid() -> None:
+    aperture = ApertureSpec(
+        spider_vane_count=4,
+        spider_vane_width_ratio=0.02,
+    )
+    axis = np.linspace(-5, 5, 128)
+    x, y = np.meshgrid(axis, axis)
+    radius = np.sqrt(x**2 + y**2)
+    amplitude = aperture.amplitude(5, x, y, radius)
+    default_amplitude = ApertureSpec().amplitude(5, x, y, radius)
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    assert np.count_nonzero((default_amplitude > 0) & (amplitude == 0)) > 0
+    assert amplitude.sum() < default_amplitude.sum()
+    assert amplitude.sum() > default_amplitude.sum() * 0.8
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(spider_vane_count=0, spider_vane_width_ratio=0.02),
+        ApertureSpec(spider_vane_count=4, spider_vane_width_ratio=0),
+    ],
+)
+def test_inactive_spider_config_matches_default_unobstructed_aperture(
+    aperture: ApertureSpec,
+) -> None:
+    default_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    spider_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    assert np.array_equal(default_simulation.pupil_mask, spider_simulation.pupil_mask)
+    assert np.array_equal(default_simulation.wavefront_nm, spider_simulation.wavefront_nm)
+
+
 def test_square_aperture_differs_from_circle_and_keeps_outputs_valid() -> None:
     circle = compute_simulation(
         10,
@@ -324,6 +381,13 @@ def test_apodized_shaped_central_obstructions_mask_center_and_keep_outputs_valid
             gaussian_apodization_enabled=True,
             gaussian_apodization_sigma_ratio=math.inf,
         ),
+        ApertureSpec(spider_vane_count=-1),
+        ApertureSpec(spider_vane_count=13),
+        ApertureSpec(spider_vane_count=1.5),
+        ApertureSpec(spider_vane_count=math.inf),
+        ApertureSpec(spider_vane_width_ratio=-0.01),
+        ApertureSpec(spider_vane_width_ratio=0.26),
+        ApertureSpec(spider_vane_width_ratio=math.inf),
     ],
 )
 def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:
@@ -340,6 +404,7 @@ def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:
             gaussian_apodization_enabled=True,
             gaussian_apodization_sigma_ratio=0.5,
         ),
+        ApertureSpec(spider_vane_count=4, spider_vane_width_ratio=0.02),
     ],
 )
 def test_render_aperture_mask_returns_png_bytes(aperture: ApertureSpec) -> None:

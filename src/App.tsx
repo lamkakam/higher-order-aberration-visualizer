@@ -44,6 +44,8 @@ const defaultApertureSettings: ApertureSettings = {
   centralObstructionShape: 'circle',
   centralObstructionRotationDegrees: 0,
   centralObstructionRatio: 0,
+  spiderVaneCount: 0,
+  spiderVaneWidthRatio: 0,
   gaussianApodizationEnabled: false,
   gaussianApodizationSigmaRatio: 0.5
 };

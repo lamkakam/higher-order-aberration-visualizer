@@ -41,6 +41,8 @@ describe('optics worker', () => {
     centralObstructionShape: 'circle',
     centralObstructionRotationDegrees: 0,
     centralObstructionRatio: 0,
+    spiderVaneCount: 0,
+    spiderVaneWidthRatio: 0,
     gaussianApodizationEnabled: false,
     gaussianApodizationSigmaRatio: 0.5
   } as const;
@@ -133,6 +135,8 @@ describe('optics worker', () => {
         centralObstructionShape: 'circle',
         centralObstructionRotationDegrees: 0,
         centralObstructionRatio: 0.25,
+        spiderVaneCount: 4,
+        spiderVaneWidthRatio: 0.02,
         gaussianApodizationEnabled: true,
         gaussianApodizationSigmaRatio: 0.5
       },
@@ -160,6 +164,8 @@ describe('optics worker', () => {
             centralObstructionShape: 'circle',
             centralObstructionRotationDegrees: 0,
             centralObstructionRatio: 0.25,
+            spiderVaneCount: 4,
+            spiderVaneWidthRatio: 0.02,
             gaussianApodizationEnabled: true,
             gaussianApodizationSigmaRatio: 0.5
           }
@@ -219,6 +225,8 @@ describe('optics worker', () => {
       centralObstructionShape: 'circle',
       centralObstructionRotationDegrees: 0,
       centralObstructionRatio: 0.35,
+      spiderVaneCount: 4,
+      spiderVaneWidthRatio: 0.03,
       gaussianApodizationEnabled: true,
       gaussianApodizationSigmaRatio: 0.75
     });
@@ -235,6 +243,8 @@ describe('optics worker', () => {
             centralObstructionShape: 'circle',
             centralObstructionRotationDegrees: 0,
             centralObstructionRatio: 0.35,
+            spiderVaneCount: 4,
+            spiderVaneWidthRatio: 0.03,
             gaussianApodizationEnabled: true,
             gaussianApodizationSigmaRatio: 0.75
           }
@@ -255,6 +265,8 @@ describe('optics worker', () => {
         centralObstructionShape: 'regular_hexagon',
         centralObstructionRotationDegrees: 30,
         centralObstructionRatio: 0.2,
+        spiderVaneCount: 6,
+        spiderVaneWidthRatio: 0.04,
         gaussianApodizationEnabled: true,
         gaussianApodizationSigmaRatio: 0.6
       },
@@ -275,6 +287,8 @@ describe('optics worker', () => {
             centralObstructionShape: 'regular_hexagon',
             centralObstructionRotationDegrees: 30,
             centralObstructionRatio: 0.2,
+            spiderVaneCount: 6,
+            spiderVaneWidthRatio: 0.04,
             gaussianApodizationEnabled: true,
             gaussianApodizationSigmaRatio: 0.6
           }
@@ -287,6 +301,14 @@ describe('optics worker', () => {
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"])'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('spider_vane_count=float(aperture_settings["spiderVaneCount"])'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"])'),
       expect.any(Object)
     );
   });
@@ -302,6 +324,8 @@ describe('optics worker', () => {
       centralObstructionShape: 'regular_hexagon',
       centralObstructionRotationDegrees: 20,
       centralObstructionRatio: 0.25,
+      spiderVaneCount: 3,
+      spiderVaneWidthRatio: 0.05,
       gaussianApodizationEnabled: true,
       gaussianApodizationSigmaRatio: 0.4
     });
@@ -316,6 +340,8 @@ describe('optics worker', () => {
             centralObstructionShape: 'regular_hexagon',
             centralObstructionRotationDegrees: 20,
             centralObstructionRatio: 0.25,
+            spiderVaneCount: 3,
+            spiderVaneWidthRatio: 0.05,
             gaussianApodizationEnabled: true,
             gaussianApodizationSigmaRatio: 0.4
           }
@@ -328,6 +354,14 @@ describe('optics worker', () => {
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"])'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('spider_vane_count=float(aperture_settings["spiderVaneCount"])'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"])'),
       expect.any(Object)
     );
   });

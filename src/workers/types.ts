@@ -28,6 +28,8 @@ export interface ApertureSettings {
   centralObstructionShape: ApertureShape;
   centralObstructionRotationDegrees: number;
   centralObstructionRatio: number;
+  spiderVaneCount: number;
+  spiderVaneWidthRatio: number;
   gaussianApodizationEnabled: boolean;
   gaussianApodizationSigmaRatio: number;
 }

@@ -20,6 +20,8 @@ class ApertureSpec:
     central_obstruction_shape: str = "circle"
     central_obstruction_rotation_degrees: float = 0.0
     central_obstruction_ratio: float = 0.0
+    spider_vane_count: int = 0
+    spider_vane_width_ratio: float = 0.0
     gaussian_apodization_enabled: bool = False
     gaussian_apodization_sigma_ratio: float = 0.5
 
@@ -29,6 +31,8 @@ class ApertureSpec:
         ratio = float(self.central_obstruction_ratio)
         rotation = float(self.rotation_degrees)
         obstruction_rotation = float(self.central_obstruction_rotation_degrees)
+        spider_vane_count = float(self.spider_vane_count)
+        spider_vane_width_ratio = float(self.spider_vane_width_ratio)
         gaussian_sigma_ratio = float(self.gaussian_apodization_sigma_ratio)
         if self.shape not in APERTURE_SHAPES:
             raise ValueError("aperture shape is not supported")
@@ -47,6 +51,23 @@ class ApertureSpec:
                 "central_obstruction_rotation_degrees must be finite and satisfy "
                 "0 <= rotation <= 360"
             )
+        if (
+            not math.isfinite(spider_vane_count)
+            or not spider_vane_count.is_integer()
+            or spider_vane_count < 0
+            or spider_vane_count > 12
+        ):
+            raise ValueError(
+                "spider_vane_count must be a finite integer and satisfy 0 <= count <= 12"
+            )
+        if (
+            not math.isfinite(spider_vane_width_ratio)
+            or spider_vane_width_ratio < 0
+            or spider_vane_width_ratio > 0.25
+        ):
+            raise ValueError(
+                "spider_vane_width_ratio must be finite and satisfy 0 <= ratio <= 0.25"
+            )
         if self.gaussian_apodization_enabled and (
             not math.isfinite(gaussian_sigma_ratio)
             or gaussian_sigma_ratio < 0.05
@@ -62,6 +83,8 @@ class ApertureSpec:
             central_obstruction_shape=self.central_obstruction_shape,
             central_obstruction_rotation_degrees=obstruction_rotation,
             central_obstruction_ratio=ratio,
+            spider_vane_count=int(spider_vane_count),
+            spider_vane_width_ratio=spider_vane_width_ratio,
             gaussian_apodization_enabled=bool(self.gaussian_apodization_enabled),
             gaussian_apodization_sigma_ratio=gaussian_sigma_ratio,
         )
@@ -95,6 +118,24 @@ class ApertureSpec:
                 spec.central_obstruction_rotation_degrees,
             )
             amp = np.clip(amp - obstruction, 0, 1)
+
+        if spec.spider_vane_count > 0 and spec.spider_vane_width_ratio > 0:
+            aperture_diameter_mm = aperture_radius_mm * 2
+            width_mm = spec.spider_vane_width_ratio * aperture_diameter_mm
+            from prysm import geometry
+
+            spider = np.asarray(
+                geometry.spider(
+                    spec.spider_vane_count,
+                    width_mm,
+                    x,
+                    y,
+                    rotation=0,
+                    center=(0, 0),
+                ),
+                dtype=float,
+            )
+            amp = amp * spider
 
         if not spec.gaussian_apodization_enabled:
             return amp

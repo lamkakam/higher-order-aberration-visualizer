@@ -17,6 +17,8 @@ const defaultApertureSettings = {
   centralObstructionShape: 'circle',
   centralObstructionRotationDegrees: 0,
   centralObstructionRatio: 0,
+  spiderVaneCount: 0,
+  spiderVaneWidthRatio: 0,
   gaussianApodizationEnabled: false,
   gaussianApodizationSigmaRatio: 0.5
 } as const;
@@ -31,6 +33,26 @@ function getCentralObstructionRatioSlider(container: HTMLElement = document.body
 
 function getGaussianApodizationSwitch(container: HTMLElement = document.body) {
   return within(container).getByRole('switch', { name: 'Gaussian Apodization' });
+}
+
+function getSpiderVanesTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', { name: 'Spider Vanes' });
+}
+
+function getSpiderVanesSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', { name: 'Spider Vanes' });
+}
+
+function getSpiderVaneWidthTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', {
+    name: 'Vane Width (x Aperture Diameter)'
+  });
+}
+
+function getSpiderVaneWidthSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', {
+    name: 'Vane Width (x Aperture Diameter)'
+  });
 }
 
 function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
@@ -150,6 +172,14 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(within(modal).queryByRole('option', { name: 'Ellipse' })).not.toBeInTheDocument();
   expect(getCentralObstructionRatioTextbox(modal)).toHaveValue('0');
   expect(getCentralObstructionRatioSlider(modal)).toBeInTheDocument();
+  expect(getSpiderVanesTextbox(modal)).toHaveValue('0');
+  expect(getSpiderVanesSlider(modal)).toBeInTheDocument();
+  expect(getSpiderVaneWidthTextbox(modal)).toHaveValue('0');
+  expect(getSpiderVaneWidthSlider(modal)).toBeInTheDocument();
+  expect(
+    getSpiderVaneWidthSlider(modal).compareDocumentPosition(getGaussianApodizationSwitch(modal)) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
   expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
   expect(
     within(modal).queryByRole('slider', {
@@ -333,6 +363,8 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
       centralObstructionShape: 'circle',
       centralObstructionRotationDegrees: 0,
       centralObstructionRatio: 0,
+      spiderVaneCount: 0,
+      spiderVaneWidthRatio: 0,
       gaussianApodizationEnabled: false,
       gaussianApodizationSigmaRatio: 0.5
     },
@@ -489,6 +521,106 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
   });
 });
 
+it('commits spider vane textbox values to the confirmed payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(getSpiderVanesTextbox(), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(getSpiderVanesTextbox());
+  fireEvent.change(getSpiderVaneWidthTextbox(), {
+    target: { value: '0.02' }
+  });
+  fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction, 4-vane spider, each vane 0.02D wide')).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: {
+      shape: 'circle',
+      rotationDegrees: 0,
+      centralObstructionShape: 'circle',
+      centralObstructionRotationDegrees: 0,
+      centralObstructionRatio: 0,
+      spiderVaneCount: 4,
+      spiderVaneWidthRatio: 0.02,
+      gaussianApodizationEnabled: false,
+      gaussianApodizationSigmaRatio: 0.5
+    },
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('omits spider vane settings from the aperture summary when width is zero', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  fireEvent.change(getSpiderVanesTextbox(), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(getSpiderVanesTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  expect(screen.queryByText(/spider/iu)).not.toBeInTheDocument();
+});
+
+it('omits spider vane settings from the aperture summary when count is zero', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  fireEvent.change(getSpiderVaneWidthTextbox(), {
+    target: { value: '0.02' }
+  });
+  fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  expect(screen.queryByText(/spider/iu)).not.toBeInTheDocument();
+});
+
 it('confirms aperture mask changes and sends them in the next simulation payload', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
@@ -524,6 +656,14 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   fireEvent.change(screen.getByLabelText('Obstruction Shape'), {
     target: { value: 'regular_hexagon' }
   });
+  fireEvent.change(getSpiderVanesTextbox(), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(getSpiderVanesTextbox());
+  fireEvent.change(getSpiderVaneWidthTextbox(), {
+    target: { value: '0.02' }
+  });
+  fireEvent.blur(getSpiderVaneWidthTextbox());
   fireEvent.click(getGaussianApodizationSwitch());
   fireEvent.change(getGaussianSigmaRatioTextbox(), {
     target: { value: '0.75' }
@@ -534,7 +674,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
   expect(
     screen.getByText(
-      'Square, 35% regular hexagon obstruction, 0.75D sigmas Gaussian Apodization'
+      'Square, 35% regular hexagon obstruction, 4-vane spider, each vane 0.02D wide, Gaussian apodization with 0.75D sigma'
     )
   ).toBeInTheDocument();
 
@@ -548,6 +688,8 @@ it('confirms aperture mask changes and sends them in the next simulation payload
       centralObstructionShape: 'regular_hexagon',
       centralObstructionRotationDegrees: 0,
       centralObstructionRatio: 0.35,
+      spiderVaneCount: 4,
+      spiderVaneWidthRatio: 0.02,
       gaussianApodizationEnabled: true,
       gaussianApodizationSigmaRatio: 0.75
     },

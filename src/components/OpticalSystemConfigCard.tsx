@@ -95,6 +95,49 @@ const gaussianSigmaRatioSliderInput = {
   inputStep: 0.01
 };
 
+const spiderVaneCountSliderInput = {
+  formatValue: (value: number) => String(Math.round(value)),
+  parseDraft: (draft: string) => Number(draft),
+  isDraftAllowed: (draft: string) => draft === '' || /^\d*$/.test(draft),
+  isValidDraft: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    Number.isInteger(parsedValue) &&
+    parsedValue >= 0 &&
+    parsedValue <= 12,
+  getErrorText: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    (parsedValue < 0 || parsedValue > 12)
+      ? 'Value must be between 0 and 12.'
+      : undefined,
+  inputMode: 'numeric' as const,
+  inputMin: 0,
+  inputMax: 12,
+  inputStep: 1
+};
+
+const spiderVaneWidthRatioSliderInput = {
+  formatValue: formatRatioValue,
+  parseDraft: (draft: string) => Number(draft),
+  isDraftAllowed: isRatioText,
+  isValidDraft: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    parsedValue >= 0 &&
+    parsedValue <= 0.25,
+  getErrorText: (draft: string, parsedValue: number) =>
+    draft.trim() !== '' &&
+    Number.isFinite(parsedValue) &&
+    (parsedValue < 0 || parsedValue > 0.25)
+      ? 'Value must be between 0 and 0.25.'
+      : undefined,
+  inputMode: 'decimal' as const,
+  inputMin: 0,
+  inputMax: 0.25,
+  inputStep: 0.01
+};
+
 interface OpticalSystemConfigCardProps {
   readonly apertureDiameterMm: number;
   readonly apertureSettings: ApertureSettings;
@@ -226,6 +269,12 @@ function ApertureMaskModal({
   const [draftGaussianSigmaRatio, setDraftGaussianSigmaRatio] = useState(
     apertureSettings.gaussianApodizationSigmaRatio
   );
+  const [draftSpiderVaneCount, setDraftSpiderVaneCount] = useState(
+    apertureSettings.spiderVaneCount
+  );
+  const [draftSpiderVaneWidthRatio, setDraftSpiderVaneWidthRatio] = useState(
+    apertureSettings.spiderVaneWidthRatio
+  );
   const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
   const [previewError, setPreviewError] = useState<string | undefined>(undefined);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -250,10 +299,21 @@ function ApertureMaskModal({
     (Number.isFinite(draftGaussianSigmaRatio) &&
       draftGaussianSigmaRatio >= 0.05 &&
       draftGaussianSigmaRatio <= 1);
+  const spiderVaneCountIsValid =
+    Number.isFinite(draftSpiderVaneCount) &&
+    Number.isInteger(draftSpiderVaneCount) &&
+    draftSpiderVaneCount >= 0 &&
+    draftSpiderVaneCount <= 12;
+  const spiderVaneWidthRatioIsValid =
+    Number.isFinite(draftSpiderVaneWidthRatio) &&
+    draftSpiderVaneWidthRatio >= 0 &&
+    draftSpiderVaneWidthRatio <= 0.25;
   const draftIsValid =
     obstructionRatioIsValid &&
     apertureRotationIsValid &&
     obstructionRotationIsValid &&
+    spiderVaneCountIsValid &&
+    spiderVaneWidthRatioIsValid &&
     gaussianSigmaRatioIsValid;
   const draftSettings = useMemo<ApertureSettings | undefined>(
     () =>
@@ -268,6 +328,8 @@ function ApertureMaskModal({
                 ? draftObstructionRotationDegrees
                 : 0,
             centralObstructionRatio: draftObstructionRatio,
+            spiderVaneCount: draftSpiderVaneCount,
+            spiderVaneWidthRatio: draftSpiderVaneWidthRatio,
             gaussianApodizationEnabled: draftGaussianApodizationEnabled,
             gaussianApodizationSigmaRatio: draftGaussianSigmaRatio
           }
@@ -279,6 +341,8 @@ function ApertureMaskModal({
       draftObstructionShape,
       draftObstructionRotationDegrees,
       draftObstructionRatio,
+      draftSpiderVaneCount,
+      draftSpiderVaneWidthRatio,
       draftGaussianApodizationEnabled,
       draftGaussianSigmaRatio
     ]
@@ -301,6 +365,8 @@ function ApertureMaskModal({
     );
     setDraftGaussianApodizationEnabled(apertureSettings.gaussianApodizationEnabled);
     setDraftGaussianSigmaRatio(apertureSettings.gaussianApodizationSigmaRatio);
+    setDraftSpiderVaneCount(apertureSettings.spiderVaneCount);
+    setDraftSpiderVaneWidthRatio(apertureSettings.spiderVaneWidthRatio);
   }, [apertureSettings, open]);
 
   useEffect(() => {
@@ -448,6 +514,32 @@ function ApertureMaskModal({
               ) : undefined}
             </>
           ) : undefined}
+          <CommitSlider
+            ariaLabel="Spider Vanes"
+            label="Spider Vanes"
+            min={0}
+            max={12}
+            step={1}
+            value={draftSpiderVaneCount}
+            input={spiderVaneCountSliderInput}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(value) => value.toFixed(0)}
+            roundValue={Math.round}
+            onCommit={setDraftSpiderVaneCount}
+          />
+          <CommitSlider
+            ariaLabel="Vane Width (x Aperture Diameter)"
+            label="Vane Width (x Aperture Diameter)"
+            min={0}
+            max={0.25}
+            step={0.01}
+            value={draftSpiderVaneWidthRatio}
+            input={spiderVaneWidthRatioSliderInput}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(value) => `${formatRatioValue(value)}D`}
+            roundValue={roundRatioValue}
+            onCommit={setDraftSpiderVaneWidthRatio}
+          />
           <FormControlLabel
             control={
               <Switch
@@ -553,13 +645,24 @@ function formatApertureSummary(settings: ApertureSettings): string {
   const maskSummary = `${formatShapeLabel(settings.shape)}, ${obstructionPercent.toLocaleString(undefined, {
     maximumFractionDigits: 1
   })}%${obstructionLabel} obstruction`;
+  const effects = [maskSummary];
+  if (settings.spiderVaneCount > 0 && settings.spiderVaneWidthRatio > 0) {
+    effects.push(
+      `${settings.spiderVaneCount}-vane spider, each vane ${formatRatioValue(
+        settings.spiderVaneWidthRatio
+      )}D wide`
+    );
+  }
   if (!settings.gaussianApodizationEnabled) {
-    return maskSummary;
+    return effects.join(', ');
   }
 
-  return `${maskSummary}, ${formatRatioValue(
-    settings.gaussianApodizationSigmaRatio
-  )}D sigmas Gaussian Apodization`;
+  effects.push(
+    `Gaussian apodization with ${formatRatioValue(
+      settings.gaussianApodizationSigmaRatio
+    )}D sigma`
+  );
+  return effects.join(', ');
 }
 
 function isRatioText(value: string) {
