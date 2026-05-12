@@ -43,7 +43,11 @@ describe('useApertureMaskPreview', () => {
       useApertureMaskPreview(apertureSettings, onRenderApertureMask)
     );
 
-    await waitFor(() => expect(result.current.isPreviewLoading).toBe(true));
+    expect(result.current).toMatchObject({
+      preview: undefined,
+      previewError: undefined,
+      isPreviewLoading: true
+    });
 
     await act(async () => {
       preview.resolve(previewResult);
@@ -73,6 +77,12 @@ describe('useApertureMaskPreview', () => {
         ...apertureSettings,
         spiderVaneCount: 4
       }
+    });
+
+    expect(result.current).toMatchObject({
+      preview: undefined,
+      previewError: undefined,
+      isPreviewLoading: true
     });
 
     await waitFor(() => {
@@ -120,6 +130,12 @@ describe('useApertureMaskPreview', () => {
       }
     });
 
+    expect(result.current).toMatchObject({
+      preview: undefined,
+      previewError: undefined,
+      isPreviewLoading: true
+    });
+
     await act(async () => {
       firstPreview.resolve(previewResult);
     });
@@ -132,6 +148,46 @@ describe('useApertureMaskPreview', () => {
 
     await waitFor(() => {
       expect(result.current.preview).toBe(nextPreview);
+      expect(result.current.isPreviewLoading).toBe(false);
+    });
+  });
+
+  it('hides a settled error immediately after settings change', async () => {
+    const nextPreview = deferred<ApertureMaskResult>();
+    const onRenderApertureMask = vi
+      .fn<(value: ApertureSettings) => Promise<ApertureMaskResult>>()
+      .mockRejectedValueOnce(new Error('Worker unavailable'))
+      .mockReturnValueOnce(nextPreview.promise);
+    const { result, rerender } = renderHook(
+      ({ settings }) => useApertureMaskPreview(settings, onRenderApertureMask),
+      { initialProps: { settings: apertureSettings } }
+    );
+
+    await waitFor(() => {
+      expect(result.current.previewError).toBe('Worker unavailable');
+      expect(result.current.isPreviewLoading).toBe(false);
+    });
+
+    rerender({
+      settings: {
+        ...apertureSettings,
+        spiderVaneCount: 4
+      }
+    });
+
+    expect(result.current).toMatchObject({
+      preview: undefined,
+      previewError: undefined,
+      isPreviewLoading: true
+    });
+
+    await act(async () => {
+      nextPreview.resolve(previewResult);
+    });
+
+    await waitFor(() => {
+      expect(result.current.preview).toBe(previewResult);
+      expect(result.current.previewError).toBeUndefined();
       expect(result.current.isPreviewLoading).toBe(false);
     });
   });

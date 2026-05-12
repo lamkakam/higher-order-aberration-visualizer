@@ -7,44 +7,60 @@ interface ApertureMaskPreview {
   readonly isPreviewLoading: boolean;
 }
 
+type SettledApertureMaskPreview =
+  | {
+      readonly settings: ApertureSettings;
+      readonly preview: ApertureMaskResult;
+      readonly previewError?: undefined;
+    }
+  | {
+      readonly settings: ApertureSettings;
+      readonly preview?: undefined;
+      readonly previewError: string;
+    };
+
 export function useApertureMaskPreview(
   draftSettings: ApertureSettings | undefined,
   onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>
 ): ApertureMaskPreview {
-  const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
-  const [previewError, setPreviewError] = useState<string | undefined>(undefined);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [settledPreview, setSettledPreview] = useState<SettledApertureMaskPreview | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     if (!draftSettings) {
       return;
     }
 
-    let cancelled = false;
-    setIsPreviewLoading(true);
-    setPreviewError(undefined);
+    let ignore = false;
     onRenderApertureMask(draftSettings)
       .then((nextPreview) => {
-        if (!cancelled) {
-          setPreview(nextPreview);
+        if (!ignore) {
+          setSettledPreview({
+            settings: draftSettings,
+            preview: nextPreview
+          });
         }
       })
       .catch((error) => {
-        if (!cancelled) {
-          setPreview(undefined);
-          setPreviewError(error instanceof Error ? error.message : 'Aperture preview failed');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsPreviewLoading(false);
+        if (!ignore) {
+          setSettledPreview({
+            settings: draftSettings,
+            previewError: error instanceof Error ? error.message : 'Aperture preview failed'
+          });
         }
       });
 
     return () => {
-      cancelled = true;
+      ignore = true;
     };
   }, [draftSettings, onRenderApertureMask]);
+
+  const currentSettledPreview =
+    settledPreview?.settings === draftSettings ? settledPreview : undefined;
+  const preview = currentSettledPreview?.preview;
+  const previewError = currentSettledPreview?.previewError;
+  const isPreviewLoading = Boolean(draftSettings && settledPreview?.settings !== draftSettings);
 
   return { preview, previewError, isPreviewLoading };
 }
