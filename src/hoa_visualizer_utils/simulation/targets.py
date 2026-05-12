@@ -254,12 +254,56 @@ def _make_jupiter_502nm(
 ) -> NDArray[np.float64]:
     """Build a centered monochrome HST Jupiter target with 50 arcsec diameter."""
 
+    return _make_jupiter_target(
+        "jupiter_502nm.npz",
+        shape,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+
+def _make_jupiter_rgb_target(
+    shape: tuple[int, int],
+    *,
+    image_dx_arcmin: float,
+) -> NDArray[np.float64]:
+    """Build centered red, green, and blue Jupiter channels."""
+
+    return np.stack(
+        [
+            _make_jupiter_target(
+                "jupiter_658nm.npz",
+                shape,
+                image_dx_arcmin=image_dx_arcmin,
+            ),
+            _make_jupiter_target(
+                "jupiter_502nm.npz",
+                shape,
+                image_dx_arcmin=image_dx_arcmin,
+            ),
+            _make_jupiter_target(
+                "jupiter_395nm.npz",
+                shape,
+                image_dx_arcmin=image_dx_arcmin,
+            ),
+        ],
+        axis=-1,
+    )
+
+
+def _make_jupiter_target(
+    asset_filename: str,
+    shape: tuple[int, int],
+    *,
+    image_dx_arcmin: float,
+) -> NDArray[np.float64]:
+    """Build a centered monochrome HST Jupiter target with 50 arcsec diameter."""
+
     diameter_px = max(1, round(JUPITER_502NM_DIAMETER_ARCMIN / image_dx_arcmin))
     rows, columns = shape
     if diameter_px > rows or diameter_px > columns:
         raise ValueError("jupiter_502nm target is larger than the image grid")
 
-    source = _load_jupiter_502nm_asset()
+    source = _load_jupiter_asset(asset_filename)
     zoom = diameter_px / source.shape[0]
     resized = ndimage.zoom(source, zoom, order=3, mode="nearest", prefilter=True)
     resized = np.clip(resized, 0, 1)
@@ -280,10 +324,17 @@ def _make_point_source(shape: tuple[int, int]) -> NDArray[np.float64]:
     return target
 
 
-@lru_cache(maxsize=1)
-def _load_jupiter_502nm_asset() -> NDArray[np.float64]:
+@lru_cache(maxsize=3)
+def _load_jupiter_asset(asset_filename: str) -> NDArray[np.float64]:
+    if asset_filename not in {
+        "jupiter_395nm.npz",
+        "jupiter_502nm.npz",
+        "jupiter_658nm.npz",
+    }:
+        raise ValueError("Unsupported Jupiter asset")
+
     asset = resources.files("hoa_visualizer_utils.simulation.assets").joinpath(
-        "jupiter_502nm.npz"
+        asset_filename
     )
     with asset.open("rb") as file:
         return np.asarray(np.load(file)["image"], dtype=float)

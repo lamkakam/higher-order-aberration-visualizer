@@ -24,6 +24,7 @@ from hoa_visualizer_utils.simulation.compute import (
     compute_simulation,
 )
 from hoa_visualizer_utils.simulation.aperture import ApertureSpec
+from hoa_visualizer_utils.simulation import targets
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
 
 
@@ -93,6 +94,175 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.sampling.image_dx_arcmin == image_dx_arcmin
     assert simulation.sampling.wavelength_nm == 550.0
     assert simulation.inputs.aperture == ApertureSpec()
+
+
+def test_compute_simulation_monochrome_contract_stays_2d() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    assert simulation.convolved_image.shape == (64, 64)
+    assert simulation.psf.shape == (64, 64)
+    assert simulation.wavefront_nm.shape == (32, 32)
+    assert simulation.sampling.wavelength_nm == 550.0
+    assert simulation.inputs.zernike_coefficients == {}
+
+
+@pytest.mark.parametrize(
+    "wavelength_weights",
+    [
+        [(450, 1), (550, 1)],
+        [(450, 1), (550, 1), (650, 1), (700, 1)],
+        [(math.nan, 1), (550, 1), (650, 1)],
+        [(-450, 1), (550, 1), (650, 1)],
+        [(450, -1), (550, 1), (650, 1)],
+    ],
+)
+def test_polychromatic_simulation_rejects_invalid_wavelength_weights(
+    wavelength_weights: list[tuple[float, float]],
+) -> None:
+    with pytest.raises(ValueError, match="wavelength_weights"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            wavelength_weights=wavelength_weights,
+            zernike_coefficients_by_wavelength=[{}, {}, {}],
+        )
+
+
+def test_polychromatic_simulation_rejects_coefficient_length_mismatch() -> None:
+    with pytest.raises(ValueError, match="zernike_coefficients_by_wavelength"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            wavelength_weights=[(450, 1), (550, 1), (650, 1)],
+            zernike_coefficients_by_wavelength=[{}, {}],
+        )
+
+
+def test_polychromatic_point_source_maps_longest_middle_shortest_to_rgb() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(550, 0.2), (650, 0.7), (450, 0.4)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (64, 64, 3)
+    assert simulation.convolved_image[..., 0].max() == pytest.approx(0.7)
+    assert simulation.convolved_image[..., 1].max() == pytest.approx(0.2)
+    assert simulation.convolved_image[..., 2].max() == pytest.approx(0.4)
+    assert simulation.sampling.wavelength_nm == 550
+
+
+def test_polychromatic_non_jupiter_output_is_linear_rgb() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(650, 1), (550, 0.5), (450, 0.25)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (64, 64, 3)
+    assert simulation.convolved_image.min() >= 0
+    assert simulation.convolved_image.max() <= 1
+    assert simulation.target.shape == (64, 64)
+
+
+def test_polychromatic_zernike_mappings_are_used_per_channel() -> None:
+    wavelength_weights = [(650, 1), (550, 1), (450, 1)]
+    coefficients = [{(4, 0): 0.05}, {(4, 0): 0.15}, {(4, 0): 0.25}]
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=wavelength_weights,
+        zernike_coefficients_by_wavelength=coefficients,
+    )
+
+    for channel, (wavelength_nm, coefficient_mapping) in enumerate(
+        [(650, coefficients[0]), (550, coefficients[1]), (450, coefficients[2])]
+    ):
+        monochrome = compute_simulation(
+            10,
+            coefficient_mapping,
+            "point_source",
+            wavelength_nm=wavelength_nm,
+            pupil_samples=32,
+            image_samples=64,
+            image_dx_arcmin=simulation.sampling.image_dx_arcmin,
+        )
+        assert simulation.convolved_image[..., channel] == pytest.approx(
+            monochrome.convolved_image
+        )
+
+    assert simulation.inputs.zernike_coefficients == coefficients[1]
+    green_monochrome = compute_simulation(
+        10,
+        coefficients[1],
+        "point_source",
+        wavelength_nm=550,
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=simulation.sampling.image_dx_arcmin,
+    )
+    assert simulation.wavefront_nm == pytest.approx(green_monochrome.wavefront_nm)
+
+
+def test_jupiter_polychromatic_target_uses_rgb_wavelength_assets() -> None:
+    red_target = targets._make_jupiter_target(
+        "jupiter_658nm.npz",
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+    green_target = targets._make_jupiter_target(
+        "jupiter_502nm.npz",
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+    blue_target = targets._make_jupiter_target(
+        "jupiter_395nm.npz",
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+
+    assert not np.array_equal(red_target, green_target)
+    assert not np.array_equal(green_target, blue_target)
+
+    simulation = compute_simulation(
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=128,
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+        wavelength_weights=[(658, 1), (502, 1), (395, 1)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (128, 128, 3)
+    assert simulation.target.shape == (128, 128, 3)
+    assert simulation.target[..., 0] == pytest.approx(red_target)
+    assert simulation.target[..., 1] == pytest.approx(green_target)
+    assert simulation.target[..., 2] == pytest.approx(blue_target)
 
 
 def test_default_aperture_is_unobstructed_circle() -> None:

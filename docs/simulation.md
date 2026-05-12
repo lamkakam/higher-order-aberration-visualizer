@@ -17,6 +17,12 @@ The worker converts the Zernike keys to Python `(n, m)` tuples, converts `apertu
 
 The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns, using the configured 550 nm wavelength for conversion, but values sent to the worker remain in waves. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
 
+The internal Python API also supports opt-in three-channel polychromatic runs through `compute_simulation(..., wavelength_weights=[...], zernike_coefficients_by_wavelength=[...])`. The browser worker does not call this path yet, and the TypeScript worker contract and UI controls remain monochrome.
+
+Polychromatic callers must provide exactly three `(wavelength_nm, weight)` pairs and exactly three matching Zernike coefficient mappings. Wavelengths must be finite and positive, and weights must be finite and non-negative. The wavelength entries are sorted by wavelength before rendering: longest wavelength becomes red, the middle wavelength becomes green, and the shortest wavelength becomes blue. Each channel gets its own wavefront, PSF, target convolution, and linear post-convolution weight multiplier. Weights are not normalized by the simulation.
+
+For polychromatic results, `simulation.convolved_image` is linear RGB with shape `(H, W, 3)`. The representative `simulation.psf`, `simulation.wavefront_nm`, `simulation.sampling.wavelength_nm`, and `simulation.inputs.zernike_coefficients` values come from the middle/green channel so existing diagnostics and renderers can continue to consume those fields.
+
 ## Supported Targets
 
 Supported target ids are defined in both [`src/workers/types.ts`](../src/workers/types.ts) and [`src/hoa_visualizer_utils/simulation/targets.py`](../src/hoa_visualizer_utils/simulation/targets.py):
@@ -29,7 +35,7 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 - `slantededge`
 - `tiltedsquare`
 
-`targets.py` builds synthetic Siemens star, slanted edge, tilted square, Snellen E, LogMAR, and point-source targets. The Jupiter target uses the packaged [`jupiter_502nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz) asset.
+`targets.py` builds synthetic Siemens star, slanted edge, tilted square, Snellen E, LogMAR, and point-source targets. The monochrome Jupiter target uses the packaged [`jupiter_502nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz) asset. In polychromatic runs, Jupiter uses [`jupiter_658nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz) for red, `jupiter_502nm.npz` for green, and [`jupiter_395nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz) for blue. The red and blue packaged arrays are generated from the source JPEGs in [`docs/`](.) with [`scripts/build-jupiter-assets.py`](../scripts/build-jupiter-assets.py).
 
 ## Computation Path
 
@@ -41,6 +47,8 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 4. normalize the PSF energy
 5. build the requested target image
 6. convolve the target with the PSF, or use the normalized PSF directly for `point_source`
+
+For polychromatic runs, steps 2 through 6 are repeated for each RGB channel. Non-Jupiter image targets reuse the same grayscale target in each channel. `point_source` returns an RGB image built from the three display-normalized PSFs. Jupiter builds separate red, green, and blue target channels from the 658 nm, 502 nm, and 395 nm assets before convolution.
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
 
