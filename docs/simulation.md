@@ -9,15 +9,18 @@ The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the wor
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
 - `apertureSettings`: aperture mask settings for circle, square, or regular hexagon apertures, optional matching central obstructions, optional spider vanes, and optional Gaussian apodization
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
+- `spectralMode`: `monochromatic` or `polychromatic`; Basic Mode always sends `monochromatic`
 - `targetId`: one of the supported target ids
+- `wavelengthWeights`: in Advanced Mode Polychromatic, fixed to `[[550, 1], [656, 1], [486, 1]]`
 - `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
 - `zernikeCoefficients`: a record keyed by `"n,m"` strings with coefficient values in waves
+- `zernikeCoefficientsByWavelength`: in Advanced Mode Polychromatic, records for `550`, `656`, and `486` nm using the same `"n,m"` coefficient key format
 
-The worker converts the Zernike keys to Python `(n, m)` tuples, converts `apertureSettings` to an [`ApertureSpec`](../src/hoa_visualizer_utils/simulation/aperture.py), and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
+The worker converts the Zernike keys to Python `(n, m)` tuples, converts `apertureSettings` to an [`ApertureSpec`](../src/hoa_visualizer_utils/simulation/aperture.py), and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`. Monochromatic payloads call the existing single-channel path. Advanced Mode Polychromatic payloads also pass `wavelength_weights` and `zernike_coefficients_by_wavelength`, with the top-level `zernikeCoefficients` kept as the representative `550 nm` map.
 
-The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns, using the configured 550 nm wavelength for conversion, but values sent to the worker remain in waves. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
+The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns, using the configured 550 nm wavelength for conversion, but values sent to the worker remain in waves. Basic Mode and Advanced Monochromatic Mode show a single aberration card backed by the `550 nm` coefficient state. Advanced Polychromatic Mode shows tabs for `550 nm`, `656 nm`, and `486 nm`; each tab has an independent aberration card and reset action, and the `550 nm` tab shares state with monochromatic mode. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
 
-The internal Python API also supports opt-in three-channel polychromatic runs through `compute_simulation(..., wavelength_weights=[...], zernike_coefficients_by_wavelength=[...])`. The browser worker does not call this path yet, and the TypeScript worker contract and UI controls remain monochrome.
+The internal Python API and the browser worker support opt-in three-channel polychromatic runs through `compute_simulation(..., wavelength_weights=[...], zernike_coefficients_by_wavelength=[...])`.
 
 Polychromatic callers must provide exactly three `(wavelength_nm, weight)` pairs and exactly three matching Zernike coefficient mappings. Wavelengths must be finite and positive, and weights must be finite and non-negative. The wavelength entries are sorted by wavelength before rendering: longest wavelength becomes red, the middle wavelength becomes green, and the shortest wavelength becomes blue. Each channel gets its own wavefront, PSF, target convolution, and linear post-convolution weight multiplier. Weights are not normalized by the simulation.
 

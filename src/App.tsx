@@ -5,6 +5,8 @@ import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -28,6 +30,7 @@ import type { WorkerClient } from './workers/client';
 import type {
   ApertureSettings,
   ConvolvedImageResult,
+  SpectralMode,
   SupportedTargetId,
   ZernikeCoefficientKey
 } from './workers/types';
@@ -59,6 +62,18 @@ const wavefrontLegendUnitOptions = [
   { value: 'wave', label: 'Wave' },
   { value: 'micron', label: 'Micron' }
 ] as const;
+const spectralWavelengths = [550, 656, 486] as const;
+type SpectralWavelength = (typeof spectralWavelengths)[number];
+type ZernikeCoefficientMap = Record<ZernikeCoefficientKey, number>;
+type ZernikeCoefficientsByWavelength = Record<SpectralWavelength, ZernikeCoefficientMap>;
+
+function createDefaultZernikeCoefficientsByWavelength(): ZernikeCoefficientsByWavelength {
+  return {
+    550: createDefaultZernikeCoefficients(),
+    656: createDefaultZernikeCoefficients(),
+    486: createDefaultZernikeCoefficients()
+  };
+}
 
 export function App({ workerClient }: AppProps) {
   const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
@@ -66,13 +81,15 @@ export function App({ workerClient }: AppProps) {
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
   const [showScaleBar, setShowScaleBar] = useState(false);
+  const [spectralMode, setSpectralMode] = useState<SpectralMode>('monochromatic');
+  const [selectedWavelength, setSelectedWavelength] = useState<SpectralWavelength>(550);
   const [wavefrontLegendUnit, setWavefrontLegendUnit] =
     useState<WavefrontLegendUnit>('wave');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [apertureSettings, setApertureSettings] = useState(defaultApertureSettings);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
-  const [zernikeCoefficients, setZernikeCoefficients] = useState(
-    createDefaultZernikeCoefficients
+  const [zernikeCoefficientsByWavelength, setZernikeCoefficientsByWavelength] = useState(
+    createDefaultZernikeCoefficientsByWavelength
   );
   const [result, setResult] = useState<ConvolvedImageResult | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,6 +125,10 @@ export function App({ workerClient }: AppProps) {
       display: { xs: 'none', sm: 'block' }
     }
   };
+  const zernikeCoefficients = zernikeCoefficientsByWavelength[550];
+  const effectiveSpectralMode: SpectralMode =
+    displayMode === 'advanced' ? spectralMode : 'monochromatic';
+  const isPolychromatic = effectiveSpectralMode === 'polychromatic';
 
   useEffect(() => {
     let cancelled = false;
@@ -120,7 +141,19 @@ export function App({ workerClient }: AppProps) {
           apertureSettings,
           apertureDiameterMm,
           showScaleBar,
+          spectralMode: effectiveSpectralMode,
           targetId,
+          ...(isPolychromatic
+            ? {
+                wavelengthWeights: spectralWavelengths.map(
+                  (wavelength) => [wavelength, 1] as const
+                ),
+                zernikeCoefficientsByWavelength: spectralWavelengths.map(
+                  (wavelength) =>
+                    [wavelength, zernikeCoefficientsByWavelength[wavelength]] as const
+                )
+              }
+            : {}),
           wavefrontLegendUnit,
           zernikeCoefficients
         }),
@@ -153,21 +186,40 @@ export function App({ workerClient }: AppProps) {
     apertureDiameterMm,
     apertureSettings,
     client,
+    effectiveSpectralMode,
+    isPolychromatic,
     showScaleBar,
     targetId,
     wavefrontLegendUnit,
-    zernikeCoefficients
+    zernikeCoefficients,
+    zernikeCoefficientsByWavelength
   ]);
 
-  const updateZernikeCoefficient = useCallback((key: ZernikeCoefficientKey, value: number) => {
-    setZernikeCoefficients((currentValues) => ({
+  const updateZernikeCoefficient = useCallback(
+    (wavelength: SpectralWavelength, key: ZernikeCoefficientKey, value: number) => {
+      setZernikeCoefficientsByWavelength((currentValues) => ({
+        ...currentValues,
+        [wavelength]: {
+          ...currentValues[wavelength],
+          [key]: value
+        }
+      }));
+    },
+    []
+  );
+
+  const resetZernikeCoefficients = useCallback((wavelength: SpectralWavelength) => {
+    setZernikeCoefficientsByWavelength((currentValues) => ({
       ...currentValues,
-      [key]: value
+      [wavelength]: createDefaultZernikeCoefficients()
     }));
   }, []);
 
-  const resetZernikeCoefficients = useCallback(() => {
-    setZernikeCoefficients(createDefaultZernikeCoefficients());
+  const updateSpectralMode = useCallback((nextMode: SpectralMode) => {
+    setSpectralMode(nextMode);
+    if (nextMode === 'polychromatic') {
+      setSelectedWavelength(550);
+    }
   }, []);
 
   const renderApertureMask = useCallback(
@@ -306,17 +358,52 @@ export function App({ workerClient }: AppProps) {
                 apertureDiameterMm={apertureDiameterMm}
                 apertureSettings={apertureSettings}
                 displayMode={displayMode}
+                spectralMode={spectralMode}
                 targetId={targetId}
                 onApertureChange={setApertureDiameterMm}
                 onApertureSettingsChange={setApertureSettings}
                 onRenderApertureMask={renderApertureMask}
+                onSpectralModeChange={updateSpectralMode}
                 onTargetChange={setTargetId}
               />
-              <AberrationSlidersCard
-                values={zernikeCoefficients}
-                onValueChange={updateZernikeCoefficient}
-                onReset={resetZernikeCoefficients}
-              />
+              {isPolychromatic ? (
+                <Stack spacing={2}>
+                  <Tabs
+                    aria-label="Polychromatic wavelength"
+                    value={selectedWavelength}
+                    onChange={(_, nextWavelength: SpectralWavelength) => {
+                      setSelectedWavelength(nextWavelength);
+                    }}
+                  >
+                    {spectralWavelengths.map((wavelength) => (
+                      <Tab
+                        key={wavelength}
+                        label={`${wavelength} nm`}
+                        value={wavelength}
+                      />
+                    ))}
+                  </Tabs>
+                  <AberrationSlidersCard
+                    values={zernikeCoefficientsByWavelength[selectedWavelength]}
+                    onValueChange={(key, value) => {
+                      updateZernikeCoefficient(selectedWavelength, key, value);
+                    }}
+                    onReset={() => {
+                      resetZernikeCoefficients(selectedWavelength);
+                    }}
+                  />
+                </Stack>
+              ) : (
+                <AberrationSlidersCard
+                  values={zernikeCoefficients}
+                  onValueChange={(key, value) => {
+                    updateZernikeCoefficient(550, key, value);
+                  }}
+                  onReset={() => {
+                    resetZernikeCoefficients(550);
+                  }}
+                />
+              )}
             </Stack>
           </Box>
         </Container>

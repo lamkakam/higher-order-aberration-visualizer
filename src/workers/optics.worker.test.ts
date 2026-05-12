@@ -65,6 +65,7 @@ describe('optics worker', () => {
       apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
       showScaleBar: true,
+      spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}
@@ -100,6 +101,7 @@ describe('optics worker', () => {
       apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
       showScaleBar: true,
+      spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}
@@ -120,6 +122,14 @@ describe('optics worker', () => {
     );
     expect(writeFile).toHaveBeenCalledWith(
       '/home/pyodide/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz',
+      expect.any(Uint8Array)
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      '/home/pyodide/hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz',
+      expect.any(Uint8Array)
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      '/home/pyodide/hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz',
       expect.any(Uint8Array)
     );
   });
@@ -144,6 +154,7 @@ describe('optics worker', () => {
       },
       apertureDiameterMm: 3,
       showScaleBar: true,
+      spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'micron',
       zernikeCoefficients: {
@@ -219,6 +230,95 @@ describe('optics worker', () => {
     );
   });
 
+  it('omits polychromatic simulation arguments for monochromatic payloads', async () => {
+    const { expose } = await import('comlink');
+    await import('./optics.worker');
+
+    const api = vi.mocked(expose).mock.calls[0][0];
+    await api.computeConvolvedImage({
+      apertureSettings: defaultApertureSettings,
+      apertureDiameterMm: 3,
+      showScaleBar: true,
+      spectralMode: 'monochromatic',
+      targetId: 'siemensstar',
+      wavefrontLegendUnit: 'wave',
+      zernikeCoefficients: {}
+    });
+
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('simulation = compute_simulation('),
+      expect.not.objectContaining({
+        globals: expect.objectContaining({
+          wavelength_weights: expect.anything(),
+          zernike_coefficients_by_wavelength: expect.anything()
+        })
+      })
+    );
+    expect(runPythonAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining('wavelength_weights=wavelength_weights'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining(
+        'zernike_coefficients_by_wavelength=zernike_coefficients_by_wavelength'
+      ),
+      expect.any(Object)
+    );
+  });
+
+  it('passes polychromatic wavelength weights and scoped coefficients into simulation', async () => {
+    const { expose } = await import('comlink');
+    await import('./optics.worker');
+
+    const api = vi.mocked(expose).mock.calls[0][0];
+    await api.computeConvolvedImage({
+      apertureSettings: defaultApertureSettings,
+      apertureDiameterMm: 3,
+      showScaleBar: true,
+      spectralMode: 'polychromatic',
+      targetId: 'siemensstar',
+      wavelengthWeights: [
+        [550, 1],
+        [656, 1],
+        [486, 1]
+      ],
+      wavefrontLegendUnit: 'wave',
+      zernikeCoefficients: {
+        '4,0': 0.25
+      },
+      zernikeCoefficientsByWavelength: [
+        [550, { '4,0': 0.25 }],
+        [656, { '4,0': 0.5 }],
+        [486, { '4,0': 0.75 }]
+      ]
+    });
+
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('wavelength_weights=wavelength_weights'),
+      expect.objectContaining({
+        globals: expect.objectContaining({
+          spectral_mode: 'polychromatic',
+          wavelength_weights: [
+            [550, 1],
+            [656, 1],
+            [486, 1]
+          ],
+          zernike_coefficients_by_wavelength_input: [
+            [550, { '4,0': 0.25 }],
+            [656, { '4,0': 0.5 }],
+            [486, { '4,0': 0.75 }]
+          ]
+        })
+      })
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'zernike_coefficients_by_wavelength=zernike_coefficients_by_wavelength'
+      ),
+      expect.any(Object)
+    );
+  });
+
   it('renders an aperture mask preview through Pyodide using serializable inputs', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');
@@ -280,6 +380,7 @@ describe('optics worker', () => {
       },
       apertureDiameterMm: 3,
       showScaleBar: true,
+      spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}
@@ -394,6 +495,7 @@ describe('optics worker', () => {
       apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
       showScaleBar: false,
+      spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
       zernikeCoefficients: {}

@@ -11,6 +11,8 @@ import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
 import scaleBarSource from '../hoa_visualizer_utils/rendering/scale_bar.py?raw';
 import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw';
 import jupiter502nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz?url';
+import jupiter658nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz?url';
+import jupiter395nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz?url';
 import simulationAssetsInitSource from '../hoa_visualizer_utils/simulation/assets/__init__.py?raw';
 import simulationInitSource from '../hoa_visualizer_utils/simulation/__init__.py?raw';
 import apertureSource from '../hoa_visualizer_utils/simulation/aperture.py?raw';
@@ -51,8 +53,16 @@ const pythonSources = [
 ] as const;
 const pythonAssets = [
   [
+    'hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz',
+    jupiter658nmAssetUrl
+  ],
+  [
     'hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz',
     jupiter502nmAssetUrl
+  ],
+  [
+    'hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz',
+    jupiter395nmAssetUrl
   ]
 ] as const;
 
@@ -140,12 +150,61 @@ async function computeConvolvedImage(
     aperture_diameter_mm: input.apertureDiameterMm,
     show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
+    ...(input.spectralMode === 'polychromatic'
+      ? {
+          spectral_mode: input.spectralMode,
+          wavelength_weights: input.wavelengthWeights,
+          zernike_coefficients_by_wavelength_input: input.zernikeCoefficientsByWavelength
+        }
+      : {}),
     wavefront_legend_unit: input.wavefrontLegendUnit,
     zernike_coefficients: input.zernikeCoefficients
   });
 
-  await pyodide.runPythonAsync(
-    `
+  const simulationSource =
+    input.spectralMode === 'polychromatic'
+      ? `
+from hoa_visualizer_utils.simulation.compute import compute_simulation
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
+
+coefficients = {
+    tuple(int(index) for index in key.split(",")): float(value)
+    for key, value in zernike_coefficients.items()
+}
+zernike_coefficients_by_wavelength = [
+    (
+        float(wavelength),
+        {
+            tuple(int(index) for index in key.split(",")): float(value)
+            for key, value in scoped_coefficients.items()
+        },
+    )
+    for wavelength, scoped_coefficients in zernike_coefficients_by_wavelength_input
+]
+aperture = ApertureSpec(
+    shape=str(aperture_settings["shape"]),
+    rotation_degrees=float(aperture_settings["rotationDegrees"]),
+    central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
+    central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
+    central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+    spider_vane_count=float(aperture_settings["spiderVaneCount"]),
+    spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"]),
+    spider_vane_rotation_degrees=float(aperture_settings["spiderVaneRotationDegrees"]),
+    gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
+    gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
+)
+simulation = compute_simulation(
+    entrance_pupil_diameter_mm=float(aperture_diameter_mm),
+    zernike_coefficients=coefficients,
+    target_id=str(target_id),
+    pupil_samples=256,
+    image_samples=512,
+    aperture=aperture,
+    wavelength_weights=wavelength_weights,
+    zernike_coefficients_by_wavelength=zernike_coefficients_by_wavelength,
+)
+`
+      : `
 from hoa_visualizer_utils.simulation.compute import compute_simulation
 from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 
@@ -173,9 +232,9 @@ simulation = compute_simulation(
     image_samples=512,
     aperture=aperture,
 )
-`,
-    { globals }
-  );
+`;
+
+  await pyodide.runPythonAsync(simulationSource, { globals });
 
   const imageBytes = await renderSimulationImage(
     globals,
