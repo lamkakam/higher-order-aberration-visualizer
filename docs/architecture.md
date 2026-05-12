@@ -7,20 +7,22 @@ HOA Visualizer is a Vite React app that runs the optics computation in a Web Wor
 The browser entry point in [`src/main.tsx`](../src/main.tsx) mounts [`src/App.tsx`](../src/App.tsx). `App` owns the current optical inputs:
 
 - aperture diameter in millimeters
+- aperture settings for circle, square, or regular hexagon masks with optional central obstruction, spider vanes, and Gaussian apodization exposed in advanced mode
 - target id
 - Zernike coefficient values
 - wavefront legend unit
 - display mode and worker diagnostics
 
-Input controls keep fast-moving draft text and slider positions local so typing and dragging stay responsive on slower devices. Text inputs commit valid values to `App` after a short pause, blur, or Enter. Zernike sliders update their visible row while moving and commit to `App` on release. After committed inputs change, `App` debounces the update and calls `computeConvolvedImage` on the worker API. The returned image URLs are passed to [`SimulatedImageCard`](../src/components/SimulatedImageCard.tsx) for display. In basic mode the UI shows the convolved target image. In advanced mode it also shows the PSF image and wavefront map, except the point-source target omits the separate PSF card.
+Input controls keep fast-moving draft text and slider positions local so typing and dragging stay responsive on slower devices. Text inputs commit valid values to `App` after a short pause, blur, or Enter. Zernike sliders update their visible row while moving and commit to `App` on release through a shared committed-slider component. The advanced aperture mask modal keeps edits local until Confirm, and requests a preview through the worker while the draft settings are valid. Shape rotation sliders use the same preview-then-commit slider behavior. After committed inputs change, `App` debounces the update and calls `computeConvolvedImage` on the worker API. The returned image URLs are passed to [`SimulatedImageCard`](../src/components/SimulatedImageCard.tsx) for display. In basic mode the UI shows the convolved target image. In advanced mode it also shows the PSF image and wavefront map, except the point-source target omits the separate PSF card.
 
 ## Worker Boundary
 
 Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
 
-- `ConvolvedImageInput`: aperture diameter, scale-bar visibility, supported target id, wavefront legend unit, and Zernike coefficients keyed as `"n,m"` strings
+- `ConvolvedImageInput`: aperture diameter, aperture settings, scale-bar visibility, supported target id, wavefront legend unit, and Zernike coefficients keyed as `"n,m"` strings
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
-- `OpticsWorkerApi`: `initialize`, `getStatus`, and `computeConvolvedImage`
+- `ApertureMaskResult`: data URL for an aperture preview image and worker diagnostics
+- `OpticsWorkerApi`: `initialize`, `getStatus`, `computeConvolvedImage`, and `renderApertureMask`
 
 [`src/workers/client.ts`](../src/workers/client.ts) creates the module worker and wraps it with Comlink. [`src/hooks/useWorkerClient.ts`](../src/hooks/useWorkerClient.ts) owns the React-side session singleton for the app-created worker client and initializes diagnostics. The React UI talks to that Comlink proxy rather than importing worker or Pyodide code directly.
 
@@ -32,10 +34,14 @@ The worker imports Python package files with Vite `?raw` imports and writes them
 
 ## Result Data Flow
 
-`computeConvolvedImage` converts the TypeScript input into Python globals, converts Zernike keys from `"n,m"` strings to `(n, m)` tuples, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py). The returned `OpticalSimulation` object is rendered by:
+`computeConvolvedImage` converts the TypeScript input into Python globals, converts Zernike keys from `"n,m"` strings to `(n, m)` tuples, converts aperture settings to an `ApertureSpec`, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py). The returned `OpticalSimulation` object is rendered by:
 
 - [`render_convolved_image`](../src/hoa_visualizer_utils/rendering/convolved_image.py)
 - [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
 
 Each renderer returns PNG bytes. The worker base64-encodes those bytes into `data:image/png` URLs and returns them to the React UI.
+
+`renderApertureMask` converts aperture settings to an `ApertureSpec` and calls [`render_aperture_mask`](../src/hoa_visualizer_utils/rendering/aperture_mask.py) without computing a full simulation. It returns a non-enlargeable PNG preview for the advanced aperture mask modal.
+
+`ApertureSettings` carries the outer aperture shape, rotation, central obstruction ratio, obstruction shape, obstruction rotation, spider vane count, spider vane width ratio, spider vane rotation, Gaussian apodization enabled state, and Gaussian standard-deviation ratio. The worker maps those serializable fields directly into the Python `ApertureSpec` used by both full simulations and aperture preview rendering.

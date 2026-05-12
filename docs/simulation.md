@@ -7,12 +7,13 @@ The optics simulation is implemented in the Python package under [`src/hoa_visua
 The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the worker:
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
+- `apertureSettings`: aperture mask settings for circle, square, or regular hexagon apertures, optional matching central obstructions, optional spider vanes, and optional Gaussian apodization
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `targetId`: one of the supported target ids
 - `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
 - `zernikeCoefficients`: a record keyed by `"n,m"` strings with coefficient values in waves
 
-The worker converts the Zernike keys to Python `(n, m)` tuples and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
+The worker converts the Zernike keys to Python `(n, m)` tuples, converts `apertureSettings` to an [`ApertureSpec`](../src/hoa_visualizer_utils/simulation/aperture.py), and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with fixed browser sampling values of `pupil_samples=256` and `image_samples=512`.
 
 The UI exposes the Zernike terms listed in [`src/components/simulationConfig.ts`](../src/components/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns, using the configured 550 nm wavelength for conversion, but values sent to the worker remain in waves. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
 
@@ -34,7 +35,7 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) validates inputs, resolves target-specific angular sampling, and uses Prysm to:
 
-1. build the pupil grid and circular aperture
+1. build the pupil grid and aperture mask, optionally with a centered obstruction, spider vanes, and Gaussian apodization
 2. sum normalized Zernike terms into a wavefront OPD map
 3. propagate the pupil to a fixed-sampling focal-plane PSF
 4. normalize the PSF energy
@@ -42,6 +43,14 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 6. convolve the target with the PSF, or use the normalized PSF directly for `point_source`
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
+
+The aperture helper accepts `circle`, `square`, and `regular_hexagon` for both the outer aperture and central obstruction. The UI-facing aperture diameter remains the outer diameter. Square and regular hexagon masks use Prysm's `regular_polygon` helper. Non-circular shapes accept rotation values from 0 to 360 degrees.
+
+`centralObstructionRatio` must satisfy `0 <= ratio < 1`. A ratio of `0` is the default unobstructed pupil and hides obstruction shape controls in the UI. A nonzero ratio subtracts a centered obstruction from the outer aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`. In advanced display mode, the UI exposes these aperture settings through an aperture mask modal under Target.
+
+Spider vanes are disabled by default. `spiderVaneCount` must be an integer from `0` to `12`, `spiderVaneWidthRatio` must satisfy `0 <= ratio <= 0.25`, and `spiderVaneRotationDegrees` must satisfy `0 <= rotation <= 360`. Vanes are active only when both count and width are greater than zero. Active vanes use Prysm's `spider` helper with the configured rotation, subtract from the shaped aperture after any central obstruction, and interpret width as a fraction of the outer aperture diameter.
+
+Gaussian apodization is disabled by default. When enabled, `gaussianApodizationSigmaRatio` must satisfy `0.05 <= ratio <= 1.0` and is interpreted as a true Gaussian standard deviation divided by the outer aperture diameter. The Python aperture helper first builds the geometric aperture, central obstruction, and active spider vanes, then multiplies that amplitude by `exp(-r^2 / (2 * sigma_mm^2))`, where `sigma_mm = gaussianApodizationSigmaRatio * apertureDiameterMm`. The pupil mask remains `amp > 0`, so wavefront support still follows the geometric aperture, obstruction, and spider vanes while the PSF uses the softened amplitude.
 
 When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
 
@@ -58,6 +67,8 @@ The Python renderers use a default 10 by 9 inch Matplotlib figure size, which pr
 By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`.
 
 The worker returns these as `imageUrl`, `psfImageUrl`, and `wavefrontImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
+
+The worker can also render a standalone aperture mask preview with `renderApertureMask`. That path validates the same `ApertureSpec` settings, including spider vanes and Gaussian apodization, and returns an `ApertureMaskResult` PNG data URL without running `compute_simulation`.
 
 ## Pyodide Wheel Rationale
 

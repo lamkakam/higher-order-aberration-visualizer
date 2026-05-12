@@ -3,12 +3,11 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
+import { CommitSlider } from './CommitSlider';
 import {
   micronsToWaves,
   roundToTwoDecimals,
@@ -108,157 +107,46 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   resetVersion,
   onValueChange
 }: AberrationCoefficientRowProps) {
-  const [rowState, setRowState] = useState({
-    committedValue: value,
-    displayUnit,
-    draftValue: formatCommittedValue(value, displayUnit),
-    resetVersion,
-    sliderValue: value
-  });
-  const sliderValueRef = useRef(value);
-  const keyboardSlidingRef = useRef(false);
-  let currentRowState = rowState;
-
-  if (
-    currentRowState.committedValue !== value ||
-    currentRowState.displayUnit !== displayUnit ||
-    currentRowState.resetVersion !== resetVersion
-  ) {
-    currentRowState = {
-      committedValue: value,
-      displayUnit,
-      draftValue: formatCommittedValue(value, displayUnit),
-      resetVersion,
-      sliderValue: value
-    };
-    sliderValueRef.current = value;
-    setRowState(currentRowState);
-  }
-
   const label = `${term.label} Z(${term.n},${term.m})`;
   const coefficientLabel = `${label} coefficient`;
-  const hasDraftRangeError = isOutOfRangeDraft(currentRowState.draftValue, displayUnit);
-
-  const commitDraft = useCallback(
-    (nextDraft: string) => {
-      const nextValue = getWaveValueFromDraft(nextDraft, displayUnit);
-      if (isValidCommittedDraft(nextDraft, nextValue) && nextValue !== value) {
-        onValueChange(term.key, nextValue);
-      }
-    },
-    [displayUnit, onValueChange, term.key, value]
-  );
-
-  const flushDraft = useCallback(() => {
-    commitDraft(currentRowState.draftValue);
-  }, [commitDraft, currentRowState.draftValue]);
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
       const roundedValue = roundToTwoDecimals(nextValue);
-      sliderValueRef.current = roundedValue;
-      setRowState((previousState) => ({
-        ...previousState,
-        draftValue: formatCommittedValue(roundedValue, displayUnit),
-        sliderValue: roundedValue
-      }));
       if (roundedValue !== value) {
         onValueChange(term.key, roundedValue);
       }
     },
-    [displayUnit, onValueChange, term.key, value]
+    [onValueChange, term.key, value]
   );
 
   return (
     <Box>
-      <Box
-        sx={{
-          alignItems: 'baseline',
-          display: 'flex',
-          gap: 2,
-          justifyContent: 'space-between'
-        }}
-      >
-        <Typography variant="body2">{label}</Typography>
-        <TextField
-          data-testid={`zernike-value-${term.key}`}
-          autoComplete="off"
-          error={hasDraftRangeError}
-          helperText={hasDraftRangeError ? getRangeErrorText(displayUnit) : undefined}
-          inputMode="decimal"
-          size="small"
-          sx={{
-            '& input': {
-              py: 0.5,
-              textAlign: 'right',
-              width: '4.5rem'
-            }
-          }}
-          type="text"
-          value={currentRowState.draftValue}
-          onChange={(event) => {
-            const nextDraft = event.target.value;
-            if (isSignedDecimalDraft(nextDraft)) {
-              setRowState((previousState) => ({
-                ...previousState,
-                draftValue: nextDraft
-              }));
-            }
-          }}
-          onBlur={flushDraft}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              flushDraft();
-            }
-          }}
-          slotProps={{
-            htmlInput: {
-              'aria-label': coefficientLabel,
-              autoComplete: 'off',
-              min: getDisplayValueFromWaves(zernikeCoefficientMin, displayUnit),
-              max: getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit),
-              step: zernikeCoefficientStep
-            }
-          }}
-        />
-      </Box>
-      <Slider
-        aria-label={coefficientLabel}
+      <CommitSlider
+        ariaLabel={coefficientLabel}
+        label={label}
         min={zernikeCoefficientMin}
         max={zernikeCoefficientMax}
         step={zernikeCoefficientStep}
-        value={currentRowState.sliderValue}
+        value={value}
+        input={{
+          formatValue: (nextValue) => formatCommittedValue(nextValue, displayUnit),
+          parseDraft: (draft) => getWaveValueFromDraft(draft, displayUnit),
+          isDraftAllowed: isSignedDecimalDraft,
+          isValidDraft: isValidCommittedDraft,
+          getErrorText: (draft) =>
+            isOutOfRangeDraft(draft, displayUnit) ? getRangeErrorText(displayUnit) : undefined,
+          inputMode: 'decimal',
+          inputMin: getDisplayValueFromWaves(zernikeCoefficientMin, displayUnit),
+          inputMax: getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit),
+          inputStep: zernikeCoefficientStep,
+          testId: `zernike-value-${term.key}`
+        }}
+        inputSyncKey={`${displayUnit}-${resetVersion}`}
         valueLabelDisplay="auto"
         valueLabelFormat={(nextValue) => formatCommittedValue(nextValue, displayUnit)}
-        onChange={(event, nextValue) => {
-          const roundedValue = roundToTwoDecimals(
-            Array.isArray(nextValue) ? nextValue[0] : nextValue
-          );
-          if (event.type === 'keydown') {
-            keyboardSlidingRef.current = true;
-          }
-          sliderValueRef.current = roundedValue;
-          setRowState((previousState) => ({
-            ...previousState,
-            sliderValue: roundedValue
-          }));
-        }}
-        onChangeCommitted={(_, nextValue) => {
-          if (keyboardSlidingRef.current) {
-            return;
-          }
-
-          commitSliderValue(Array.isArray(nextValue) ? nextValue[0] : nextValue);
-        }}
-        onKeyDown={() => {
-          keyboardSlidingRef.current = true;
-        }}
-        onKeyUp={() => {
-          if (keyboardSlidingRef.current) {
-            keyboardSlidingRef.current = false;
-            commitSliderValue(sliderValueRef.current);
-          }
-        }}
+        roundValue={roundToTwoDecimals}
+        onCommit={commitSliderValue}
       />
     </Box>
   );

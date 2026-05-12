@@ -20,8 +20,23 @@ export type SupportedTargetId = (typeof supportedTargetIds)[number];
 
 export type ZernikeCoefficientKey = `${number},${number}`;
 export type WavefrontLegendUnit = 'wave' | 'micron';
+export type ApertureShape = 'circle' | 'square' | 'regular_hexagon';
+
+export interface ApertureSettings {
+  shape: ApertureShape;
+  rotationDegrees: number;
+  centralObstructionShape: ApertureShape;
+  centralObstructionRotationDegrees: number;
+  centralObstructionRatio: number;
+  spiderVaneCount: number;
+  spiderVaneWidthRatio: number;
+  spiderVaneRotationDegrees: number;
+  gaussianApodizationEnabled: boolean;
+  gaussianApodizationSigmaRatio: number;
+}
 
 export interface ConvolvedImageInput {
+  apertureSettings: ApertureSettings;
   apertureDiameterMm: number;
   showScaleBar: boolean;
   targetId: SupportedTargetId;
@@ -36,8 +51,14 @@ export interface ConvolvedImageResult {
   diagnostics: WorkerDiagnostics;
 }
 
+export interface ApertureMaskResult {
+  imageUrl: string;
+  diagnostics: WorkerDiagnostics;
+}
+
 export interface OpticsWorkerApi {
   initialize(): Promise<WorkerDiagnostics>;
   getStatus(): Promise<WorkerDiagnostics>;
   computeConvolvedImage(input: ConvolvedImageInput): Promise<ConvolvedImageResult>;
+  renderApertureMask(input: ApertureSettings): Promise<ApertureMaskResult>;
 }

@@ -5,6 +5,7 @@ import type { PyodideInterface } from 'pyodide';
 import type { PyProxy } from 'pyodide/ffi';
 import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
 import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
+import apertureMaskSource from '../hoa_visualizer_utils/rendering/aperture_mask.py?raw';
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
 import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
 import scaleBarSource from '../hoa_visualizer_utils/rendering/scale_bar.py?raw';
@@ -12,12 +13,15 @@ import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw'
 import jupiter502nmAssetUrl from '../hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz?url';
 import simulationAssetsInitSource from '../hoa_visualizer_utils/simulation/assets/__init__.py?raw';
 import simulationInitSource from '../hoa_visualizer_utils/simulation/__init__.py?raw';
+import apertureSource from '../hoa_visualizer_utils/simulation/aperture.py?raw';
 import computeSource from '../hoa_visualizer_utils/simulation/compute.py?raw';
 import modelsSource from '../hoa_visualizer_utils/simulation/models.py?raw';
 import targetsSource from '../hoa_visualizer_utils/simulation/targets.py?raw';
 import utilsInitSource from '../hoa_visualizer_utils/utils/__init__.py?raw';
 import figuresSource from '../hoa_visualizer_utils/utils/figures.py?raw';
 import type {
+  ApertureMaskResult,
+  ApertureSettings,
   ConvolvedImageInput,
   ConvolvedImageResult,
   OpticsWorkerApi,
@@ -31,12 +35,14 @@ const pythonPackageRoot = '/home/pyodide';
 const pythonSources = [
   ['hoa_visualizer_utils/__init__.py', packageInitSource],
   ['hoa_visualizer_utils/rendering/__init__.py', renderingInitSource],
+  ['hoa_visualizer_utils/rendering/aperture_mask.py', apertureMaskSource],
   ['hoa_visualizer_utils/rendering/convolved_image.py', convolvedImageSource],
   ['hoa_visualizer_utils/rendering/psf.py', psfSource],
   ['hoa_visualizer_utils/rendering/scale_bar.py', scaleBarSource],
   ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
   ['hoa_visualizer_utils/simulation/__init__.py', simulationInitSource],
   ['hoa_visualizer_utils/simulation/assets/__init__.py', simulationAssetsInitSource],
+  ['hoa_visualizer_utils/simulation/aperture.py', apertureSource],
   ['hoa_visualizer_utils/simulation/compute.py', computeSource],
   ['hoa_visualizer_utils/simulation/models.py', modelsSource],
   ['hoa_visualizer_utils/simulation/targets.py', targetsSource],
@@ -130,6 +136,7 @@ async function computeConvolvedImage(
   }
 
   const globals = pyodide.toPy({
+    aperture_settings: input.apertureSettings,
     aperture_diameter_mm: input.apertureDiameterMm,
     show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
@@ -140,17 +147,31 @@ async function computeConvolvedImage(
   await pyodide.runPythonAsync(
     `
 from hoa_visualizer_utils.simulation.compute import compute_simulation
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 
 coefficients = {
     tuple(int(index) for index in key.split(",")): float(value)
     for key, value in zernike_coefficients.items()
 }
+aperture = ApertureSpec(
+    shape=str(aperture_settings["shape"]),
+    rotation_degrees=float(aperture_settings["rotationDegrees"]),
+    central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
+    central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
+    central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+    spider_vane_count=float(aperture_settings["spiderVaneCount"]),
+    spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"]),
+    spider_vane_rotation_degrees=float(aperture_settings["spiderVaneRotationDegrees"]),
+    gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
+    gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
+)
 simulation = compute_simulation(
     entrance_pupil_diameter_mm=float(aperture_diameter_mm),
     zernike_coefficients=coefficients,
     target_id=str(target_id),
     pupil_samples=256,
     image_samples=512,
+    aperture=aperture,
 )
 `,
     { globals }
@@ -177,10 +198,48 @@ simulation = compute_simulation(
   };
 }
 
+async function renderApertureMask(input: ApertureSettings): Promise<ApertureMaskResult> {
+  await ensureInitialized();
+  if (!pyodide || diagnostics.status !== 'ready') {
+    throw new Error(diagnostics.message);
+  }
+
+  const globals = pyodide.toPy({
+    aperture_settings: input
+  });
+  const imageBytes = await renderSimulationImage(
+    globals,
+    `
+from hoa_visualizer_utils.rendering.aperture_mask import render_aperture_mask
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
+
+aperture = ApertureSpec(
+    shape=str(aperture_settings["shape"]),
+    rotation_degrees=float(aperture_settings["rotationDegrees"]),
+    central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
+    central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
+    central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
+    spider_vane_count=float(aperture_settings["spiderVaneCount"]),
+    spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"]),
+    spider_vane_rotation_degrees=float(aperture_settings["spiderVaneRotationDegrees"]),
+    gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
+    gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
+)
+render_aperture_mask(aperture)
+`
+  );
+
+  return {
+    imageUrl: `data:image/png;base64,${bytesToBase64(imageBytes)}`,
+    diagnostics
+  };
+}
+
 const api: OpticsWorkerApi = {
   initialize,
   getStatus,
-  computeConvolvedImage
+  computeConvolvedImage,
+  renderApertureMask
 };
 
 expose(api);

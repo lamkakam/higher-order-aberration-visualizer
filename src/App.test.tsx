@@ -3,10 +3,72 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { createMockWorkerClient } from './test/workerMock';
-import type { ConvolvedImageInput, ConvolvedImageResult } from './workers/types';
+import type {
+  ApertureMaskResult,
+  ConvolvedImageInput,
+  ConvolvedImageResult
+} from './workers/types';
 
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
+const defaultApertureSettings = {
+  shape: 'circle',
+  rotationDegrees: 0,
+  centralObstructionShape: 'circle',
+  centralObstructionRotationDegrees: 0,
+  centralObstructionRatio: 0,
+  spiderVaneCount: 0,
+  spiderVaneWidthRatio: 0,
+  spiderVaneRotationDegrees: 0,
+  gaussianApodizationEnabled: false,
+  gaussianApodizationSigmaRatio: 0.5
+} as const;
+
+function getCentralObstructionRatioTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', { name: 'Central Obstruction Ratio' });
+}
+
+function getCentralObstructionRatioSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', { name: 'Central Obstruction Ratio' });
+}
+
+function getGaussianApodizationSwitch(container: HTMLElement = document.body) {
+  return within(container).getByRole('switch', { name: 'Gaussian Apodization' });
+}
+
+function getSpiderVanesTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', { name: 'Spider Vanes' });
+}
+
+function getSpiderVanesSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', { name: 'Spider Vanes' });
+}
+
+function getSpiderVaneWidthTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', {
+    name: 'Vane Width (x Aperture Diameter)'
+  });
+}
+
+function getSpiderVaneWidthSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', {
+    name: 'Vane Width (x Aperture Diameter)'
+  });
+}
+
+function getSpiderVaneRotationTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', { name: 'Vane Rotation' });
+}
+
+function getSpiderVaneRotationSlider(container: HTMLElement = document.body) {
+  return within(container).getByRole('slider', { name: 'Vane Rotation' });
+}
+
+function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
+  return within(container).getByRole('textbox', {
+    name: 'Standard Deviation (x Aperture Diameter)'
+  });
+}
 
 afterEach(() => {
   vi.useRealTimers();
@@ -79,6 +141,627 @@ it('renders default aperture and supported target options', async () => {
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
+});
+
+it('shows aperture mask controls only in advanced mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByRole('button', { name: 'Edit aperture mask' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.getByRole('button', { name: 'Edit aperture mask' })).toBeInTheDocument();
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+});
+
+it('opens an aperture mask modal that only closes through confirm or cancel', async () => {
+  const user = userEvent.setup();
+  let resolvePreview: (value: ApertureMaskResult) => void = () => {};
+  const renderApertureMask = vi.fn(
+    () =>
+      new Promise<ApertureMaskResult>((resolve) => {
+        resolvePreview = resolve;
+      })
+  );
+  render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  expect(within(modal).getByLabelText('Aperture Shape')).toHaveValue('circle');
+  expect(within(modal).getByRole('option', { name: 'Circle' })).toBeInTheDocument();
+  expect(within(modal).getByRole('option', { name: 'Square' })).toBeInTheDocument();
+  expect(within(modal).getByRole('option', { name: 'Regular Hexagon' })).toBeInTheDocument();
+  expect(within(modal).queryByRole('option', { name: 'Ellipse' })).not.toBeInTheDocument();
+  expect(getCentralObstructionRatioTextbox(modal)).toHaveValue('0');
+  expect(getCentralObstructionRatioSlider(modal)).toBeInTheDocument();
+  expect(getSpiderVanesTextbox(modal)).toHaveValue('0');
+  expect(getSpiderVanesSlider(modal)).toBeInTheDocument();
+  expect(getSpiderVaneWidthTextbox(modal)).toHaveValue('0');
+  expect(getSpiderVaneWidthSlider(modal)).toBeInTheDocument();
+  expect(getSpiderVaneRotationTextbox(modal)).toHaveValue('0');
+  expect(getSpiderVaneRotationSlider(modal)).toBeInTheDocument();
+  expect(
+    getSpiderVaneWidthSlider(modal).compareDocumentPosition(getSpiderVaneRotationSlider(modal)) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    getSpiderVaneRotationSlider(modal).compareDocumentPosition(getGaussianApodizationSwitch(modal)) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
+  expect(
+    within(modal).queryByRole('slider', {
+      name: 'Standard Deviation (x Aperture Diameter)'
+    })
+  ).not.toBeInTheDocument();
+  expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
+  expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+  expect(within(modal).getByText('Preview')).toBeInTheDocument();
+  expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
+  expect(within(modal).getByRole('button', { name: 'Confirm aperture mask' })).toBeInTheDocument();
+  expect(within(modal).getByRole('button', { name: 'Cancel aperture mask' })).toBeInTheDocument();
+
+  fireEvent.keyDown(modal, { key: 'Escape' });
+  expect(screen.getByRole('dialog', { name: 'Aperture Mask' })).toBeInTheDocument();
+
+  const backdrop = document.querySelector('.MuiBackdrop-root') as HTMLElement;
+  fireEvent.click(backdrop);
+  expect(screen.getByRole('dialog', { name: 'Aperture Mask' })).toBeInTheDocument();
+
+  await act(async () => {
+    resolvePreview({
+      imageUrl: `data:image/png;base64,${window.btoa('mask')}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    });
+  });
+  expect(await within(modal).findByAltText('Aperture mask preview')).toBeInTheDocument();
+  await user.click(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
+  expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
+});
+
+it('keeps aperture mask modal actions outside the scrollable content', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  const content = within(modal).getByTestId('aperture-mask-modal-content');
+  const footer = within(modal).getByTestId('aperture-mask-modal-footer');
+
+  expect(content.style.overflowY).toBe('auto');
+  expect(content.style.minHeight).toBe('0');
+  expect(content).toHaveStyle({
+    paddingLeft: '16px',
+    paddingRight: '20px',
+    scrollbarGutter: 'stable'
+  });
+  expect(footer.style.flexShrink).toBe('0');
+  expect(content).not.toContainElement(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
+  expect(footer).toContainElement(within(modal).getByRole('button', { name: 'Cancel aperture mask' }));
+  expect(footer).toContainElement(within(modal).getByRole('button', { name: 'Confirm aperture mask' }));
+});
+
+it('shows Gaussian apodization SD controls only when enabled', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
+  expect(
+    within(modal).queryByRole('textbox', {
+      name: 'Standard Deviation (x Aperture Diameter)'
+    })
+  ).not.toBeInTheDocument();
+
+  await user.click(getGaussianApodizationSwitch(modal));
+
+  expect(getGaussianApodizationSwitch(modal)).toBeChecked();
+  expect(
+    within(modal).getByRole('slider', {
+      name: 'Standard Deviation (x Aperture Diameter)'
+    })
+  ).toBeInTheDocument();
+  expect(getGaussianSigmaRatioTextbox(modal)).toHaveValue('0.5');
+});
+
+it('shows aperture shape controls conditionally in the aperture mask modal', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  fireEvent.change(within(modal).getByLabelText('Aperture Shape'), {
+    target: { value: 'square' }
+  });
+  expect(within(modal).getByRole('slider', { name: 'Aperture Rotation' })).toBeInTheDocument();
+  expect(within(modal).getByRole('textbox', { name: 'Aperture Rotation' })).toBeInTheDocument();
+  expect(within(modal).queryByLabelText('Aperture Ellipse Minor-Axis Ratio')).not.toBeInTheDocument();
+
+  fireEvent.change(within(modal).getByLabelText('Aperture Shape'), {
+    target: { value: 'regular_hexagon' }
+  });
+  expect(within(modal).getByRole('slider', { name: 'Aperture Rotation' })).toBeInTheDocument();
+
+  fireEvent.change(getCentralObstructionRatioTextbox(modal), {
+    target: { value: '0.25' }
+  });
+  fireEvent.blur(getCentralObstructionRatioTextbox(modal));
+  expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
+  expect(
+    within(modal).getByLabelText('Obstruction Shape').compareDocumentPosition(
+      getGaussianApodizationSwitch(modal)
+    ) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(within(modal).getAllByRole('option', { name: 'Circle' })).toHaveLength(2);
+  expect(within(modal).getAllByRole('option', { name: 'Square' })).toHaveLength(2);
+  expect(within(modal).getAllByRole('option', { name: 'Regular Hexagon' })).toHaveLength(2);
+  expect(within(modal).queryAllByRole('option', { name: 'Ellipse' })).toHaveLength(0);
+
+  fireEvent.change(within(modal).getByLabelText('Obstruction Shape'), {
+    target: { value: 'square' }
+  });
+  expect(within(modal).getByRole('slider', { name: 'Obstruction Rotation' })).toBeInTheDocument();
+  expect(within(modal).getByRole('textbox', { name: 'Obstruction Rotation' })).toBeInTheDocument();
+  expect(within(modal).queryByLabelText('Obstruction Ellipse Minor-Axis Ratio')).not.toBeInTheDocument();
+
+  fireEvent.change(getCentralObstructionRatioTextbox(modal), {
+    target: { value: '0' }
+  });
+  fireEvent.blur(getCentralObstructionRatioTextbox(modal));
+  expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+});
+
+it('toggles aperture obstruction controls from the ratio slider and textbox', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  const ratioSlider = getCentralObstructionRatioSlider(modal);
+
+  fireEvent.keyDown(ratioSlider, { key: 'ArrowRight' });
+  expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+  fireEvent.keyUp(ratioSlider, { key: 'ArrowRight' });
+  expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
+
+  fireEvent.change(getCentralObstructionRatioTextbox(modal), {
+    target: { value: '0' }
+  });
+  fireEvent.blur(getCentralObstructionRatioTextbox(modal));
+  expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
+});
+
+it('commits aperture rotation textbox values to the confirmed payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(screen.getByLabelText('Aperture Shape'), {
+    target: { value: 'square' }
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Aperture Rotation' }), {
+    target: { value: '45' }
+  });
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'Aperture Rotation' }), {
+    key: 'Enter'
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: {
+      shape: 'square',
+      rotationDegrees: 45,
+      centralObstructionShape: 'circle',
+      centralObstructionRotationDegrees: 0,
+      centralObstructionRatio: 0,
+      spiderVaneCount: 0,
+      spiderVaneWidthRatio: 0,
+      spiderVaneRotationDegrees: 0,
+      gaussianApodizationEnabled: false,
+      gaussianApodizationSigmaRatio: 0.5
+    },
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('keeps the aperture preview panel height stable while loading and loaded', async () => {
+  const user = userEvent.setup();
+  let resolvePreview: (value: ApertureMaskResult) => void = () => {};
+  const renderApertureMask = vi.fn(
+    () =>
+      new Promise<ApertureMaskResult>((resolve) => {
+        resolvePreview = resolve;
+      })
+  );
+  render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const panel = screen.getByTestId('aperture-mask-preview-panel');
+  expect(panel).toHaveStyle({ height: '280px', minHeight: '280px' });
+  expect(within(panel).getByText('Preparing aperture mask...')).toBeInTheDocument();
+
+  await act(async () => {
+    resolvePreview({
+      imageUrl: `data:image/png;base64,${window.btoa('mask')}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    });
+  });
+
+  expect(within(panel).getByAltText('Aperture mask preview')).toBeInTheDocument();
+  expect(panel).toHaveStyle({ height: '280px', minHeight: '280px' });
+});
+
+it('cancels draft aperture mask changes and preserves previous simulation settings', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(getCentralObstructionRatioTextbox(), {
+    target: { value: '0.35' }
+  });
+  fireEvent.blur(getCentralObstructionRatioTextbox());
+  fireEvent.change(screen.getByLabelText('Aperture Shape'), {
+    target: { value: 'square' }
+  });
+  fireEvent.click(getGaussianApodizationSwitch());
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
+    target: { value: '5' }
+  });
+  fireEvent.blur(screen.getByLabelText('Aperture Diameter (mm)'));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
+    apertureDiameterMm: 5,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('cancels draft Gaussian apodization changes and preserves previous simulation settings', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.click(getGaussianApodizationSwitch());
+  fireEvent.change(getGaussianSigmaRatioTextbox(), {
+    target: { value: '0.25' }
+  });
+  fireEvent.blur(getGaussianSigmaRatioTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
+    target: { value: '5' }
+  });
+  fireEvent.blur(screen.getByLabelText('Aperture Diameter (mm)'));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
+    apertureDiameterMm: 5,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('commits spider vane textbox values to the confirmed payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(getSpiderVanesTextbox(), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(getSpiderVanesTextbox());
+  fireEvent.change(getSpiderVaneWidthTextbox(), {
+    target: { value: '0.02' }
+  });
+  fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.change(getSpiderVaneRotationTextbox(), {
+    target: { value: '30' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(
+    screen.getByText(
+      'Circle, 0% obstruction, 4-vane spider rotated 30 deg, each vane 0.02D wide'
+    )
+  ).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: {
+      shape: 'circle',
+      rotationDegrees: 0,
+      centralObstructionShape: 'circle',
+      centralObstructionRotationDegrees: 0,
+      centralObstructionRatio: 0,
+      spiderVaneCount: 4,
+      spiderVaneWidthRatio: 0.02,
+      spiderVaneRotationDegrees: 30,
+      gaussianApodizationEnabled: false,
+      gaussianApodizationSigmaRatio: 0.5
+    },
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
+});
+
+it('omits spider vane settings from the aperture summary when width is zero', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  fireEvent.change(getSpiderVanesTextbox(), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(getSpiderVanesTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  expect(screen.queryByText(/spider/iu)).not.toBeInTheDocument();
+});
+
+it('omits spider vane settings from the aperture summary when count is zero', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  fireEvent.change(getSpiderVaneWidthTextbox(), {
+    target: { value: '0.02' }
+  });
+  fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.change(getSpiderVaneRotationTextbox(), {
+    target: { value: '30' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
+  expect(screen.queryByText(/spider/iu)).not.toBeInTheDocument();
+});
+
+it('confirms aperture mask changes and sends them in the next simulation payload', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+  fireEvent.change(getCentralObstructionRatioTextbox(), {
+    target: { value: '0.35' }
+  });
+  fireEvent.blur(getCentralObstructionRatioTextbox());
+  fireEvent.change(screen.getByLabelText('Aperture Shape'), {
+    target: { value: 'square' }
+  });
+  fireEvent.change(screen.getByLabelText('Obstruction Shape'), {
+    target: { value: 'regular_hexagon' }
+  });
+  fireEvent.change(getSpiderVanesTextbox(), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(getSpiderVanesTextbox());
+  fireEvent.change(getSpiderVaneWidthTextbox(), {
+    target: { value: '0.02' }
+  });
+  fireEvent.blur(getSpiderVaneWidthTextbox());
+  fireEvent.change(getSpiderVaneRotationTextbox(), {
+    target: { value: '30' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox());
+  fireEvent.click(getGaussianApodizationSwitch());
+  fireEvent.change(getGaussianSigmaRatioTextbox(), {
+    target: { value: '0.75' }
+  });
+  fireEvent.blur(getGaussianSigmaRatioTextbox());
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm aperture mask' }));
+
+  expect(screen.queryByRole('dialog', { name: 'Aperture Mask' })).not.toBeInTheDocument();
+  expect(
+    screen.getByText(
+      'Square, 35% regular hexagon obstruction, 4-vane spider rotated 30 deg, each vane 0.02D wide, Gaussian apodization with 0.75D sigma'
+    )
+  ).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: {
+      shape: 'square',
+      rotationDegrees: 0,
+      centralObstructionShape: 'regular_hexagon',
+      centralObstructionRotationDegrees: 0,
+      centralObstructionRatio: 0.35,
+      spiderVaneCount: 4,
+      spiderVaneWidthRatio: 0.02,
+      spiderVaneRotationDegrees: 30,
+      gaussianApodizationEnabled: true,
+      gaussianApodizationSigmaRatio: 0.75
+    },
+    apertureDiameterMm: 6,
+    showScaleBar: false,
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficients: expect.objectContaining({
+      '4,0': 0
+    })
+  });
 });
 
 it('describes the default simulated image target in plain language', async () => {
@@ -251,6 +934,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -317,6 +1001,7 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -366,6 +1051,7 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -508,6 +1194,7 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
     await vi.advanceTimersByTimeAsync(1);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -558,6 +1245,7 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
     await vi.advanceTimersByTimeAsync(1);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -612,6 +1300,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -682,6 +1371,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
 
   expect(computeConvolvedImage).toHaveBeenCalledTimes(1);
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -717,6 +1407,7 @@ it('debounces worker calls using the current UI payload', async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -752,6 +1443,7 @@ it('debounces worker calls using the current UI payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
     showScaleBar: false,
     targetId: 'logmar_chart',
@@ -792,6 +1484,7 @@ it('sends enabled scale bar preference to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: true,
     targetId: 'logmar_chart',
@@ -838,6 +1531,7 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   });
 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
     showScaleBar: false,
     targetId: 'logmar_chart',

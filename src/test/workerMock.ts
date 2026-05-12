@@ -1,5 +1,6 @@
 import type { WorkerClient } from '../workers/client';
 import type {
+  ApertureMaskResult,
   ConvolvedImageInput,
   ConvolvedImageResult,
   OpticsWorkerApi,
@@ -29,6 +30,12 @@ export function createMockWorkerClient(
         imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
         psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
         wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+        diagnostics
+      };
+    },
+    async renderApertureMask(): Promise<ApertureMaskResult> {
+      return {
+        imageUrl: `data:image/png;base64,${window.btoa('aperture-mask')}`,
         diagnostics
       };
     },

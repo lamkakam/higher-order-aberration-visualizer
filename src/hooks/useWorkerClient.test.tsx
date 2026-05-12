@@ -24,6 +24,15 @@ function createTestWorkerClient(
           message: 'Mock worker ready'
         }
       };
+    },
+    async renderApertureMask() {
+      return {
+        imageUrl: 'data:image/png;base64,YXBlcnR1cmU=',
+        diagnostics: {
+          status: 'ready',
+          message: 'Mock worker ready'
+        }
+      };
     }
   };
 

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
+
 
 @dataclass(frozen=True)
 class SimulationInputs:
@@ -16,6 +18,7 @@ class SimulationInputs:
     effective_focal_length_mm: float
     zernike_coefficients: dict[tuple[int, int], float]
     target_id: str
+    aperture: ApertureSpec
 
 
 @dataclass(frozen=True)

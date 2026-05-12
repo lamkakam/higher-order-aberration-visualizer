@@ -7,6 +7,7 @@ import pytest
 from scipy import ndimage
 
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
+from hoa_visualizer_utils.rendering.aperture_mask import render_aperture_mask
 from hoa_visualizer_utils.rendering.psf import render_psf
 from hoa_visualizer_utils.rendering.scale_bar import _scale_bar_spec, add_scale_bar
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
@@ -21,6 +22,7 @@ from hoa_visualizer_utils.simulation.compute import (
     SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
     compute_simulation,
 )
+from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
 
 
@@ -89,6 +91,358 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.sampling.image_samples == 64
     assert simulation.sampling.image_dx_arcmin == image_dx_arcmin
     assert simulation.sampling.wavelength_nm == 550.0
+    assert simulation.inputs.aperture == ApertureSpec()
+
+
+def test_default_aperture_is_unobstructed_circle() -> None:
+    default_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    explicit_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(central_obstruction_ratio=0),
+    )
+
+    assert default_simulation.inputs.aperture == ApertureSpec(
+        shape="circle",
+        central_obstruction_ratio=0,
+    )
+    assert np.array_equal(default_simulation.pupil_mask, explicit_simulation.pupil_mask)
+    assert np.array_equal(default_simulation.wavefront_nm, explicit_simulation.wavefront_nm)
+
+
+def test_central_obstruction_masks_center_and_keeps_outputs_valid() -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(central_obstruction_ratio=0.35),
+    )
+
+    center = simulation.pupil_mask.shape[0] // 2
+
+    assert not simulation.pupil_mask[center, center]
+    assert simulation.inputs.aperture == ApertureSpec(
+        shape="circle",
+        central_obstruction_ratio=0.35,
+    )
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+    assert simulation.wavefront_nm[center, center] == 0
+
+
+def test_gaussian_apodization_produces_non_binary_amplitude_and_valid_psf() -> None:
+    aperture = ApertureSpec(
+        gaussian_apodization_enabled=True,
+        gaussian_apodization_sigma_ratio=0.5,
+    )
+    axis = np.linspace(-5, 5, 64)
+    x, y = np.meshgrid(axis, axis)
+    radius = np.sqrt(x**2 + y**2)
+    amplitude = aperture.amplitude(5, x, y, radius)
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    inside_values = amplitude[amplitude > 0]
+
+    assert inside_values.min() > 0
+    assert inside_values.max() <= 1
+    assert np.unique(np.round(inside_values, decimals=6)).size > 2
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+
+
+def test_spider_vanes_mask_aperture_pixels_and_keep_outputs_valid() -> None:
+    aperture = ApertureSpec(
+        spider_vane_count=4,
+        spider_vane_width_ratio=0.02,
+    )
+    axis = np.linspace(-5, 5, 128)
+    x, y = np.meshgrid(axis, axis)
+    radius = np.sqrt(x**2 + y**2)
+    amplitude = aperture.amplitude(5, x, y, radius)
+    default_amplitude = ApertureSpec().amplitude(5, x, y, radius)
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    assert np.count_nonzero((default_amplitude > 0) & (amplitude == 0)) > 0
+    assert amplitude.sum() < default_amplitude.sum()
+    assert amplitude.sum() > default_amplitude.sum() * 0.8
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+
+
+def test_spider_vane_rotation_changes_aperture_mask() -> None:
+    default_aperture = ApertureSpec(
+        spider_vane_count=4,
+        spider_vane_width_ratio=0.02,
+    )
+    rotated_aperture = ApertureSpec(
+        spider_vane_count=4,
+        spider_vane_width_ratio=0.02,
+        spider_vane_rotation_degrees=30,
+    )
+    axis = np.linspace(-5, 5, 128)
+    x, y = np.meshgrid(axis, axis)
+    radius = np.sqrt(x**2 + y**2)
+
+    default_amplitude = default_aperture.amplitude(5, x, y, radius)
+    rotated_amplitude = rotated_aperture.amplitude(5, x, y, radius)
+
+    assert not np.array_equal(default_amplitude, rotated_amplitude)
+    assert default_aperture.validated().spider_vane_rotation_degrees == 0
+    assert rotated_aperture.validated().spider_vane_rotation_degrees == 30
+    assert (
+        ApertureSpec(spider_vane_rotation_degrees=360)
+        .validated()
+        .spider_vane_rotation_degrees
+        == 0
+    )
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(spider_vane_count=0, spider_vane_width_ratio=0.02),
+        ApertureSpec(spider_vane_count=4, spider_vane_width_ratio=0),
+    ],
+)
+def test_inactive_spider_config_matches_default_unobstructed_aperture(
+    aperture: ApertureSpec,
+) -> None:
+    default_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    spider_simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    assert np.array_equal(default_simulation.pupil_mask, spider_simulation.pupil_mask)
+    assert np.array_equal(default_simulation.wavefront_nm, spider_simulation.wavefront_nm)
+
+
+def test_square_aperture_differs_from_circle_and_keeps_outputs_valid() -> None:
+    circle = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    square = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(shape="square", rotation_degrees=45),
+    )
+
+    assert not np.array_equal(circle.pupil_mask, square.pupil_mask)
+    assert np.isclose(square.psf.sum(), 1)
+    assert np.isfinite(square.convolved_image).all()
+    assert np.isfinite(square.wavefront_nm).all()
+
+
+def test_regular_hexagon_aperture_uses_polygon_path_and_keeps_outputs_valid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from prysm import geometry
+
+    calls: list[tuple[int, float]] = []
+    original_regular_polygon = geometry.regular_polygon
+
+    def recording_regular_polygon(*args, **kwargs):
+        calls.append((args[0], kwargs["rotation"]))
+        return original_regular_polygon(*args, **kwargs)
+
+    monkeypatch.setattr(geometry, "regular_polygon", recording_regular_polygon)
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=ApertureSpec(shape="regular_hexagon", rotation_degrees=30),
+    )
+
+    assert calls == [(6, 30)]
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(
+            shape="square",
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="square",
+            central_obstruction_rotation_degrees=45,
+        ),
+        ApertureSpec(
+            shape="regular_hexagon",
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="regular_hexagon",
+            central_obstruction_rotation_degrees=30,
+        ),
+    ],
+)
+def test_shaped_central_obstructions_mask_center_and_keep_outputs_valid(
+    aperture: ApertureSpec,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    center = simulation.pupil_mask.shape[0] // 2
+
+    assert not simulation.pupil_mask[center, center]
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+    assert simulation.wavefront_nm[center, center] == 0
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(
+            shape="square",
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="square",
+            central_obstruction_rotation_degrees=45,
+            gaussian_apodization_enabled=True,
+            gaussian_apodization_sigma_ratio=0.5,
+        ),
+        ApertureSpec(
+            shape="regular_hexagon",
+            central_obstruction_ratio=0.35,
+            central_obstruction_shape="regular_hexagon",
+            central_obstruction_rotation_degrees=30,
+            gaussian_apodization_enabled=True,
+            gaussian_apodization_sigma_ratio=0.5,
+        ),
+    ],
+)
+def test_apodized_shaped_central_obstructions_mask_center_and_keep_outputs_valid(
+    aperture: ApertureSpec,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "point_source",
+        pupil_samples=64,
+        image_samples=128,
+        aperture=aperture,
+    )
+
+    center = simulation.pupil_mask.shape[0] // 2
+
+    assert not simulation.pupil_mask[center, center]
+    assert np.isclose(simulation.psf.sum(), 1)
+    assert np.isfinite(simulation.convolved_image).all()
+    assert np.isfinite(simulation.wavefront_nm).all()
+    assert simulation.wavefront_nm[center, center] == 0
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(shape="hex"),
+        ApertureSpec(central_obstruction_ratio=-0.1),
+        ApertureSpec(central_obstruction_ratio=1),
+        ApertureSpec(central_obstruction_ratio=math.inf),
+        ApertureSpec(rotation_degrees=-1),
+        ApertureSpec(rotation_degrees=math.inf),
+        ApertureSpec(central_obstruction_shape="hex"),
+        ApertureSpec(central_obstruction_ratio=0.2, central_obstruction_rotation_degrees=-1),
+        ApertureSpec(
+            gaussian_apodization_enabled=True,
+            gaussian_apodization_sigma_ratio=0.04,
+        ),
+        ApertureSpec(
+            gaussian_apodization_enabled=True,
+            gaussian_apodization_sigma_ratio=1.01,
+        ),
+        ApertureSpec(
+            gaussian_apodization_enabled=True,
+            gaussian_apodization_sigma_ratio=math.inf,
+        ),
+        ApertureSpec(spider_vane_count=-1),
+        ApertureSpec(spider_vane_count=13),
+        ApertureSpec(spider_vane_count=1.5),
+        ApertureSpec(spider_vane_count=math.inf),
+        ApertureSpec(spider_vane_width_ratio=-0.01),
+        ApertureSpec(spider_vane_width_ratio=0.26),
+        ApertureSpec(spider_vane_width_ratio=math.inf),
+        ApertureSpec(spider_vane_rotation_degrees=-1),
+        ApertureSpec(spider_vane_rotation_degrees=361),
+        ApertureSpec(spider_vane_rotation_degrees=math.inf),
+    ],
+)
+def test_aperture_spec_rejects_invalid_values(aperture: ApertureSpec) -> None:
+    with pytest.raises(ValueError):
+        aperture.validated()
+
+
+@pytest.mark.parametrize(
+    "aperture",
+    [
+        ApertureSpec(),
+        ApertureSpec(central_obstruction_ratio=0.35),
+        ApertureSpec(
+            gaussian_apodization_enabled=True,
+            gaussian_apodization_sigma_ratio=0.5,
+        ),
+        ApertureSpec(spider_vane_count=4, spider_vane_width_ratio=0.02),
+    ],
+)
+def test_render_aperture_mask_returns_png_bytes(aperture: ApertureSpec) -> None:
+    image_bytes = render_aperture_mask(aperture)
+
+    assert image_bytes.startswith(b"\x89PNG")
+    assert len(image_bytes) > 1000
 
 
 def test_snellen_e_20_20_uses_five_arcminute_height() -> None:
