@@ -2,22 +2,22 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
-import { useEffect, useId, useMemo, useState } from 'react';
-import type { ApertureMaskResult, ApertureSettings, ApertureShape } from '../../workers/types';
+import { useId, useMemo } from 'react';
+import type { ApertureMaskResult, ApertureSettings } from '../../workers/types';
 import {
   ApertureShapeControls,
   CentralObstructionControls,
   GaussianApodizationControls,
-  SpiderVaneControls,
-  type ApertureMaskDraftActions
+  SpiderVaneControls
 } from './ApertureMaskControls';
 import {
   getApertureMaskModalDraftKey,
   getApertureMaskVisibility,
   normalizeApertureMaskDraft,
-  type ApertureMaskDraftState,
   type ApertureMaskVisibility
 } from './apertureMaskRules';
+import { type ApertureMaskDraft, useApertureMaskDraft } from './hooks/useApertureMaskDraft';
+import { useApertureMaskPreview } from './hooks/useApertureMaskPreview';
 
 interface ApertureMaskModalProps {
   readonly open: boolean;
@@ -119,81 +119,6 @@ function ApertureMaskModalDraft({
   );
 }
 
-interface ApertureMaskDraft {
-  readonly state: ApertureMaskDraftState;
-  readonly actions: ApertureMaskDraftActions;
-}
-
-function useApertureMaskDraft(apertureSettings: ApertureSettings): ApertureMaskDraft {
-  const [shape, setShape] = useState<ApertureShape>(apertureSettings.shape);
-  const [rotationDegrees, setRotationDegrees] = useState(apertureSettings.rotationDegrees);
-  const [centralObstructionRatio, setCentralObstructionRatio] = useState(
-    apertureSettings.centralObstructionRatio
-  );
-  const [centralObstructionShape, setCentralObstructionShape] = useState<ApertureShape>(
-    apertureSettings.centralObstructionShape
-  );
-  const [centralObstructionRotationDegrees, setCentralObstructionRotationDegrees] =
-    useState(apertureSettings.centralObstructionRotationDegrees);
-  const [gaussianApodizationEnabled, setGaussianApodizationEnabled] = useState(
-    apertureSettings.gaussianApodizationEnabled
-  );
-  const [gaussianApodizationSigmaRatio, setGaussianApodizationSigmaRatio] = useState(
-    apertureSettings.gaussianApodizationSigmaRatio
-  );
-  const [spiderVaneCount, setSpiderVaneCount] = useState(apertureSettings.spiderVaneCount);
-  const [spiderVaneWidthRatio, setSpiderVaneWidthRatio] = useState(
-    apertureSettings.spiderVaneWidthRatio
-  );
-  const [spiderVaneRotationDegrees, setSpiderVaneRotationDegrees] = useState(
-    apertureSettings.spiderVaneRotationDegrees
-  );
-
-  const state = useMemo(
-    () => ({
-      shape,
-      rotationDegrees,
-      centralObstructionRatio,
-      centralObstructionShape,
-      centralObstructionRotationDegrees,
-      gaussianApodizationEnabled,
-      gaussianApodizationSigmaRatio,
-      spiderVaneCount,
-      spiderVaneWidthRatio,
-      spiderVaneRotationDegrees
-    }),
-    [
-      shape,
-      rotationDegrees,
-      centralObstructionRatio,
-      centralObstructionShape,
-      centralObstructionRotationDegrees,
-      gaussianApodizationEnabled,
-      gaussianApodizationSigmaRatio,
-      spiderVaneCount,
-      spiderVaneWidthRatio,
-      spiderVaneRotationDegrees
-    ]
-  );
-  const actions = useMemo(
-    () => ({
-      setShape,
-      setRotationDegrees,
-      setCentralObstructionRatio,
-      setCentralObstructionShape,
-      setCentralObstructionRotationDegrees,
-      setGaussianApodizationEnabled,
-      setGaussianApodizationSigmaRatio,
-      setSpiderVaneCount,
-      setSpiderVaneWidthRatio,
-      setSpiderVaneRotationDegrees
-    }),
-    []
-  );
-
-  return { state, actions };
-}
-
 interface ApertureMaskModalContentProps {
   readonly shapeId: string;
   readonly obstructionShapeId: string;
@@ -265,40 +190,10 @@ function ApertureMaskPreviewPanel({
   draftSettings,
   onRenderApertureMask
 }: ApertureMaskPreviewPanelProps) {
-  const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
-  const [previewError, setPreviewError] = useState<string | undefined>(undefined);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-
-  useEffect(() => {
-    if (!draftSettings) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsPreviewLoading(true);
-    setPreviewError(undefined);
-    onRenderApertureMask(draftSettings)
-      .then((nextPreview) => {
-        if (!cancelled) {
-          setPreview(nextPreview);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPreview(undefined);
-          setPreviewError(error instanceof Error ? error.message : 'Aperture preview failed');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsPreviewLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [draftSettings, onRenderApertureMask]);
+  const { preview, previewError, isPreviewLoading } = useApertureMaskPreview(
+    draftSettings,
+    onRenderApertureMask
+  );
 
   return (
     <>
