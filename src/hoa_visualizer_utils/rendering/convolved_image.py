@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
+import numpy as np
+
 from hoa_visualizer_utils.rendering.scale_bar import add_scale_bar
 from hoa_visualizer_utils.simulation.models import OpticalSimulation
 from hoa_visualizer_utils.utils.figures import (
@@ -12,13 +16,27 @@ from hoa_visualizer_utils.utils.figures import (
 )
 
 
+PERCEPTUAL_DISPLAY_SCALE_STRENGTH = 100
+
+
 def render_convolved_image(
     simulation: OpticalSimulation,
     *,
     image_format: ImageFormat = "png",
     show_scale_bar: bool = False,
+    display_scale: Literal["linear", "perceptual"] = "linear",
 ) -> bytes:
     """Render the target image convolved with the normalized PSF."""
+
+    image = np.clip(simulation.convolved_image, 0, 1)
+    if display_scale == "linear":
+        display_image = image
+    elif display_scale == "perceptual":
+        display_image = np.log1p(PERCEPTUAL_DISPLAY_SCALE_STRENGTH * image) / np.log1p(
+            PERCEPTUAL_DISPLAY_SCALE_STRENGTH,
+        )
+    else:
+        raise ValueError("display_scale must be 'linear' or 'perceptual'")
 
     plt = _load_pyplot()
     fig, ax = plt.subplots(
@@ -26,7 +44,7 @@ def render_convolved_image(
         constrained_layout=True,
     )
     ax.imshow(
-        simulation.convolved_image,
+        display_image,
         cmap="gray",
         vmin=0,
         vmax=1,

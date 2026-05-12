@@ -1,4 +1,5 @@
 import math
+from dataclasses import replace
 
 from matplotlib.colors import LogNorm
 from matplotlib.ticker import LogFormatterSciNotation, ScalarFormatter
@@ -957,6 +958,48 @@ def test_render_helpers_use_large_default_figure_size(
         assert tuple(fig.get_size_inches()) == pytest.approx((10, 9))
     finally:
         _load_pyplot().close(fig)
+
+
+def test_convolved_image_renderer_can_apply_perceptual_display_scale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    linear_image = np.array([[0, 0.01], [0.25, 1]], dtype=float)
+    simulation = replace(simulation, convolved_image=linear_image)
+    rendered_arrays = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_arrays.append(np.asarray(fig.axes[0].images[0].get_array()))
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.convolved_image._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_convolved_image(simulation, display_scale="perceptual") == b"rendered"
+
+    expected = np.log1p(100 * np.clip(linear_image, 0, 1)) / np.log1p(100)
+    assert rendered_arrays[0] == pytest.approx(expected)
+
+
+def test_convolved_image_renderer_rejects_invalid_display_scale() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    with pytest.raises(ValueError, match="display_scale"):
+        render_convolved_image(simulation, display_scale="gamma")
 
 
 def test_psf_renderer_uses_viridis_log_normalized_intensity_colorbar(
