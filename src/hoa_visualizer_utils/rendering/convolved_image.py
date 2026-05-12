@@ -16,7 +16,7 @@ from hoa_visualizer_utils.utils.figures import (
 )
 
 
-PERCEPTUAL_DISPLAY_SCALE_STRENGTH = 100
+PERCEPTUAL_DISPLAY_SCALE_STRENGTH = 10
 
 
 def render_convolved_image(

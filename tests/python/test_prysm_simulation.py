@@ -985,7 +985,7 @@ def test_convolved_image_renderer_can_apply_perceptual_display_scale(
 
     assert render_convolved_image(simulation, display_scale="perceptual") == b"rendered"
 
-    expected = np.log1p(100 * np.clip(linear_image, 0, 1)) / np.log1p(100)
+    expected = np.log1p(10 * np.clip(linear_image, 0, 1)) / np.log1p(10)
     assert rendered_arrays[0] == pytest.approx(expected)
 
 
