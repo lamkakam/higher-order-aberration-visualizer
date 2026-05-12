@@ -250,166 +250,6 @@ function ApertureMaskModal({
   onRenderApertureMask
 }: ApertureMaskModalProps) {
   const titleId = useId();
-  const shapeId = useId();
-  const obstructionShapeId = useId();
-  const [draftShape, setDraftShape] = useState<ApertureShape>(apertureSettings.shape);
-  const [draftRotationDegrees, setDraftRotationDegrees] = useState(
-    apertureSettings.rotationDegrees
-  );
-  const [draftObstructionRatio, setDraftObstructionRatio] = useState(
-    apertureSettings.centralObstructionRatio
-  );
-  const [draftObstructionShape, setDraftObstructionShape] = useState<ApertureShape>(
-    apertureSettings.centralObstructionShape
-  );
-  const [draftObstructionRotationDegrees, setDraftObstructionRotationDegrees] =
-    useState(apertureSettings.centralObstructionRotationDegrees);
-  const [draftGaussianApodizationEnabled, setDraftGaussianApodizationEnabled] =
-    useState(apertureSettings.gaussianApodizationEnabled);
-  const [draftGaussianSigmaRatio, setDraftGaussianSigmaRatio] = useState(
-    apertureSettings.gaussianApodizationSigmaRatio
-  );
-  const [draftSpiderVaneCount, setDraftSpiderVaneCount] = useState(
-    apertureSettings.spiderVaneCount
-  );
-  const [draftSpiderVaneWidthRatio, setDraftSpiderVaneWidthRatio] = useState(
-    apertureSettings.spiderVaneWidthRatio
-  );
-  const [draftSpiderVaneRotationDegrees, setDraftSpiderVaneRotationDegrees] = useState(
-    apertureSettings.spiderVaneRotationDegrees
-  );
-  const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
-  const [previewError, setPreviewError] = useState<string | undefined>(undefined);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const obstructionRatioIsValid =
-    Number.isFinite(draftObstructionRatio) &&
-    draftObstructionRatio >= 0 &&
-    draftObstructionRatio < 1;
-  const apertureRotationIsValid =
-    draftShape === 'circle' ||
-    (Number.isFinite(draftRotationDegrees) &&
-      draftRotationDegrees >= 0 &&
-      draftRotationDegrees <= 360);
-  const obstructionRotationIsValid =
-    !obstructionRatioIsValid ||
-    draftObstructionRatio === 0 ||
-    draftObstructionShape === 'circle' ||
-    (Number.isFinite(draftObstructionRotationDegrees) &&
-      draftObstructionRotationDegrees >= 0 &&
-      draftObstructionRotationDegrees <= 360);
-  const gaussianSigmaRatioIsValid =
-    !draftGaussianApodizationEnabled ||
-    (Number.isFinite(draftGaussianSigmaRatio) &&
-      draftGaussianSigmaRatio >= 0.05 &&
-      draftGaussianSigmaRatio <= 1);
-  const spiderVaneCountIsValid =
-    Number.isFinite(draftSpiderVaneCount) &&
-    Number.isInteger(draftSpiderVaneCount) &&
-    draftSpiderVaneCount >= 0 &&
-    draftSpiderVaneCount <= 12;
-  const spiderVaneWidthRatioIsValid =
-    Number.isFinite(draftSpiderVaneWidthRatio) &&
-    draftSpiderVaneWidthRatio >= 0 &&
-    draftSpiderVaneWidthRatio <= 0.25;
-  const spiderVaneRotationIsValid =
-    Number.isFinite(draftSpiderVaneRotationDegrees) &&
-    draftSpiderVaneRotationDegrees >= 0 &&
-    draftSpiderVaneRotationDegrees <= 360;
-  const draftIsValid =
-    obstructionRatioIsValid &&
-    apertureRotationIsValid &&
-    obstructionRotationIsValid &&
-    spiderVaneCountIsValid &&
-    spiderVaneWidthRatioIsValid &&
-    spiderVaneRotationIsValid &&
-    gaussianSigmaRatioIsValid;
-  const draftSettings = useMemo<ApertureSettings | undefined>(
-    () =>
-      draftIsValid
-        ? {
-            shape: draftShape,
-            rotationDegrees: draftShape === 'circle' ? 0 : draftRotationDegrees,
-            centralObstructionShape:
-              draftObstructionRatio > 0 ? draftObstructionShape : 'circle',
-            centralObstructionRotationDegrees:
-              draftObstructionRatio > 0 && draftObstructionShape !== 'circle'
-                ? draftObstructionRotationDegrees
-                : 0,
-            centralObstructionRatio: draftObstructionRatio,
-            spiderVaneCount: draftSpiderVaneCount,
-            spiderVaneWidthRatio: draftSpiderVaneWidthRatio,
-            spiderVaneRotationDegrees: draftSpiderVaneRotationDegrees,
-            gaussianApodizationEnabled: draftGaussianApodizationEnabled,
-            gaussianApodizationSigmaRatio: draftGaussianSigmaRatio
-          }
-        : undefined,
-    [
-      draftIsValid,
-      draftShape,
-      draftRotationDegrees,
-      draftObstructionShape,
-      draftObstructionRotationDegrees,
-      draftObstructionRatio,
-      draftSpiderVaneCount,
-      draftSpiderVaneWidthRatio,
-      draftSpiderVaneRotationDegrees,
-      draftGaussianApodizationEnabled,
-      draftGaussianSigmaRatio
-    ]
-  );
-  const showApertureRotation = draftShape !== 'circle';
-  const showObstructionControls = draftIsValid && draftObstructionRatio > 0;
-  const showObstructionRotation = showObstructionControls && draftObstructionShape !== 'circle';
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setDraftShape(apertureSettings.shape);
-    setDraftRotationDegrees(apertureSettings.rotationDegrees);
-    setDraftObstructionRatio(apertureSettings.centralObstructionRatio);
-    setDraftObstructionShape(apertureSettings.centralObstructionShape);
-    setDraftObstructionRotationDegrees(
-      apertureSettings.centralObstructionRotationDegrees
-    );
-    setDraftGaussianApodizationEnabled(apertureSettings.gaussianApodizationEnabled);
-    setDraftGaussianSigmaRatio(apertureSettings.gaussianApodizationSigmaRatio);
-    setDraftSpiderVaneCount(apertureSettings.spiderVaneCount);
-    setDraftSpiderVaneWidthRatio(apertureSettings.spiderVaneWidthRatio);
-    setDraftSpiderVaneRotationDegrees(apertureSettings.spiderVaneRotationDegrees);
-  }, [apertureSettings, open]);
-
-  useEffect(() => {
-    if (!open || !draftSettings) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsPreviewLoading(true);
-    setPreviewError(undefined);
-    onRenderApertureMask(draftSettings)
-      .then((nextPreview) => {
-        if (!cancelled) {
-          setPreview(nextPreview);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPreview(undefined);
-          setPreviewError(error instanceof Error ? error.message : 'Aperture preview failed');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsPreviewLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [draftSettings, onRenderApertureMask, open]);
 
   return (
     <Modal
@@ -446,34 +286,321 @@ function ApertureMaskModal({
         <Typography id={titleId} variant="h5" component="h2" sx={{ flexShrink: 0 }}>
           Aperture Mask
         </Typography>
-        <Box
-          data-testid="aperture-mask-modal-content"
-          style={{
-            marginLeft: -16,
-            marginRight: -8,
-            minHeight: 0,
-            overflowY: 'auto',
-            paddingLeft: 16,
-            paddingRight: 20,
-            scrollbarGutter: 'stable'
+        {open ? (
+          <ApertureMaskModalDraft
+            key={getApertureMaskModalDraftKey(apertureSettings)}
+            apertureSettings={apertureSettings}
+            onCancel={onCancel}
+            onConfirm={onConfirm}
+            onRenderApertureMask={onRenderApertureMask}
+          />
+        ) : undefined}
+      </Box>
+    </Modal>
+  );
+}
+
+interface ApertureMaskModalDraftProps {
+  readonly apertureSettings: ApertureSettings;
+  readonly onCancel: () => void;
+  readonly onConfirm: (value: ApertureSettings) => void;
+  readonly onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>;
+}
+
+function ApertureMaskModalDraft({
+  apertureSettings,
+  onCancel,
+  onConfirm,
+  onRenderApertureMask
+}: ApertureMaskModalDraftProps) {
+  const shapeId = useId();
+  const obstructionShapeId = useId();
+  const draft = useApertureMaskDraft(apertureSettings);
+  const draftSettings = useMemo(() => normalizeApertureMaskDraft(draft.state), [draft.state]);
+  const visibility = getApertureMaskVisibility(draft.state, draftSettings);
+
+  return (
+    <>
+      <ApertureMaskModalContent
+        shapeId={shapeId}
+        obstructionShapeId={obstructionShapeId}
+        draft={draft}
+        visibility={visibility}
+        draftSettings={draftSettings}
+        onRenderApertureMask={onRenderApertureMask}
+      />
+      <ApertureMaskModalFooter
+        draftSettings={draftSettings}
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />
+    </>
+  );
+}
+
+interface ApertureMaskDraftState {
+  readonly shape: ApertureShape;
+  readonly rotationDegrees: number;
+  readonly centralObstructionRatio: number;
+  readonly centralObstructionShape: ApertureShape;
+  readonly centralObstructionRotationDegrees: number;
+  readonly gaussianApodizationEnabled: boolean;
+  readonly gaussianApodizationSigmaRatio: number;
+  readonly spiderVaneCount: number;
+  readonly spiderVaneWidthRatio: number;
+  readonly spiderVaneRotationDegrees: number;
+}
+
+interface ApertureMaskDraftActions {
+  readonly setShape: (value: ApertureShape) => void;
+  readonly setRotationDegrees: (value: number) => void;
+  readonly setCentralObstructionRatio: (value: number) => void;
+  readonly setCentralObstructionShape: (value: ApertureShape) => void;
+  readonly setCentralObstructionRotationDegrees: (value: number) => void;
+  readonly setGaussianApodizationEnabled: (value: boolean) => void;
+  readonly setGaussianApodizationSigmaRatio: (value: number) => void;
+  readonly setSpiderVaneCount: (value: number) => void;
+  readonly setSpiderVaneWidthRatio: (value: number) => void;
+  readonly setSpiderVaneRotationDegrees: (value: number) => void;
+}
+
+interface ApertureMaskDraft {
+  readonly state: ApertureMaskDraftState;
+  readonly actions: ApertureMaskDraftActions;
+}
+
+function useApertureMaskDraft(apertureSettings: ApertureSettings): ApertureMaskDraft {
+  const [shape, setShape] = useState<ApertureShape>(apertureSettings.shape);
+  const [rotationDegrees, setRotationDegrees] = useState(apertureSettings.rotationDegrees);
+  const [centralObstructionRatio, setCentralObstructionRatio] = useState(
+    apertureSettings.centralObstructionRatio
+  );
+  const [centralObstructionShape, setCentralObstructionShape] = useState<ApertureShape>(
+    apertureSettings.centralObstructionShape
+  );
+  const [centralObstructionRotationDegrees, setCentralObstructionRotationDegrees] =
+    useState(apertureSettings.centralObstructionRotationDegrees);
+  const [gaussianApodizationEnabled, setGaussianApodizationEnabled] = useState(
+    apertureSettings.gaussianApodizationEnabled
+  );
+  const [gaussianApodizationSigmaRatio, setGaussianApodizationSigmaRatio] = useState(
+    apertureSettings.gaussianApodizationSigmaRatio
+  );
+  const [spiderVaneCount, setSpiderVaneCount] = useState(apertureSettings.spiderVaneCount);
+  const [spiderVaneWidthRatio, setSpiderVaneWidthRatio] = useState(
+    apertureSettings.spiderVaneWidthRatio
+  );
+  const [spiderVaneRotationDegrees, setSpiderVaneRotationDegrees] = useState(
+    apertureSettings.spiderVaneRotationDegrees
+  );
+
+  const state = useMemo(
+    () => ({
+      shape,
+      rotationDegrees,
+      centralObstructionRatio,
+      centralObstructionShape,
+      centralObstructionRotationDegrees,
+      gaussianApodizationEnabled,
+      gaussianApodizationSigmaRatio,
+      spiderVaneCount,
+      spiderVaneWidthRatio,
+      spiderVaneRotationDegrees
+    }),
+    [
+      shape,
+      rotationDegrees,
+      centralObstructionRatio,
+      centralObstructionShape,
+      centralObstructionRotationDegrees,
+      gaussianApodizationEnabled,
+      gaussianApodizationSigmaRatio,
+      spiderVaneCount,
+      spiderVaneWidthRatio,
+      spiderVaneRotationDegrees
+    ]
+  );
+  const actions = useMemo(
+    () => ({
+      setShape,
+      setRotationDegrees,
+      setCentralObstructionRatio,
+      setCentralObstructionShape,
+      setCentralObstructionRotationDegrees,
+      setGaussianApodizationEnabled,
+      setGaussianApodizationSigmaRatio,
+      setSpiderVaneCount,
+      setSpiderVaneWidthRatio,
+      setSpiderVaneRotationDegrees
+    }),
+    []
+  );
+
+  return { state, actions };
+}
+
+interface ApertureMaskVisibility {
+  readonly showApertureRotation: boolean;
+  readonly showObstructionControls: boolean;
+  readonly showObstructionRotation: boolean;
+  readonly showGaussianSigma: boolean;
+}
+
+interface ApertureMaskModalContentProps {
+  readonly shapeId: string;
+  readonly obstructionShapeId: string;
+  readonly draft: ApertureMaskDraft;
+  readonly visibility: ApertureMaskVisibility;
+  readonly draftSettings: ApertureSettings | undefined;
+  readonly onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>;
+}
+
+function ApertureMaskModalContent({
+  shapeId,
+  obstructionShapeId,
+  draft,
+  visibility,
+  draftSettings,
+  onRenderApertureMask
+}: ApertureMaskModalContentProps) {
+  return (
+    <Box
+      data-testid="aperture-mask-modal-content"
+      style={{
+        marginLeft: -16,
+        marginRight: -8,
+        minHeight: 0,
+        overflowY: 'auto',
+        paddingLeft: 16,
+        paddingRight: 20,
+        scrollbarGutter: 'stable'
+      }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        py: 2
+      }}
+    >
+      <ApertureShapeControls
+        shapeId={shapeId}
+        state={draft.state}
+        actions={draft.actions}
+        showApertureRotation={visibility.showApertureRotation}
+      />
+      <CentralObstructionControls
+        obstructionShapeId={obstructionShapeId}
+        state={draft.state}
+        actions={draft.actions}
+        visibility={visibility}
+      />
+      <SpiderVaneControls state={draft.state} actions={draft.actions} />
+      <GaussianApodizationControls
+        state={draft.state}
+        actions={draft.actions}
+        showGaussianSigma={visibility.showGaussianSigma}
+      />
+      <ApertureMaskPreviewPanel
+        draftSettings={draftSettings}
+        onRenderApertureMask={onRenderApertureMask}
+      />
+    </Box>
+  );
+}
+
+interface ApertureShapeControlsProps {
+  readonly shapeId: string;
+  readonly state: ApertureMaskDraftState;
+  readonly actions: ApertureMaskDraftActions;
+  readonly showApertureRotation: boolean;
+}
+
+function ApertureShapeControls({
+  shapeId,
+  state,
+  actions,
+  showApertureRotation
+}: ApertureShapeControlsProps) {
+  return (
+    <>
+      <FormControl fullWidth size="small">
+        <InputLabel htmlFor={shapeId}>Aperture Shape</InputLabel>
+        <NativeSelect
+          value={state.shape}
+          onChange={(event) => {
+            actions.setShape(event.target.value as ApertureShape);
           }}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            py: 2
+          inputProps={{
+            id: shapeId,
+            'aria-label': 'Aperture Shape'
           }}
         >
+          {apertureShapeOptions.map((shape) => (
+            <option key={shape.value} value={shape.value}>
+              {shape.label}
+            </option>
+          ))}
+        </NativeSelect>
+      </FormControl>
+      {showApertureRotation ? (
+        <CommitSlider
+          ariaLabel="Aperture Rotation"
+          label="Aperture Rotation"
+          min={0}
+          max={360}
+          step={1}
+          value={state.rotationDegrees}
+          input={rotationSliderInput}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
+          roundValue={Math.round}
+          onCommit={actions.setRotationDegrees}
+        />
+      ) : undefined}
+    </>
+  );
+}
+
+interface CentralObstructionControlsProps {
+  readonly obstructionShapeId: string;
+  readonly state: ApertureMaskDraftState;
+  readonly actions: ApertureMaskDraftActions;
+  readonly visibility: ApertureMaskVisibility;
+}
+
+function CentralObstructionControls({
+  obstructionShapeId,
+  state,
+  actions,
+  visibility
+}: CentralObstructionControlsProps) {
+  return (
+    <>
+      <CommitSlider
+        ariaLabel="Central Obstruction Ratio"
+        label="Central Obstruction Ratio"
+        min={0}
+        max={0.99}
+        step={0.01}
+        value={state.centralObstructionRatio}
+        input={ratioSliderInput}
+        valueLabelDisplay="auto"
+        valueLabelFormat={formatRatioValue}
+        roundValue={roundRatioValue}
+        onCommit={actions.setCentralObstructionRatio}
+      />
+      {visibility.showObstructionControls ? (
+        <>
           <FormControl fullWidth size="small">
-            <InputLabel htmlFor={shapeId}>Aperture Shape</InputLabel>
+            <InputLabel htmlFor={obstructionShapeId}>Obstruction Shape</InputLabel>
             <NativeSelect
-              value={draftShape}
+              value={state.centralObstructionShape}
               onChange={(event) => {
-                setDraftShape(event.target.value as ApertureShape);
+                actions.setCentralObstructionShape(event.target.value as ApertureShape);
               }}
               inputProps={{
-                id: shapeId,
-                'aria-label': 'Aperture Shape'
+                id: obstructionShapeId,
+                'aria-label': 'Obstruction Shape'
               }}
             >
               {apertureShapeOptions.map((shape) => (
@@ -483,214 +610,359 @@ function ApertureMaskModal({
               ))}
             </NativeSelect>
           </FormControl>
-          {showApertureRotation ? (
+          {visibility.showObstructionRotation ? (
             <CommitSlider
-              ariaLabel="Aperture Rotation"
-              label="Aperture Rotation"
+              ariaLabel="Obstruction Rotation"
+              label="Obstruction Rotation"
               min={0}
               max={360}
               step={1}
-              value={draftRotationDegrees}
+              value={state.centralObstructionRotationDegrees}
               input={rotationSliderInput}
               valueLabelDisplay="auto"
               valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
               roundValue={Math.round}
-              onCommit={setDraftRotationDegrees}
+              onCommit={actions.setCentralObstructionRotationDegrees}
             />
           ) : undefined}
-          <CommitSlider
-            ariaLabel="Central Obstruction Ratio"
-            label="Central Obstruction Ratio"
-            min={0}
-            max={0.99}
-            step={0.01}
-            value={draftObstructionRatio}
-            input={ratioSliderInput}
-            valueLabelDisplay="auto"
-            valueLabelFormat={formatRatioValue}
-            roundValue={roundRatioValue}
-            onCommit={setDraftObstructionRatio}
-          />
-          {showObstructionControls ? (
-            <>
-              <FormControl fullWidth size="small">
-                <InputLabel htmlFor={obstructionShapeId}>Obstruction Shape</InputLabel>
-                <NativeSelect
-                  value={draftObstructionShape}
-                  onChange={(event) => {
-                    setDraftObstructionShape(event.target.value as ApertureShape);
-                  }}
-                  inputProps={{
-                    id: obstructionShapeId,
-                    'aria-label': 'Obstruction Shape'
-                  }}
-                >
-                  {apertureShapeOptions.map((shape) => (
-                    <option key={shape.value} value={shape.value}>
-                      {shape.label}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </FormControl>
-              {showObstructionRotation ? (
-                <CommitSlider
-                  ariaLabel="Obstruction Rotation"
-                  label="Obstruction Rotation"
-                  min={0}
-                  max={360}
-                  step={1}
-                  value={draftObstructionRotationDegrees}
-                  input={rotationSliderInput}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
-                  roundValue={Math.round}
-                  onCommit={setDraftObstructionRotationDegrees}
-                />
-              ) : undefined}
-            </>
-          ) : undefined}
-          <CommitSlider
-            ariaLabel="Spider Vanes"
-            label="Spider Vanes"
-            min={0}
-            max={12}
-            step={1}
-            value={draftSpiderVaneCount}
-            input={spiderVaneCountSliderInput}
-            valueLabelDisplay="auto"
-            valueLabelFormat={(value) => value.toFixed(0)}
-            roundValue={Math.round}
-            onCommit={setDraftSpiderVaneCount}
-          />
-          <CommitSlider
-            ariaLabel="Vane Width (x Aperture Diameter)"
-            label="Vane Width (x Aperture Diameter)"
-            min={0}
-            max={0.25}
-            step={0.01}
-            value={draftSpiderVaneWidthRatio}
-            input={spiderVaneWidthRatioSliderInput}
-            valueLabelDisplay="auto"
-            valueLabelFormat={(value) => `${formatRatioValue(value)}D`}
-            roundValue={roundRatioValue}
-            onCommit={setDraftSpiderVaneWidthRatio}
-          />
-          <CommitSlider
-            ariaLabel="Vane Rotation"
-            label="Vane Rotation"
-            min={0}
-            max={360}
-            step={1}
-            value={draftSpiderVaneRotationDegrees}
-            input={rotationSliderInput}
-            valueLabelDisplay="auto"
-            valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
-            roundValue={Math.round}
-            onCommit={setDraftSpiderVaneRotationDegrees}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={draftGaussianApodizationEnabled}
-                onChange={(event) => {
-                  setDraftGaussianApodizationEnabled(event.target.checked);
-                }}
-              />
-            }
-            label="Gaussian Apodization"
-          />
-          {draftGaussianApodizationEnabled ? (
-            <CommitSlider
-              ariaLabel="Standard Deviation (x Aperture Diameter)"
-              label="Standard Deviation (x Aperture Diameter)"
-              min={0.05}
-              max={1}
-              step={0.01}
-              value={draftGaussianSigmaRatio}
-              input={gaussianSigmaRatioSliderInput}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(value) => `${formatRatioValue(value)}D`}
-              roundValue={roundRatioValue}
-              onCommit={setDraftGaussianSigmaRatio}
-            />
-          ) : undefined}
-          <Typography variant="subtitle2" component="p">
-            Preview
-          </Typography>
-          <Box
-            data-testid="aperture-mask-preview-panel"
-            sx={{
-              alignItems: 'center',
-              bgcolor: 'background.default',
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1,
-              display: 'flex',
-              height: 280,
-              justifyContent: 'center',
-              minHeight: 280,
-              overflow: 'hidden',
-              p: 2
-            }}
-          >
-            {isPreviewLoading ? (
-              <Typography variant="body2">Preparing aperture mask...</Typography>
-            ) : previewError ? (
-              <Typography variant="body2" color="error">
-                {previewError}
-              </Typography>
-            ) : preview ? (
-              <Box
-                component="img"
-                src={preview.imageUrl}
-                alt="Aperture mask preview"
-                sx={{
-                  display: 'block',
-                  height: 'auto',
-                  maxHeight: 260,
-                  maxWidth: '100%',
-                  objectFit: 'contain'
-                }}
-              />
-            ) : (
-              <Typography variant="body2">Preparing aperture mask...</Typography>
-            )}
-          </Box>
-        </Box>
-        <Box
-          data-testid="aperture-mask-modal-footer"
-          style={{ flexShrink: 0 }}
-          sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 1,
-            justifyContent: 'flex-end',
-            pt: 2
-          }}
-        >
-          <Button
-            aria-label="Cancel aperture mask"
-            variant="outlined"
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-          <Button
-            aria-label="Confirm aperture mask"
-            variant="contained"
-            disabled={!draftSettings}
-            onClick={() => {
-              if (draftSettings) {
-                onConfirm(draftSettings);
-              }
-            }}
-          >
-            Confirm
-          </Button>
-        </Box>
-      </Box>
-    </Modal>
+        </>
+      ) : undefined}
+    </>
   );
+}
+
+interface SpiderVaneControlsProps {
+  readonly state: ApertureMaskDraftState;
+  readonly actions: ApertureMaskDraftActions;
+}
+
+function SpiderVaneControls({ state, actions }: SpiderVaneControlsProps) {
+  return (
+    <>
+      <CommitSlider
+        ariaLabel="Spider Vanes"
+        label="Spider Vanes"
+        min={0}
+        max={12}
+        step={1}
+        value={state.spiderVaneCount}
+        input={spiderVaneCountSliderInput}
+        valueLabelDisplay="auto"
+        valueLabelFormat={(value) => value.toFixed(0)}
+        roundValue={Math.round}
+        onCommit={actions.setSpiderVaneCount}
+      />
+      <CommitSlider
+        ariaLabel="Vane Width (x Aperture Diameter)"
+        label="Vane Width (x Aperture Diameter)"
+        min={0}
+        max={0.25}
+        step={0.01}
+        value={state.spiderVaneWidthRatio}
+        input={spiderVaneWidthRatioSliderInput}
+        valueLabelDisplay="auto"
+        valueLabelFormat={(value) => `${formatRatioValue(value)}D`}
+        roundValue={roundRatioValue}
+        onCommit={actions.setSpiderVaneWidthRatio}
+      />
+      <CommitSlider
+        ariaLabel="Vane Rotation"
+        label="Vane Rotation"
+        min={0}
+        max={360}
+        step={1}
+        value={state.spiderVaneRotationDegrees}
+        input={rotationSliderInput}
+        valueLabelDisplay="auto"
+        valueLabelFormat={(value) => `${value.toFixed(0)} deg`}
+        roundValue={Math.round}
+        onCommit={actions.setSpiderVaneRotationDegrees}
+      />
+    </>
+  );
+}
+
+interface GaussianApodizationControlsProps {
+  readonly state: ApertureMaskDraftState;
+  readonly actions: ApertureMaskDraftActions;
+  readonly showGaussianSigma: boolean;
+}
+
+function GaussianApodizationControls({
+  state,
+  actions,
+  showGaussianSigma
+}: GaussianApodizationControlsProps) {
+  return (
+    <>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={state.gaussianApodizationEnabled}
+            onChange={(event) => {
+              actions.setGaussianApodizationEnabled(event.target.checked);
+            }}
+          />
+        }
+        label="Gaussian Apodization"
+      />
+      {showGaussianSigma ? (
+        <CommitSlider
+          ariaLabel="Standard Deviation (x Aperture Diameter)"
+          label="Standard Deviation (x Aperture Diameter)"
+          min={0.05}
+          max={1}
+          step={0.01}
+          value={state.gaussianApodizationSigmaRatio}
+          input={gaussianSigmaRatioSliderInput}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(value) => `${formatRatioValue(value)}D`}
+          roundValue={roundRatioValue}
+          onCommit={actions.setGaussianApodizationSigmaRatio}
+        />
+      ) : undefined}
+    </>
+  );
+}
+
+interface ApertureMaskPreviewPanelProps {
+  readonly draftSettings: ApertureSettings | undefined;
+  readonly onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>;
+}
+
+function ApertureMaskPreviewPanel({
+  draftSettings,
+  onRenderApertureMask
+}: ApertureMaskPreviewPanelProps) {
+  const [preview, setPreview] = useState<ApertureMaskResult | undefined>(undefined);
+  const [previewError, setPreviewError] = useState<string | undefined>(undefined);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!draftSettings) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsPreviewLoading(true);
+    setPreviewError(undefined);
+    onRenderApertureMask(draftSettings)
+      .then((nextPreview) => {
+        if (!cancelled) {
+          setPreview(nextPreview);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPreview(undefined);
+          setPreviewError(error instanceof Error ? error.message : 'Aperture preview failed');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsPreviewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftSettings, onRenderApertureMask]);
+
+  return (
+    <>
+      <Typography variant="subtitle2" component="p">
+        Preview
+      </Typography>
+      <Box
+        data-testid="aperture-mask-preview-panel"
+        sx={{
+          alignItems: 'center',
+          bgcolor: 'background.default',
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1,
+          display: 'flex',
+          height: 280,
+          justifyContent: 'center',
+          minHeight: 280,
+          overflow: 'hidden',
+          p: 2
+        }}
+      >
+        {isPreviewLoading ? (
+          <Typography variant="body2">Preparing aperture mask...</Typography>
+        ) : previewError ? (
+          <Typography variant="body2" color="error">
+            {previewError}
+          </Typography>
+        ) : preview ? (
+          <Box
+            component="img"
+            src={preview.imageUrl}
+            alt="Aperture mask preview"
+            sx={{
+              display: 'block',
+              height: 'auto',
+              maxHeight: 260,
+              maxWidth: '100%',
+              objectFit: 'contain'
+            }}
+          />
+        ) : (
+          <Typography variant="body2">Preparing aperture mask...</Typography>
+        )}
+      </Box>
+    </>
+  );
+}
+
+interface ApertureMaskModalFooterProps {
+  readonly draftSettings: ApertureSettings | undefined;
+  readonly onCancel: () => void;
+  readonly onConfirm: (value: ApertureSettings) => void;
+}
+
+function ApertureMaskModalFooter({
+  draftSettings,
+  onCancel,
+  onConfirm
+}: ApertureMaskModalFooterProps) {
+  return (
+    <Box
+      data-testid="aperture-mask-modal-footer"
+      style={{ flexShrink: 0 }}
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: 1,
+        justifyContent: 'flex-end',
+        pt: 2
+      }}
+    >
+      <Button aria-label="Cancel aperture mask" variant="outlined" onClick={onCancel}>
+        Cancel
+      </Button>
+      <Button
+        aria-label="Confirm aperture mask"
+        variant="contained"
+        disabled={!draftSettings}
+        onClick={() => {
+          if (draftSettings) {
+            onConfirm(draftSettings);
+          }
+        }}
+      >
+        Confirm
+      </Button>
+    </Box>
+  );
+}
+
+function getApertureMaskModalDraftKey(settings: ApertureSettings): string {
+  return [
+    settings.shape,
+    settings.rotationDegrees,
+    settings.centralObstructionRatio,
+    settings.centralObstructionShape,
+    settings.centralObstructionRotationDegrees,
+    settings.gaussianApodizationEnabled,
+    settings.gaussianApodizationSigmaRatio,
+    settings.spiderVaneCount,
+    settings.spiderVaneWidthRatio,
+    settings.spiderVaneRotationDegrees
+  ].join('|');
+}
+
+function getApertureMaskVisibility(
+  draft: ApertureMaskDraftState,
+  normalizedDraft: ApertureSettings | undefined
+): ApertureMaskVisibility {
+  const showObstructionControls =
+    normalizedDraft !== undefined && draft.centralObstructionRatio > 0;
+
+  return {
+    showApertureRotation: draft.shape !== 'circle',
+    showObstructionControls,
+    showObstructionRotation:
+      showObstructionControls && draft.centralObstructionShape !== 'circle',
+    showGaussianSigma: draft.gaussianApodizationEnabled
+  };
+}
+
+function normalizeApertureMaskDraft(
+  draft: ApertureMaskDraftState
+): ApertureSettings | undefined {
+  if (!isApertureMaskDraftValid(draft)) {
+    return undefined;
+  }
+
+  return {
+    shape: draft.shape,
+    rotationDegrees: draft.shape === 'circle' ? 0 : draft.rotationDegrees,
+    centralObstructionShape:
+      draft.centralObstructionRatio > 0 ? draft.centralObstructionShape : 'circle',
+    centralObstructionRotationDegrees:
+      draft.centralObstructionRatio > 0 && draft.centralObstructionShape !== 'circle'
+        ? draft.centralObstructionRotationDegrees
+        : 0,
+    centralObstructionRatio: draft.centralObstructionRatio,
+    spiderVaneCount: draft.spiderVaneCount,
+    spiderVaneWidthRatio: draft.spiderVaneWidthRatio,
+    spiderVaneRotationDegrees: draft.spiderVaneRotationDegrees,
+    gaussianApodizationEnabled: draft.gaussianApodizationEnabled,
+    gaussianApodizationSigmaRatio: draft.gaussianApodizationSigmaRatio
+  };
+}
+
+function isApertureMaskDraftValid(draft: ApertureMaskDraftState): boolean {
+  return (
+    isApertureRotationValid(draft) &&
+    isObstructionRatioValid(draft.centralObstructionRatio) &&
+    isObstructionRotationValid(draft) &&
+    isSpiderVaneCountValid(draft.spiderVaneCount) &&
+    isSpiderVaneWidthRatioValid(draft.spiderVaneWidthRatio) &&
+    isRotationDegreesValid(draft.spiderVaneRotationDegrees) &&
+    isGaussianSigmaRatioValid(draft)
+  );
+}
+
+function isApertureRotationValid(draft: ApertureMaskDraftState): boolean {
+  return draft.shape === 'circle' || isRotationDegreesValid(draft.rotationDegrees);
+}
+
+function isObstructionRatioValid(value: number): boolean {
+  return Number.isFinite(value) && value >= 0 && value < 1;
+}
+
+function isObstructionRotationValid(draft: ApertureMaskDraftState): boolean {
+  return (
+    !isObstructionRatioValid(draft.centralObstructionRatio) ||
+    draft.centralObstructionRatio === 0 ||
+    draft.centralObstructionShape === 'circle' ||
+    isRotationDegreesValid(draft.centralObstructionRotationDegrees)
+  );
+}
+
+function isSpiderVaneCountValid(value: number): boolean {
+  return Number.isFinite(value) && Number.isInteger(value) && value >= 0 && value <= 12;
+}
+
+function isSpiderVaneWidthRatioValid(value: number): boolean {
+  return Number.isFinite(value) && value >= 0 && value <= 0.25;
+}
+
+function isGaussianSigmaRatioValid(draft: ApertureMaskDraftState): boolean {
+  return (
+    !draft.gaussianApodizationEnabled ||
+    (Number.isFinite(draft.gaussianApodizationSigmaRatio) &&
+      draft.gaussianApodizationSigmaRatio >= 0.05 &&
+      draft.gaussianApodizationSigmaRatio <= 1)
+  );
+}
+
+function isRotationDegreesValid(value: number): boolean {
+  return Number.isFinite(value) && value >= 0 && value <= 360;
 }
 
 function formatApertureSummary(settings: ApertureSettings): string {
