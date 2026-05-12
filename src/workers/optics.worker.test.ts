@@ -196,7 +196,9 @@ describe('optics worker', () => {
       expect.any(Object)
     );
     expect(runPythonAsync).toHaveBeenCalledWith(
-      expect.stringContaining('render_convolved_image(simulation, show_scale_bar=bool(show_scale_bar))'),
+      expect.stringContaining(
+        'render_convolved_image(simulation, show_scale_bar=bool(show_scale_bar), display_scale="perceptual")'
+      ),
       expect.any(Object)
     );
     expect(runPythonAsync).toHaveBeenCalledWith(

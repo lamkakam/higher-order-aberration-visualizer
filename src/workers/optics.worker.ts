@@ -179,7 +179,7 @@ simulation = compute_simulation(
 
   const imageBytes = await renderSimulationImage(
     globals,
-    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation, show_scale_bar=bool(show_scale_bar))'
+    'from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image\nrender_convolved_image(simulation, show_scale_bar=bool(show_scale_bar), display_scale="perceptual")'
   );
   const psfImageBytes = await renderSimulationImage(
     globals,

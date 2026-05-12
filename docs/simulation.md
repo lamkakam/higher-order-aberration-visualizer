@@ -44,6 +44,8 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
 
+The computed `simulation.convolved_image` remains linear normalized intensity data. Display-only tone mapping is applied only by renderers that explicitly request it.
+
 The aperture helper accepts `circle`, `square`, and `regular_hexagon` for both the outer aperture and central obstruction. The UI-facing aperture diameter remains the outer diameter. Square and regular hexagon masks use Prysm's `regular_polygon` helper. Non-circular shapes accept rotation values from 0 to 360 degrees.
 
 `centralObstructionRatio` must satisfy `0 <= ratio < 1`. A ratio of `0` is the default unobstructed pupil and hides obstruction shape controls in the UI. A nonzero ratio subtracts a centered obstruction from the outer aperture, masks the wavefront map in the same region, and is recorded in `simulation.inputs.aperture`. In advanced display mode, the UI exposes these aperture settings through an aperture mask modal under Target.
@@ -63,6 +65,8 @@ The worker renders three PNG outputs from each `OpticalSimulation`:
 - wavefront OPD map from [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
 
 The Python renderers use a default 10 by 9 inch Matplotlib figure size, which produces approximately 1000 by 900 pixel PNG outputs at Matplotlib's default 100 DPI.
+
+The web worker renders the convolved target image with `display_scale="perceptual"`, a fixed `log1p(10 * x) / log1p(10)` display transform applied after clipping to `[0, 1]`. This improves visibility of low-intensity detail in the PNG only; the underlying `simulation.convolved_image` data stays linear.
 
 By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`.
 
