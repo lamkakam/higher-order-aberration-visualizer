@@ -33,6 +33,7 @@ _LOGMAR_ROWS = (
     ("ZKCSV", 0.5),
 )
 _LOGMAR_ANTIALIASING_FACTOR = 4
+_JUPITER_DISK_THRESHOLD = 0.2
 
 _VECTOR_OPTOTYPE_STROKES = {
     "C": (
@@ -254,13 +255,57 @@ def _make_jupiter_502nm(
 ) -> NDArray[np.float64]:
     """Build a centered monochrome HST Jupiter target with 50 arcsec diameter."""
 
+    return _make_jupiter_target(
+        "jupiter_502nm.npz",
+        shape,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+
+def _make_jupiter_rgb_target(
+    shape: tuple[int, int],
+    *,
+    image_dx_arcmin: float,
+) -> NDArray[np.float64]:
+    """Build centered red, green, and blue Jupiter channels."""
+
+    return np.stack(
+        [
+            _make_jupiter_target(
+                "jupiter_658nm.npz",
+                shape,
+                image_dx_arcmin=image_dx_arcmin,
+            ),
+            _make_jupiter_target(
+                "jupiter_502nm.npz",
+                shape,
+                image_dx_arcmin=image_dx_arcmin,
+            ),
+            _make_jupiter_target(
+                "jupiter_395nm.npz",
+                shape,
+                image_dx_arcmin=image_dx_arcmin,
+            ),
+        ],
+        axis=-1,
+    )
+
+
+def _make_jupiter_target(
+    asset_filename: str,
+    shape: tuple[int, int],
+    *,
+    image_dx_arcmin: float,
+) -> NDArray[np.float64]:
+    """Build a centered monochrome HST Jupiter target with 50 arcsec diameter."""
+
     diameter_px = max(1, round(JUPITER_502NM_DIAMETER_ARCMIN / image_dx_arcmin))
     rows, columns = shape
     if diameter_px > rows or diameter_px > columns:
         raise ValueError("jupiter_502nm target is larger than the image grid")
 
-    source = _load_jupiter_502nm_asset()
-    zoom = diameter_px / source.shape[0]
+    source = _load_prepared_jupiter_asset(asset_filename)
+    zoom = (diameter_px / source.shape[0], diameter_px / source.shape[1])
     resized = ndimage.zoom(source, zoom, order=3, mode="nearest", prefilter=True)
     resized = np.clip(resized, 0, 1)
 
@@ -269,6 +314,102 @@ def _make_jupiter_502nm(
     x0 = (columns - resized.shape[1]) // 2
     target[y0 : y0 + resized.shape[0], x0 : x0 + resized.shape[1]] = resized
     return target
+
+
+@lru_cache(maxsize=3)
+def _load_prepared_jupiter_asset(asset_filename: str) -> NDArray[np.float64]:
+    return _prepare_jupiter_asset(_load_jupiter_asset(asset_filename))
+
+
+def _prepare_jupiter_asset(source: NDArray[np.float64]) -> NDArray[np.float64]:
+    source = _normalize_jupiter_polarity(source)
+    y_min, x_min, y_max, x_max = _jupiter_disk_bbox(source)
+    disk = source[y_min : y_max + 1, x_min : x_max + 1]
+    background = _corner_median(disk)
+    disk = np.clip(disk - background, 0, None)
+    maximum = float(disk.max())
+    if maximum > 0:
+        disk = disk / maximum
+    return disk
+
+
+def _normalize_jupiter_polarity(source: NDArray[np.float64]) -> NDArray[np.float64]:
+    rows, columns = source.shape
+    patch_size = max(1, min(rows, columns) // 10)
+    y0 = (rows - patch_size) // 2
+    x0 = (columns - patch_size) // 2
+    center = source[y0 : y0 + patch_size, x0 : x0 + patch_size]
+
+    if float(center.mean()) < float(_corner_samples(source, patch_size).mean()):
+        return 1 - source
+    return source
+
+
+def _jupiter_disk_bbox(source: NDArray[np.float64]) -> tuple[int, int, int, int]:
+    labels, label_count = ndimage.label(source > _JUPITER_DISK_THRESHOLD)
+    if label_count == 0:
+        raise ValueError("Jupiter asset does not contain a detectable disk")
+
+    sizes = np.bincount(labels.ravel())
+    objects = ndimage.find_objects(labels)
+    fallback_bbox: tuple[int, int, int, int] | None = None
+    fallback_size = -1
+    best_bbox: tuple[int, int, int, int] | None = None
+    best_size = -1
+
+    for label, slices in enumerate(objects, start=1):
+        if slices is None:
+            continue
+        y_slice, x_slice = slices
+        bbox = (
+            y_slice.start,
+            x_slice.start,
+            y_slice.stop - 1,
+            x_slice.stop - 1,
+        )
+        size = int(sizes[label])
+        if size > fallback_size:
+            fallback_bbox = bbox
+            fallback_size = size
+        if _bbox_touches_border(bbox, source.shape):
+            continue
+        if size > best_size:
+            best_bbox = bbox
+            best_size = size
+
+    if best_bbox is not None:
+        return best_bbox
+    if fallback_bbox is not None:
+        return fallback_bbox
+    raise ValueError("Jupiter asset does not contain a detectable disk")
+
+
+def _bbox_touches_border(
+    bbox: tuple[int, int, int, int],
+    shape: tuple[int, int],
+) -> bool:
+    y_min, x_min, y_max, x_max = bbox
+    rows, columns = shape
+    return y_min == 0 or x_min == 0 or y_max == rows - 1 or x_max == columns - 1
+
+
+def _corner_median(source: NDArray[np.float64]) -> float:
+    patch_size = max(1, min(source.shape) // 20)
+    return float(np.median(_corner_samples(source, patch_size)))
+
+
+def _corner_samples(
+    source: NDArray[np.float64],
+    patch_size: int,
+) -> NDArray[np.float64]:
+    return np.concatenate(
+        [
+            source[:patch_size, :patch_size].ravel(),
+            source[:patch_size, -patch_size:].ravel(),
+            source[-patch_size:, :patch_size].ravel(),
+            source[-patch_size:, -patch_size:].ravel(),
+        ]
+    )
 
 
 def _make_point_source(shape: tuple[int, int]) -> NDArray[np.float64]:
@@ -280,10 +421,17 @@ def _make_point_source(shape: tuple[int, int]) -> NDArray[np.float64]:
     return target
 
 
-@lru_cache(maxsize=1)
-def _load_jupiter_502nm_asset() -> NDArray[np.float64]:
+@lru_cache(maxsize=3)
+def _load_jupiter_asset(asset_filename: str) -> NDArray[np.float64]:
+    if asset_filename not in {
+        "jupiter_395nm.npz",
+        "jupiter_502nm.npz",
+        "jupiter_658nm.npz",
+    }:
+        raise ValueError("Unsupported Jupiter asset")
+
     asset = resources.files("hoa_visualizer_utils.simulation.assets").joinpath(
-        "jupiter_502nm.npz"
+        asset_filename
     )
     with asset.open("rb") as file:
         return np.asarray(np.load(file)["image"], dtype=float)

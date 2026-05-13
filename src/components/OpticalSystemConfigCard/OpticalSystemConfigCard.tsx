@@ -5,12 +5,15 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import NativeSelect from '@mui/material/NativeSelect';
 import Stack from '@mui/material/Stack';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import type { ChangeEvent } from 'react';
 import { useState } from 'react';
 import type {
   ApertureMaskResult,
   ApertureSettings,
+  SpectralMode,
   SupportedTargetId
 } from '../../workers/types';
 import type { DisplayMode } from '../SettingsDrawer';
@@ -23,10 +26,12 @@ interface OpticalSystemConfigCardProps {
   readonly apertureDiameterMm: number;
   readonly apertureSettings: ApertureSettings;
   readonly displayMode: DisplayMode;
+  readonly spectralMode: SpectralMode;
   readonly targetId: SupportedTargetId;
   readonly onApertureChange: (value: number) => void;
   readonly onApertureSettingsChange: (value: ApertureSettings) => void;
   readonly onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>;
+  readonly onSpectralModeChange: (value: SpectralMode) => void;
   readonly onTargetChange: (value: SupportedTargetId) => void;
 }
 
@@ -34,10 +39,12 @@ export function OpticalSystemConfigCard({
   apertureDiameterMm,
   apertureSettings,
   displayMode,
+  spectralMode,
   targetId,
   onApertureChange,
   onApertureSettingsChange,
   onRenderApertureMask,
+  onSpectralModeChange,
   onTargetChange
 }: OpticalSystemConfigCardProps) {
   const apertureHasError = !Number.isFinite(apertureDiameterMm) || apertureDiameterMm < 0.5;
@@ -95,6 +102,31 @@ export function OpticalSystemConfigCard({
               >
                 Edit
               </Button>
+              <Stack spacing={1}>
+                <Typography id="spectral-mode-toggle-label" variant="subtitle2" component="p">
+                  Spectral Mode
+                </Typography>
+                <ToggleButtonGroup
+                  aria-labelledby="spectral-mode-toggle-label"
+                  color="primary"
+                  exclusive
+                  fullWidth
+                  size="small"
+                  value={spectralMode}
+                  onChange={(_, nextMode: SpectralMode | undefined) => {
+                    if (nextMode) {
+                      onSpectralModeChange(nextMode);
+                    }
+                  }}
+                >
+                  <ToggleButton aria-label="Monochromatic" value="monochromatic">
+                    Monochromatic
+                  </ToggleButton>
+                  <ToggleButton aria-label="Polychromatic" value="polychromatic">
+                    Polychromatic
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
             </Stack>
           ) : undefined}
         </Stack>

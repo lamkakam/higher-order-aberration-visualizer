@@ -20,6 +20,7 @@ export type SupportedTargetId = (typeof supportedTargetIds)[number];
 
 export type ZernikeCoefficientKey = `${number},${number}`;
 export type WavefrontLegendUnit = 'wave' | 'micron';
+export type SpectralMode = 'monochromatic' | 'polychromatic';
 export type ApertureShape = 'circle' | 'square' | 'regular_hexagon';
 
 export interface ApertureSettings {
@@ -38,10 +39,16 @@ export interface ApertureSettings {
 export interface ConvolvedImageInput {
   apertureSettings: ApertureSettings;
   apertureDiameterMm: number;
+  diagnosticWavelengthNm: number;
   showScaleBar: boolean;
+  spectralMode: SpectralMode;
   targetId: SupportedTargetId;
+  wavelengthWeights: readonly (readonly [number, number])[];
   wavefrontLegendUnit: WavefrontLegendUnit;
-  zernikeCoefficients: Record<ZernikeCoefficientKey, number>;
+  zernikeCoefficientsByWavelength: readonly (readonly [
+    number,
+    Record<ZernikeCoefficientKey, number>
+  ])[];
 }
 
 export interface ConvolvedImageResult {

@@ -21,10 +21,35 @@ from hoa_visualizer_utils.simulation.compute import (
     LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION,
     LOGMAR_CHART_WIDEST_ROW_ARCMIN,
     SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
-    compute_simulation,
+    compute_simulation as _compute_simulation,
 )
 from hoa_visualizer_utils.simulation.aperture import ApertureSpec
+from hoa_visualizer_utils.simulation import targets
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
+
+
+def compute_simulation(
+    entrance_pupil_diameter_mm: float,
+    zernike_coefficients: dict[tuple[int, int], float],
+    target_id: str,
+    *,
+    wavelength_nm: float = 550.0,
+    wavelength_weights: list[tuple[float, float]] | None = None,
+    zernike_coefficients_by_wavelength: list[dict[tuple[int, int], float]] | None = None,
+    **kwargs: object,
+):
+    if wavelength_weights is None:
+        wavelength_weights = [(wavelength_nm, 1)]
+    if zernike_coefficients_by_wavelength is None:
+        zernike_coefficients_by_wavelength = [zernike_coefficients]
+
+    return _compute_simulation(
+        entrance_pupil_diameter_mm,
+        wavelength_weights,
+        zernike_coefficients_by_wavelength,
+        target_id,
+        **kwargs,
+    )
 
 
 def test_compute_simulation_rejects_invalid_inputs() -> None:
@@ -93,6 +118,317 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.sampling.image_dx_arcmin == image_dx_arcmin
     assert simulation.sampling.wavelength_nm == 550.0
     assert simulation.inputs.aperture == ApertureSpec()
+
+
+def test_compute_simulation_monochrome_contract_stays_2d() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    assert simulation.convolved_image.shape == (64, 64)
+    assert simulation.psf.shape == (64, 64)
+    assert simulation.wavefront_nm.shape == (32, 32)
+    assert simulation.sampling.wavelength_nm == 550.0
+    assert simulation.inputs.zernike_coefficients == {}
+
+
+def test_compute_simulation_requires_plural_channel_inputs() -> None:
+    with pytest.raises(TypeError, match="required positional argument"):
+        _compute_simulation(10, "siemensstar", pupil_samples=32, image_samples=64)  # type: ignore[call-arg]
+
+
+@pytest.mark.parametrize(
+    "wavelength_weights, zernike_coefficients_by_wavelength, expected_message",
+    [
+        ([], [], "wavelength_weights"),
+        ([(550, 1), (650, 1)], [{}, {}], "wavelength_weights"),
+        ([(450, 1), (550, 1), (650, 1), (700, 1)], [{}, {}, {}, {}], "wavelength_weights"),
+        ([(550, 1)], [{}, {}], "zernike_coefficients_by_wavelength"),
+        ([(550, 1), (650, 1), (450, 1)], [{}, {}], "zernike_coefficients_by_wavelength"),
+    ],
+)
+def test_compute_simulation_rejects_invalid_channel_lengths(
+    wavelength_weights: list[tuple[float, float]],
+    zernike_coefficients_by_wavelength: list[dict[tuple[int, int], float]],
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        _compute_simulation(
+            10,
+            wavelength_weights,
+            zernike_coefficients_by_wavelength,
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+        )
+
+
+def test_compute_simulation_rejects_invalid_wavelength_weight_pairs() -> None:
+    with pytest.raises(ValueError, match="wavelength_weights"):
+        _compute_simulation(
+            10,
+            [(550, 1, 0)],  # type: ignore[list-item]
+            [{}],
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+        )
+
+
+@pytest.mark.parametrize(
+    "wavelength_weights",
+    [
+        [],
+        [(450, 1), (550, 1)],
+        [(450, 1), (550, 1), (650, 1), (700, 1)],
+        [(math.nan, 1), (550, 1), (650, 1)],
+        [(-450, 1), (550, 1), (650, 1)],
+        [(450, -1), (550, 1), (650, 1)],
+    ],
+)
+def test_polychromatic_simulation_rejects_invalid_wavelength_weights(
+    wavelength_weights: list[tuple[float, float]],
+) -> None:
+    with pytest.raises(ValueError, match="wavelength_weights"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            wavelength_weights=wavelength_weights,
+            zernike_coefficients_by_wavelength=[{}, {}, {}],
+        )
+
+
+def test_polychromatic_simulation_rejects_coefficient_length_mismatch() -> None:
+    with pytest.raises(ValueError, match="zernike_coefficients_by_wavelength"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            wavelength_weights=[(450, 1), (550, 1), (650, 1)],
+            zernike_coefficients_by_wavelength=[{}, {}],
+        )
+
+
+def test_polychromatic_point_source_maps_longest_middle_shortest_to_rgb() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(550, 0.2), (650, 0.7), (450, 0.4)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (64, 64, 3)
+    assert simulation.convolved_image[..., 0].max() == pytest.approx(0.7)
+    assert simulation.convolved_image[..., 1].max() == pytest.approx(0.2)
+    assert simulation.convolved_image[..., 2].max() == pytest.approx(0.4)
+    assert simulation.sampling.wavelength_nm == 550
+
+
+def test_polychromatic_non_jupiter_output_is_linear_rgb() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(650, 1), (550, 0.5), (450, 0.25)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (64, 64, 3)
+    assert simulation.convolved_image.min() >= 0
+    assert simulation.convolved_image.max() <= 1
+    assert simulation.target.shape == (64, 64)
+
+
+def test_polychromatic_zernike_mappings_are_used_per_channel() -> None:
+    wavelength_weights = [(650, 1), (550, 1), (450, 1)]
+    coefficients = [{(4, 0): 0.05}, {(4, 0): 0.15}, {(4, 0): 0.25}]
+    simulation = compute_simulation(
+        10,
+        {},
+        "point_source",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=wavelength_weights,
+        zernike_coefficients_by_wavelength=coefficients,
+    )
+
+    for channel, (wavelength_nm, coefficient_mapping) in enumerate(
+        [(650, coefficients[0]), (550, coefficients[1]), (450, coefficients[2])]
+    ):
+        monochrome = compute_simulation(
+            10,
+            coefficient_mapping,
+            "point_source",
+            wavelength_nm=wavelength_nm,
+            pupil_samples=32,
+            image_samples=64,
+            image_dx_arcmin=simulation.sampling.image_dx_arcmin,
+        )
+        assert simulation.convolved_image[..., channel] == pytest.approx(
+            monochrome.convolved_image
+        )
+
+    assert simulation.inputs.zernike_coefficients == coefficients[1]
+    green_monochrome = compute_simulation(
+        10,
+        coefficients[1],
+        "point_source",
+        wavelength_nm=550,
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=simulation.sampling.image_dx_arcmin,
+    )
+    assert simulation.wavefront_nm == pytest.approx(green_monochrome.wavefront_nm)
+
+
+@pytest.mark.parametrize(
+    "diagnostic_wavelength_nm, coefficient_mapping",
+    [
+        (656, {(4, 0): 0.05}),
+        (550, {(4, 0): 0.15}),
+        (486, {(4, 0): 0.25}),
+    ],
+)
+def test_polychromatic_diagnostics_can_select_wavelength_channel(
+    diagnostic_wavelength_nm: float,
+    coefficient_mapping: dict[tuple[int, int], float],
+) -> None:
+    image_dx_arcmin = 0.25
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=image_dx_arcmin,
+        wavelength_weights=[(550, 1), (656, 1), (486, 1)],
+        zernike_coefficients_by_wavelength=[
+            {(4, 0): 0.15},
+            {(4, 0): 0.05},
+            {(4, 0): 0.25},
+        ],
+        diagnostic_wavelength_nm=diagnostic_wavelength_nm,
+    )
+    monochrome = compute_simulation(
+        10,
+        coefficient_mapping,
+        "siemensstar",
+        wavelength_nm=diagnostic_wavelength_nm,
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+    assert simulation.sampling.wavelength_nm == diagnostic_wavelength_nm
+    assert simulation.inputs.zernike_coefficients == coefficient_mapping
+    assert simulation.psf == pytest.approx(monochrome.psf)
+    assert simulation.wavefront_nm == pytest.approx(monochrome.wavefront_nm)
+
+
+def test_polychromatic_diagnostics_default_to_middle_channel() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(656, 1), (550, 1), (486, 1)],
+        zernike_coefficients_by_wavelength=[
+            {(4, 0): 0.05},
+            {(4, 0): 0.15},
+            {(4, 0): 0.25},
+        ],
+    )
+
+    assert simulation.sampling.wavelength_nm == 550
+    assert simulation.inputs.zernike_coefficients == {(4, 0): 0.15}
+
+
+def test_polychromatic_diagnostics_reject_unknown_wavelength() -> None:
+    with pytest.raises(ValueError, match="diagnostic_wavelength_nm"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            wavelength_weights=[(656, 1), (550, 1), (486, 1)],
+            zernike_coefficients_by_wavelength=[{}, {}, {}],
+            diagnostic_wavelength_nm=600,
+        )
+
+
+def test_jupiter_polychromatic_target_uses_rgb_wavelength_assets() -> None:
+    red_target = targets._make_jupiter_target(
+        "jupiter_658nm.npz",
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+    green_target = targets._make_jupiter_target(
+        "jupiter_502nm.npz",
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+    blue_target = targets._make_jupiter_target(
+        "jupiter_395nm.npz",
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+
+    assert not np.array_equal(red_target, green_target)
+    assert not np.array_equal(green_target, blue_target)
+
+    simulation = compute_simulation(
+        10,
+        {},
+        "jupiter_502nm",
+        pupil_samples=32,
+        image_samples=128,
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+        wavelength_weights=[(658, 1), (502, 1), (395, 1)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (128, 128, 3)
+    assert simulation.target.shape == (128, 128, 3)
+    assert simulation.target[..., 0] == pytest.approx(red_target)
+    assert simulation.target[..., 1] == pytest.approx(green_target)
+    assert simulation.target[..., 2] == pytest.approx(blue_target)
+
+
+def test_jupiter_polychromatic_target_registers_rgb_channel_disks() -> None:
+    target = targets._make_jupiter_rgb_target(
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+
+    bboxes = [_target_bbox(target[..., channel]) for channel in range(3)]
+    centers = [
+        ndimage.center_of_mass(target[..., channel] > 0.05) for channel in range(3)
+    ]
+    heights = [y_max - y_min + 1 for y_min, _, y_max, _ in bboxes]
+    widths = [x_max - x_min + 1 for _, x_min, _, x_max in bboxes]
+
+    for center_y, center_x in centers:
+        assert center_y == pytest.approx(centers[1][0], abs=1)
+        assert center_x == pytest.approx(centers[1][1], abs=1)
+
+    assert max(heights) - min(heights) <= 1
+    assert max(widths) - min(widths) <= 1
 
 
 def test_default_aperture_is_unobstructed_circle() -> None:

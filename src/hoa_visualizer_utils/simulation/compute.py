@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Mapping, cast
+from typing import Mapping, Sequence, cast
 
 import numpy as np
 
@@ -16,6 +16,7 @@ from hoa_visualizer_utils.simulation.models import (
 from hoa_visualizer_utils.simulation.targets import (
     JUPITER_502NM_DIAMETER_ARCMIN,
     SUPPORTED_TARGET_IDS,
+    _make_jupiter_rgb_target,
     _make_target,
 )
 
@@ -32,10 +33,10 @@ _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 def compute_simulation(
     entrance_pupil_diameter_mm: float,
-    zernike_coefficients: Mapping[tuple[int, int], float],
+    wavelength_weights: Sequence[tuple[float, float]],
+    zernike_coefficients_by_wavelength: Sequence[Mapping[tuple[int, int], float]],
     target_id: str,
     *,
-    wavelength_nm: float = 550.0,
     pupil_samples: int = 1024,
     image_samples: int = 2048,
     image_dx_arcmin: float | None = cast(
@@ -43,32 +44,37 @@ def compute_simulation(
         _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL,
     ),
     aperture: ApertureSpec | None = None,
+    diagnostic_wavelength_nm: float | None = None,
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
     resolved_aperture = (aperture or ApertureSpec()).validated()
+    validated_channels = _validate_wavelength_channels(
+        wavelength_weights,
+        zernike_coefficients_by_wavelength,
+    )
+    is_rgb = len(validated_channels) == 3
+    default_representative_index = 1 if is_rgb else 0
+    sampling_wavelength_nm = validated_channels[default_representative_index][0]
+    representative_index = _resolve_diagnostic_channel_index(
+        validated_channels,
+        default_representative_index=default_representative_index,
+        diagnostic_wavelength_nm=diagnostic_wavelength_nm,
+    )
+    representative_wavelength_nm = validated_channels[representative_index][0]
     resolved_image_dx_arcmin = _resolve_image_dx_arcmin(
         target_id,
         image_samples,
         image_dx_arcmin,
         entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
-        wavelength_nm=wavelength_nm,
-    )
-    coefficients = _validate_inputs(
-        entrance_pupil_diameter_mm,
-        zernike_coefficients,
-        target_id,
-        wavelength_nm,
-        pupil_samples,
-        image_samples,
-        resolved_image_dx_arcmin,
+        wavelength_nm=sampling_wavelength_nm,
     )
     prysm_image_dx_um = _angular_dx_to_image_dx_um(
         DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
         resolved_image_dx_arcmin,
     )
 
-    from prysm import coordinates, convolution, polynomials, propagation
+    from prysm import coordinates, convolution, propagation
 
     xi, eta = coordinates.make_xy_grid(pupil_samples, diameter=entrance_pupil_diameter_mm)
     r, t = coordinates.cart_to_polar(xi, eta)
@@ -76,6 +82,209 @@ def compute_simulation(
     aperture_radius_mm = entrance_pupil_diameter_mm / 2
     amp = resolved_aperture.amplitude(aperture_radius_mm, xi, eta, r)
     pupil_mask = amp > 0
+
+    channels = [
+        (
+            channel_wavelength_nm,
+            channel_weight,
+            _validate_inputs(
+                entrance_pupil_diameter_mm,
+                channel_coefficients,
+                target_id,
+                channel_wavelength_nm,
+                pupil_samples,
+                image_samples,
+                resolved_image_dx_arcmin,
+            ),
+        )
+        for (
+            channel_wavelength_nm,
+            channel_weight,
+            channel_coefficients,
+        ) in validated_channels
+    ]
+
+    if not is_rgb:
+        wavelength_nm, channel_weight, coefficients = channels[0]
+        psf, wavefront_nm, focused_dx_um = _compute_psf(
+            amp,
+            r,
+            t,
+            pupil_mask,
+            coefficients,
+            wavelength_nm=wavelength_nm,
+            aperture_radius_mm=aperture_radius_mm,
+            pupil_dx_mm=pupil_dx_mm,
+            prysm_image_dx_um=prysm_image_dx_um,
+            image_samples=image_samples,
+            propagation=propagation,
+        )
+        x, y = coordinates.make_xy_grid(psf.shape, dx=focused_dx_um)
+        target = _make_target(
+            target_id,
+            x,
+            y,
+            image_dx_arcmin=resolved_image_dx_arcmin,
+        )
+        convolved_image = (
+            _convolve_target(target, psf, target_id, convolution) * channel_weight
+        )
+        representative_coefficients = coefficients
+    else:
+        channel_results = [
+            _compute_psf(
+                amp,
+                r,
+                t,
+                pupil_mask,
+                channel_coefficients,
+                wavelength_nm=channel_wavelength_nm,
+                aperture_radius_mm=aperture_radius_mm,
+                pupil_dx_mm=pupil_dx_mm,
+                prysm_image_dx_um=prysm_image_dx_um,
+                image_samples=image_samples,
+                propagation=propagation,
+            )
+            for channel_wavelength_nm, _, channel_coefficients in channels
+        ]
+        psf = channel_results[representative_index][0]
+        wavefront_nm = channel_results[representative_index][1]
+        focused_dx_um = channel_results[representative_index][2]
+        representative_coefficients = channels[representative_index][2]
+        x, y = coordinates.make_xy_grid(psf.shape, dx=focused_dx_um)
+        if target_id == "jupiter_502nm":
+            target = _make_jupiter_rgb_target(
+                psf.shape,
+                image_dx_arcmin=resolved_image_dx_arcmin,
+            )
+            target_channels = [target[..., channel] for channel in range(3)]
+        else:
+            target = _make_target(
+                target_id,
+                x,
+                y,
+                image_dx_arcmin=resolved_image_dx_arcmin,
+            )
+            target_channels = [target, target, target]
+
+        convolved_image = np.stack(
+            [
+                _convolve_target(channel_target, channel_psf, target_id, convolution)
+                * channel_weight
+                for channel_target, (channel_psf, _, _), (_, channel_weight, _) in zip(
+                    target_channels,
+                    channel_results,
+                    channels,
+                )
+            ],
+            axis=-1,
+        )
+        wavelength_nm = representative_wavelength_nm
+
+    return OpticalSimulation(
+        target_id=target_id,
+        target=np.asarray(target, dtype=float),
+        psf=psf,
+        convolved_image=np.asarray(convolved_image, dtype=float),
+        wavefront_nm=np.asarray(wavefront_nm, dtype=float),
+        pupil_mask=np.asarray(pupil_mask, dtype=bool),
+        sampling=SimulationSampling(
+            wavelength_nm=wavelength_nm,
+            pupil_samples=pupil_samples,
+            image_samples=image_samples,
+            image_dx_arcmin=resolved_image_dx_arcmin,
+            pupil_dx_mm=pupil_dx_mm,
+        ),
+        inputs=SimulationInputs(
+            entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
+            effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
+            zernike_coefficients=dict(representative_coefficients),
+            target_id=target_id,
+            aperture=resolved_aperture,
+        ),
+    )
+
+
+def _validate_wavelength_channels(
+    wavelength_weights: Sequence[tuple[float, float]],
+    zernike_coefficients_by_wavelength: Sequence[Mapping[tuple[int, int], float]],
+) -> list[tuple[float, float, Mapping[tuple[int, int], float]]]:
+    """Validate required channel inputs and sort RGB entries into display order."""
+
+    if len(wavelength_weights) not in (1, 3):
+        raise ValueError("wavelength_weights must contain exactly 1 or 3 entries")
+    if len(zernike_coefficients_by_wavelength) not in (1, 3):
+        raise ValueError(
+            "zernike_coefficients_by_wavelength must contain exactly 1 or 3 entries"
+        )
+    if len(wavelength_weights) != len(zernike_coefficients_by_wavelength):
+        raise ValueError(
+            "wavelength_weights and zernike_coefficients_by_wavelength must have matching lengths"
+        )
+
+    channels = []
+    for wavelength_weight, coefficients in zip(
+        wavelength_weights,
+        zernike_coefficients_by_wavelength,
+    ):
+        if len(wavelength_weight) != 2:
+            raise ValueError("wavelength_weights entries must be wavelength/weight pairs")
+        channel_wavelength_nm = float(wavelength_weight[0])
+        channel_weight = float(wavelength_weight[1])
+        if not math.isfinite(channel_wavelength_nm) or channel_wavelength_nm <= 0:
+            raise ValueError("wavelength_weights wavelengths must be finite and positive")
+        if not math.isfinite(channel_weight) or channel_weight < 0:
+            raise ValueError("wavelength_weights weights must be finite and non-negative")
+        channels.append((channel_wavelength_nm, channel_weight, coefficients))
+
+    if len(channels) == 1:
+        return channels
+    return sorted(channels, key=lambda channel: channel[0], reverse=True)
+
+
+def _resolve_diagnostic_channel_index(
+    channels: Sequence[tuple[float, float, Mapping[tuple[int, int], float]]],
+    *,
+    default_representative_index: int,
+    diagnostic_wavelength_nm: float | None,
+) -> int:
+    """Resolve which channel supplies diagnostic PSF and wavefront fields."""
+
+    if len(channels) == 1 or diagnostic_wavelength_nm is None:
+        return default_representative_index
+
+    requested_wavelength_nm = float(diagnostic_wavelength_nm)
+    if not math.isfinite(requested_wavelength_nm) or requested_wavelength_nm <= 0:
+        raise ValueError("diagnostic_wavelength_nm must match a configured wavelength")
+
+    for index, (channel_wavelength_nm, _, _) in enumerate(channels):
+        if channel_wavelength_nm == requested_wavelength_nm:
+            return index
+
+    available_wavelengths = ", ".join(str(channel[0]) for channel in channels)
+    raise ValueError(
+        "diagnostic_wavelength_nm must match a configured wavelength "
+        f"({available_wavelengths})"
+    )
+
+
+def _compute_psf(
+    amp: np.ndarray,
+    r: np.ndarray,
+    t: np.ndarray,
+    pupil_mask: np.ndarray,
+    coefficients: Mapping[tuple[int, int], float],
+    *,
+    wavelength_nm: float,
+    aperture_radius_mm: float,
+    pupil_dx_mm: float,
+    prysm_image_dx_um: float,
+    image_samples: int,
+    propagation,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    """Compute a normalized PSF and wavefront for one wavelength."""
+
+    from prysm import polynomials
 
     normalized_radius = r / aperture_radius_mm
     wavefront_nm = np.zeros_like(r, dtype=float)
@@ -110,43 +319,14 @@ def compute_simulation(
     psf_sum = psf.sum()
     if not np.isfinite(psf_sum) or psf_sum <= 0:
         raise ValueError("PSF energy must be finite and positive")
-    psf = psf / psf_sum
+    return psf / psf_sum, np.asarray(wavefront_nm, dtype=float), float(focused.dx)
 
-    x, y = coordinates.make_xy_grid(psf.shape, dx=focused.dx)
-    target = _make_target(
-        target_id,
-        x,
-        y,
-        image_dx_arcmin=resolved_image_dx_arcmin,
-    )
+
+def _convolve_target(target: np.ndarray, psf: np.ndarray, target_id: str, convolution):
     if target_id == "point_source":
-        convolved_image = psf / psf.max()
-    else:
-        convolved_image = convolution.conv(target, psf)
-        convolved_image = np.clip(convolved_image, 0, 1)
-
-    return OpticalSimulation(
-        target_id=target_id,
-        target=np.asarray(target, dtype=float),
-        psf=psf,
-        convolved_image=np.asarray(convolved_image, dtype=float),
-        wavefront_nm=np.asarray(wavefront_nm, dtype=float),
-        pupil_mask=np.asarray(pupil_mask, dtype=bool),
-        sampling=SimulationSampling(
-            wavelength_nm=wavelength_nm,
-            pupil_samples=pupil_samples,
-            image_samples=image_samples,
-            image_dx_arcmin=resolved_image_dx_arcmin,
-            pupil_dx_mm=pupil_dx_mm,
-        ),
-        inputs=SimulationInputs(
-            entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
-            effective_focal_length_mm=DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
-            zernike_coefficients=dict(coefficients),
-            target_id=target_id,
-            aperture=resolved_aperture,
-        ),
-    )
+        return psf / psf.max()
+    convolved_image = convolution.conv(target, psf)
+    return np.clip(convolved_image, 0, 1)
 
 
 def _validate_inputs(

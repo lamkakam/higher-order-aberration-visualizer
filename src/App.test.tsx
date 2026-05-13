@@ -412,12 +412,13 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
       gaussianApodizationSigmaRatio: 0.5
     },
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -502,12 +503,13 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 5,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -555,12 +557,13 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 5,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -626,12 +629,13 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
       gaussianApodizationSigmaRatio: 0.5
     },
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -755,12 +759,13 @@ it('confirms aperture mask changes and sends them in the next simulation payload
       gaussianApodizationSigmaRatio: 0.75
     },
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -868,6 +873,234 @@ it('shows the zernike coefficient unit selector defaulting to wave', async () =>
   expect(screen.getByRole('button', { name: 'Micron' })).toHaveAttribute('aria-pressed', 'false');
 });
 
+it('shows the spectral selector only in Advanced Mode defaulting to monochromatic', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByText('Spectral Mode')).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.getByText('Spectral Mode')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Monochromatic' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  expect(screen.getByRole('button', { name: 'Polychromatic' })).toHaveAttribute(
+    'aria-pressed',
+    'false'
+  );
+});
+
+it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByRole('tab', { name: '550 nm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: '656 nm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: '486 nm' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.queryByRole('tab', { name: '550 nm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: '656 nm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: '486 nm' })).not.toBeInTheDocument();
+});
+
+it('shows wavelength tabs in Advanced Polychromatic mode', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  expect(screen.getByRole('tab', { name: '550 nm' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tab', { name: '656 nm' })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: '486 nm' })).toBeInTheDocument();
+});
+
+it('keeps polychromatic wavelength aberration values independent', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '3.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '550 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.00');
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+});
+
+it('shares monochromatic aberration edits with the 550 nm polychromatic tab', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.25');
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('button', { name: 'Monochromatic' }));
+
+  expect(screen.queryByRole('tab', { name: '550 nm' })).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+});
+
+it('sends polychromatic worker payloads with wavelength weights and coefficient maps', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
+    target: { value: '1.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+  fireEvent.click(screen.getByRole('tab', { name: '656 nm' }));
+  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
+    target: { value: '2.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+  fireEvent.click(screen.getByRole('tab', { name: '486 nm' }));
+  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
+    target: { value: '3.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenLastCalledWith({
+    apertureSettings: defaultApertureSettings,
+    apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 486,
+    showScaleBar: false,
+    spectralMode: 'polychromatic',
+    targetId: 'logmar_chart',
+    wavelengthWeights: [
+      [550, 1],
+      [656, 1],
+      [486, 1]
+    ],
+    wavefrontLegendUnit: 'wave',
+    zernikeCoefficientsByWavelength: [
+      [550, expect.objectContaining({ '4,0': 1 })],
+      [656, expect.objectContaining({ '4,0': 2 })],
+      [486, expect.objectContaining({ '4,0': 3 })]
+    ]
+  });
+});
+
+it('recomputes polychromatic diagnostics for the selected wavelength tab', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.diagnosticWavelengthNm}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.diagnosticWavelengthNm}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      diagnosticWavelengthNm: 550,
+      spectralMode: 'polychromatic'
+    })
+  );
+
+  computeConvolvedImage.mockClear();
+  fireEvent.click(screen.getByRole('tab', { name: '656 nm' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      diagnosticWavelengthNm: 656,
+      spectralMode: 'polychromatic'
+    })
+  );
+});
+
 it('converts zernike textbox values when switching to microns', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
@@ -879,9 +1112,46 @@ it('converts zernike textbox values when switching to microns', async () => {
   await user.type(sphericalCoefficient, '1.00');
   fireEvent.blur(sphericalCoefficient);
 
-  await user.click(screen.getByRole('button', { name: 'Micron' }));
+  const coefficientMicronButton = screen
+    .getAllByRole('button', { name: 'Micron' })
+    .find((button) => button.getAttribute('aria-pressed') === 'false');
+  expect(coefficientMicronButton).toBeDefined();
+  await user.click(coefficientMicronButton as HTMLButtonElement);
 
   expect(sphericalCoefficient).toHaveValue('0.55');
+});
+
+it('converts polychromatic zernike textbox values using the selected wavelength tab', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  const coefficientMicronButton = screen
+    .getAllByRole('button', { name: 'Micron' })
+    .find((button) => button.getAttribute('aria-pressed') === 'false');
+  expect(coefficientMicronButton).toBeDefined();
+  await user.click(coefficientMicronButton as HTMLButtonElement);
+
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.66');
+
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.49');
 });
 
 it('commits micron zernike textbox values to the worker payload in waves', async () => {
@@ -936,12 +1206,13 @@ it('commits micron zernike textbox values to the worker payload in waves', async
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 2
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 2 })]]
   });
 });
 
@@ -1003,12 +1274,13 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 4.5
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 4.5 })]]
   });
 });
 
@@ -1053,12 +1325,13 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 3.25
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 3.25 })]]
   });
 });
 
@@ -1196,12 +1469,13 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1247,12 +1521,13 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1302,12 +1577,13 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0.05
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0.05 })]]
   });
 });
 
@@ -1373,12 +1649,13 @@ it('keeps pointer slider movement out of the textbox until release, then commits
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 1.25
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 1.25 })]]
   });
 });
 
@@ -1409,14 +1686,19 @@ it('debounces worker calls using the current UI payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '5,-5': 0,
-      '6,0': 0,
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [
+      [550, expect.objectContaining({
+        '5,-5': 0,
+        '6,0': 0,
+        '4,0': 0
+      })]
+    ]
   });
 
   fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
@@ -1445,13 +1727,18 @@ it('debounces worker calls using the current UI payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '2,0': 0.05,
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [
+      [550, expect.objectContaining({
+        '2,0': 0.05,
+        '4,0': 0
+      })]
+    ]
   });
 });
 
@@ -1486,12 +1773,13 @@ it('sends enabled scale bar preference to the worker payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: true,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1533,12 +1821,13 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
+    spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'micron',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
