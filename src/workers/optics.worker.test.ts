@@ -317,6 +317,16 @@ describe('optics worker', () => {
       ),
       expect.any(Object)
     );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'for _wavelength, scoped_coefficients in zernike_coefficients_by_wavelength_input'
+      ),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining('float(wavelength)'),
+      expect.any(Object)
+    );
   });
 
   it('renders an aperture mask preview through Pyodide using serializable inputs', async () => {

@@ -172,14 +172,11 @@ coefficients = {
     for key, value in zernike_coefficients.items()
 }
 zernike_coefficients_by_wavelength = [
-    (
-        float(wavelength),
-        {
-            tuple(int(index) for index in key.split(",")): float(value)
-            for key, value in scoped_coefficients.items()
-        },
-    )
-    for wavelength, scoped_coefficients in zernike_coefficients_by_wavelength_input
+    {
+        tuple(int(index) for index in key.split(",")): float(value)
+        for key, value in scoped_coefficients.items()
+    }
+    for _wavelength, scoped_coefficients in zernike_coefficients_by_wavelength_input
 ]
 aperture = ApertureSpec(
     shape=str(aperture_settings["shape"]),
