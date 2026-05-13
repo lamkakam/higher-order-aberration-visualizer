@@ -265,6 +265,27 @@ def test_jupiter_polychromatic_target_uses_rgb_wavelength_assets() -> None:
     assert simulation.target[..., 2] == pytest.approx(blue_target)
 
 
+def test_jupiter_polychromatic_target_registers_rgb_channel_disks() -> None:
+    target = targets._make_jupiter_rgb_target(
+        (128, 128),
+        image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
+    )
+
+    bboxes = [_target_bbox(target[..., channel]) for channel in range(3)]
+    centers = [
+        ndimage.center_of_mass(target[..., channel] > 0.05) for channel in range(3)
+    ]
+    heights = [y_max - y_min + 1 for y_min, _, y_max, _ in bboxes]
+    widths = [x_max - x_min + 1 for _, x_min, _, x_max in bboxes]
+
+    for center_y, center_x in centers:
+        assert center_y == pytest.approx(centers[1][0], abs=1)
+        assert center_x == pytest.approx(centers[1][1], abs=1)
+
+    assert max(heights) - min(heights) <= 1
+    assert max(widths) - min(widths) <= 1
+
+
 def test_default_aperture_is_unobstructed_circle() -> None:
     default_simulation = compute_simulation(
         10,
