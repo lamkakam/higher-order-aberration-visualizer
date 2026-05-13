@@ -29,12 +29,14 @@ const coefficientDisplayUnits = [
 }[];
 
 interface AberrationSlidersCardProps {
+  readonly wavelengthNm: number;
   readonly values: Record<ZernikeCoefficientKey, number>;
   readonly onValueChange: (key: ZernikeCoefficientKey, value: number) => void;
   readonly onReset: () => void;
 }
 
 export function AberrationSlidersCard({
+  wavelengthNm,
   values,
   onValueChange,
   onReset
@@ -81,6 +83,7 @@ export function AberrationSlidersCard({
               key={term.key}
               term={term}
               value={values[term.key]}
+              wavelengthNm={wavelengthNm}
               displayUnit={displayUnit}
               resetVersion={resetVersion}
               onValueChange={onValueChange}
@@ -95,6 +98,7 @@ export function AberrationSlidersCard({
 interface AberrationCoefficientRowProps {
   readonly term: (typeof zernikeTerms)[number];
   readonly value: number;
+  readonly wavelengthNm: number;
   readonly displayUnit: CoefficientDisplayUnit;
   readonly resetVersion: number;
   readonly onValueChange: (key: ZernikeCoefficientKey, value: number) => void;
@@ -103,6 +107,7 @@ interface AberrationCoefficientRowProps {
 const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   term,
   value,
+  wavelengthNm,
   displayUnit,
   resetVersion,
   onValueChange
@@ -130,21 +135,38 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
         step={zernikeCoefficientStep}
         value={value}
         input={{
-          formatValue: (nextValue) => formatCommittedValue(nextValue, displayUnit),
-          parseDraft: (draft) => getWaveValueFromDraft(draft, displayUnit),
+          formatValue: (nextValue) =>
+            formatCommittedValue(nextValue, displayUnit, wavelengthNm),
+          parseDraft: (draft) => getWaveValueFromDraft(draft, displayUnit, wavelengthNm),
           isDraftAllowed: isSignedDecimalDraft,
           isValidDraft: isValidCommittedDraft,
           getErrorText: (draft) =>
-            isOutOfRangeDraft(draft, displayUnit) ? getRangeErrorText(displayUnit) : undefined,
+            isOutOfRangeDraft(draft, displayUnit, wavelengthNm)
+              ? getRangeErrorText(displayUnit, wavelengthNm)
+              : undefined,
           inputMode: 'decimal',
-          inputMin: getDisplayValueFromWaves(zernikeCoefficientMin, displayUnit),
-          inputMax: getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit),
-          inputStep: zernikeCoefficientStep,
+          inputMin: getDisplayValueFromWaves(
+            zernikeCoefficientMin,
+            displayUnit,
+            wavelengthNm
+          ),
+          inputMax: getDisplayValueFromWaves(
+            zernikeCoefficientMax,
+            displayUnit,
+            wavelengthNm
+          ),
+          inputStep: getDisplayValueFromWaves(
+            zernikeCoefficientStep,
+            displayUnit,
+            wavelengthNm
+          ),
           testId: `zernike-value-${term.key}`
         }}
-        inputSyncKey={`${displayUnit}-${resetVersion}`}
+        inputSyncKey={`${displayUnit}-${wavelengthNm}-${resetVersion}`}
         valueLabelDisplay="auto"
-        valueLabelFormat={(nextValue) => formatCommittedValue(nextValue, displayUnit)}
+        valueLabelFormat={(nextValue) =>
+          formatCommittedValue(nextValue, displayUnit, wavelengthNm)
+        }
         roundValue={roundToTwoDecimals}
         onCommit={commitSliderValue}
       />
@@ -152,13 +174,21 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   );
 });
 
-function formatCommittedValue(value: number, displayUnit: CoefficientDisplayUnit): string {
-  return getDisplayValueFromWaves(value, displayUnit).toFixed(2);
+function formatCommittedValue(
+  value: number,
+  displayUnit: CoefficientDisplayUnit,
+  wavelengthNm: number
+): string {
+  return getDisplayValueFromWaves(value, displayUnit, wavelengthNm).toFixed(2);
 }
 
-function getDisplayValueFromWaves(value: number, displayUnit: CoefficientDisplayUnit): number {
+function getDisplayValueFromWaves(
+  value: number,
+  displayUnit: CoefficientDisplayUnit,
+  wavelengthNm: number
+): number {
   if (displayUnit === 'micron') {
-    return roundToTwoDecimals(wavesToMicrons(value));
+    return roundToTwoDecimals(wavesToMicrons(value, wavelengthNm));
   }
 
   return roundToTwoDecimals(value);
@@ -166,21 +196,26 @@ function getDisplayValueFromWaves(value: number, displayUnit: CoefficientDisplay
 
 function getWaveValueFromDraft(
   draft: string,
-  displayUnit: CoefficientDisplayUnit
+  displayUnit: CoefficientDisplayUnit,
+  wavelengthNm: number
 ): number {
   const value = Number(draft);
   if (displayUnit === 'micron') {
-    return roundToTwoDecimals(micronsToWaves(value));
+    return roundToTwoDecimals(micronsToWaves(value, wavelengthNm));
   }
 
   return value;
 }
 
-function getRangeErrorText(displayUnit: CoefficientDisplayUnit): string {
+function getRangeErrorText(
+  displayUnit: CoefficientDisplayUnit,
+  wavelengthNm: number
+): string {
   return `Value must be between ${getDisplayValueFromWaves(
     zernikeCoefficientMin,
-    displayUnit
-  )} and ${getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit)}.`;
+    displayUnit,
+    wavelengthNm
+  )} and ${getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit, wavelengthNm)}.`;
 }
 
 function isValidCommittedDraft(draft: string, value: number): boolean {
@@ -192,8 +227,12 @@ function isValidCommittedDraft(draft: string, value: number): boolean {
   );
 }
 
-function isOutOfRangeDraft(draft: string, displayUnit: CoefficientDisplayUnit): boolean {
-  const value = getWaveValueFromDraft(draft, displayUnit);
+function isOutOfRangeDraft(
+  draft: string,
+  displayUnit: CoefficientDisplayUnit,
+  wavelengthNm: number
+): boolean {
+  const value = getWaveValueFromDraft(draft, displayUnit, wavelengthNm);
   return (
     draft.trim() !== '' &&
     Number.isFinite(value) &&

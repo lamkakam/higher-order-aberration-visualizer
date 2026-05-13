@@ -412,6 +412,7 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
       gaussianApodizationSigmaRatio: 0.5
     },
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -502,6 +503,7 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 5,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -555,6 +557,7 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 5,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -626,6 +629,7 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
       gaussianApodizationSigmaRatio: 0.5
     },
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -755,6 +759,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
       gaussianApodizationSigmaRatio: 0.75
     },
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1026,6 +1031,7 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
   expect(computeConvolvedImage).toHaveBeenLastCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 486,
     showScaleBar: false,
     spectralMode: 'polychromatic',
     targetId: 'logmar_chart',
@@ -1043,6 +1049,58 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
   });
 });
 
+it('recomputes polychromatic diagnostics for the selected wavelength tab', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.diagnosticWavelengthNm}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.diagnosticWavelengthNm}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      diagnosticWavelengthNm: 550,
+      spectralMode: 'polychromatic'
+    })
+  );
+
+  computeConvolvedImage.mockClear();
+  fireEvent.click(screen.getByRole('tab', { name: '656 nm' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      diagnosticWavelengthNm: 656,
+      spectralMode: 'polychromatic'
+    })
+  );
+});
+
 it('converts zernike textbox values when switching to microns', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
@@ -1054,9 +1112,46 @@ it('converts zernike textbox values when switching to microns', async () => {
   await user.type(sphericalCoefficient, '1.00');
   fireEvent.blur(sphericalCoefficient);
 
-  await user.click(screen.getByRole('button', { name: 'Micron' }));
+  const coefficientMicronButton = screen
+    .getAllByRole('button', { name: 'Micron' })
+    .find((button) => button.getAttribute('aria-pressed') === 'false');
+  expect(coefficientMicronButton).toBeDefined();
+  await user.click(coefficientMicronButton as HTMLButtonElement);
 
   expect(sphericalCoefficient).toHaveValue('0.55');
+});
+
+it('converts polychromatic zernike textbox values using the selected wavelength tab', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  const coefficientMicronButton = screen
+    .getAllByRole('button', { name: 'Micron' })
+    .find((button) => button.getAttribute('aria-pressed') === 'false');
+  expect(coefficientMicronButton).toBeDefined();
+  await user.click(coefficientMicronButton as HTMLButtonElement);
+
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.66');
+
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.49');
 });
 
 it('commits micron zernike textbox values to the worker payload in waves', async () => {
@@ -1111,6 +1206,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1178,6 +1274,7 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1228,6 +1325,7 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1371,6 +1469,7 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1422,6 +1521,7 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1477,6 +1577,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1548,6 +1649,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1584,6 +1686,7 @@ it('debounces worker calls using the current UI payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1624,6 +1727,7 @@ it('debounces worker calls using the current UI payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 4,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1669,6 +1773,7 @@ it('sends enabled scale bar preference to the worker payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: true,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
@@ -1716,6 +1821,7 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   expect(computeConvolvedImage).toHaveBeenCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',

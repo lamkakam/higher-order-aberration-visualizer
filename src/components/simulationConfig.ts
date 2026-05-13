@@ -93,11 +93,11 @@ export function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function wavesToMicrons(waves: number): number {
+export function wavesToMicrons(waves: number, wavelengthNm: number): number {
   return (waves * wavelengthNm) / 1000;
 }
 
-export function micronsToWaves(microns: number): number {
+export function micronsToWaves(microns: number, wavelengthNm: number): number {
   return microns / (wavelengthNm / 1000);
 }
 

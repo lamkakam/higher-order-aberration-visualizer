@@ -20,7 +20,7 @@ Input controls keep fast-moving draft text and slider positions local so typing 
 
 Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
 
-- `ConvolvedImageInput`: aperture diameter, aperture settings, scale-bar visibility, spectral mode, supported target id, required wavelength weights and wavelength-scoped coefficients keyed as `"n,m"` strings, and wavefront legend unit. The channel lists must contain either one entry for monochromatic runs or three entries for RGB polychromatic runs.
+- `ConvolvedImageInput`: aperture diameter, aperture settings, diagnostic wavelength, scale-bar visibility, spectral mode, supported target id, required wavelength weights and wavelength-scoped coefficients keyed as `"n,m"` strings, and wavefront legend unit. The channel lists must contain either one entry for monochromatic runs or three entries for RGB polychromatic runs.
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `ApertureMaskResult`: data URL for an aperture preview image and worker diagnostics
 - `OpticsWorkerApi`: `initialize`, `getStatus`, `computeConvolvedImage`, and `renderApertureMask`
@@ -35,7 +35,7 @@ The worker imports Python package files with Vite `?raw` imports and writes them
 
 ## Result Data Flow
 
-`computeConvolvedImage` converts the TypeScript input into Python globals, converts wavelength-scoped Zernike keys from `"n,m"` strings to `(n, m)` tuples, converts aperture settings to an `ApertureSpec`, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with the required channel lists. Monochromatic calls send one `550 nm` channel; polychromatic calls send the fixed `550 nm`, `656 nm`, and `486 nm` channels. The returned `OpticalSimulation` object is rendered by:
+`computeConvolvedImage` converts the TypeScript input into Python globals, converts wavelength-scoped Zernike keys from `"n,m"` strings to `(n, m)` tuples, converts aperture settings to an `ApertureSpec`, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with the required channel lists and diagnostic wavelength. Monochromatic calls send one `550 nm` channel and a `550 nm` diagnostic wavelength; polychromatic calls send the fixed `550 nm`, `656 nm`, and `486 nm` channels and use the active wavelength tab for PSF and wavefront diagnostics. The returned `OpticalSimulation` object is rendered by:
 
 - [`render_convolved_image`](../src/hoa_visualizer_utils/rendering/convolved_image.py)
 - [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)

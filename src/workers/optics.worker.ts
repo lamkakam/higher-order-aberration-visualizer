@@ -148,6 +148,7 @@ async function computeConvolvedImage(
   const globals = pyodide.toPy({
     aperture_settings: input.apertureSettings,
     aperture_diameter_mm: input.apertureDiameterMm,
+    diagnostic_wavelength_nm: input.diagnosticWavelengthNm,
     show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
     spectral_mode: input.spectralMode,
@@ -187,6 +188,7 @@ simulation = compute_simulation(
     pupil_samples=256,
     image_samples=512,
     aperture=aperture,
+    diagnostic_wavelength_nm=float(diagnostic_wavelength_nm),
 )
 `;
 

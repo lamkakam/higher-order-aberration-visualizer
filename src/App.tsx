@@ -144,6 +144,7 @@ export function App({ workerClient }: AppProps) {
       ),
     [simulationWavelengths, zernikeCoefficientsByWavelength]
   );
+  const diagnosticWavelengthNm = isPolychromatic ? selectedWavelength : 550;
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +156,7 @@ export function App({ workerClient }: AppProps) {
         client.api.computeConvolvedImage({
           apertureSettings,
           apertureDiameterMm,
+          diagnosticWavelengthNm,
           showScaleBar,
           spectralMode: effectiveSpectralMode,
           targetId,
@@ -191,6 +193,7 @@ export function App({ workerClient }: AppProps) {
     apertureDiameterMm,
     apertureSettings,
     client,
+    diagnosticWavelengthNm,
     effectiveSpectralMode,
     showScaleBar,
     targetId,
@@ -388,6 +391,7 @@ export function App({ workerClient }: AppProps) {
                     ))}
                   </Tabs>
                   <AberrationSlidersCard
+                    wavelengthNm={selectedWavelength}
                     values={zernikeCoefficientsByWavelength[selectedWavelength]}
                     onValueChange={(key, value) => {
                       updateZernikeCoefficient(selectedWavelength, key, value);
@@ -399,6 +403,7 @@ export function App({ workerClient }: AppProps) {
                 </Stack>
               ) : (
                 <AberrationSlidersCard
+                  wavelengthNm={550}
                   values={zernikeCoefficients}
                   onValueChange={(key, value) => {
                     updateZernikeCoefficient(550, key, value);

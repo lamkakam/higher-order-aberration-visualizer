@@ -44,6 +44,7 @@ def compute_simulation(
         _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL,
     ),
     aperture: ApertureSpec | None = None,
+    diagnostic_wavelength_nm: float | None = None,
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
@@ -53,14 +54,20 @@ def compute_simulation(
         zernike_coefficients_by_wavelength,
     )
     is_rgb = len(validated_channels) == 3
-    representative_index = 1 if is_rgb else 0
+    default_representative_index = 1 if is_rgb else 0
+    sampling_wavelength_nm = validated_channels[default_representative_index][0]
+    representative_index = _resolve_diagnostic_channel_index(
+        validated_channels,
+        default_representative_index=default_representative_index,
+        diagnostic_wavelength_nm=diagnostic_wavelength_nm,
+    )
     representative_wavelength_nm = validated_channels[representative_index][0]
     resolved_image_dx_arcmin = _resolve_image_dx_arcmin(
         target_id,
         image_samples,
         image_dx_arcmin,
         entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
-        wavelength_nm=representative_wavelength_nm,
+        wavelength_nm=sampling_wavelength_nm,
     )
     prysm_image_dx_um = _angular_dx_to_image_dx_um(
         DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM,
@@ -233,6 +240,32 @@ def _validate_wavelength_channels(
     if len(channels) == 1:
         return channels
     return sorted(channels, key=lambda channel: channel[0], reverse=True)
+
+
+def _resolve_diagnostic_channel_index(
+    channels: Sequence[tuple[float, float, Mapping[tuple[int, int], float]]],
+    *,
+    default_representative_index: int,
+    diagnostic_wavelength_nm: float | None,
+) -> int:
+    """Resolve which channel supplies diagnostic PSF and wavefront fields."""
+
+    if len(channels) == 1 or diagnostic_wavelength_nm is None:
+        return default_representative_index
+
+    requested_wavelength_nm = float(diagnostic_wavelength_nm)
+    if not math.isfinite(requested_wavelength_nm) or requested_wavelength_nm <= 0:
+        raise ValueError("diagnostic_wavelength_nm must match a configured wavelength")
+
+    for index, (channel_wavelength_nm, _, _) in enumerate(channels):
+        if channel_wavelength_nm == requested_wavelength_nm:
+            return index
+
+    available_wavelengths = ", ".join(str(channel[0]) for channel in channels)
+    raise ValueError(
+        "diagnostic_wavelength_nm must match a configured wavelength "
+        f"({available_wavelengths})"
+    )
 
 
 def _compute_psf(

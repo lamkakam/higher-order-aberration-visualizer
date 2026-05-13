@@ -39,6 +39,7 @@ export interface ApertureSettings {
 export interface ConvolvedImageInput {
   apertureSettings: ApertureSettings;
   apertureDiameterMm: number;
+  diagnosticWavelengthNm: number;
   showScaleBar: boolean;
   spectralMode: SpectralMode;
   targetId: SupportedTargetId;

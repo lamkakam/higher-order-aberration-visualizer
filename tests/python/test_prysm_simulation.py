@@ -295,6 +295,83 @@ def test_polychromatic_zernike_mappings_are_used_per_channel() -> None:
     assert simulation.wavefront_nm == pytest.approx(green_monochrome.wavefront_nm)
 
 
+@pytest.mark.parametrize(
+    "diagnostic_wavelength_nm, coefficient_mapping",
+    [
+        (656, {(4, 0): 0.05}),
+        (550, {(4, 0): 0.15}),
+        (486, {(4, 0): 0.25}),
+    ],
+)
+def test_polychromatic_diagnostics_can_select_wavelength_channel(
+    diagnostic_wavelength_nm: float,
+    coefficient_mapping: dict[tuple[int, int], float],
+) -> None:
+    image_dx_arcmin = 0.25
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=image_dx_arcmin,
+        wavelength_weights=[(550, 1), (656, 1), (486, 1)],
+        zernike_coefficients_by_wavelength=[
+            {(4, 0): 0.15},
+            {(4, 0): 0.05},
+            {(4, 0): 0.25},
+        ],
+        diagnostic_wavelength_nm=diagnostic_wavelength_nm,
+    )
+    monochrome = compute_simulation(
+        10,
+        coefficient_mapping,
+        "siemensstar",
+        wavelength_nm=diagnostic_wavelength_nm,
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=image_dx_arcmin,
+    )
+
+    assert simulation.sampling.wavelength_nm == diagnostic_wavelength_nm
+    assert simulation.inputs.zernike_coefficients == coefficient_mapping
+    assert simulation.psf == pytest.approx(monochrome.psf)
+    assert simulation.wavefront_nm == pytest.approx(monochrome.wavefront_nm)
+
+
+def test_polychromatic_diagnostics_default_to_middle_channel() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(656, 1), (550, 1), (486, 1)],
+        zernike_coefficients_by_wavelength=[
+            {(4, 0): 0.05},
+            {(4, 0): 0.15},
+            {(4, 0): 0.25},
+        ],
+    )
+
+    assert simulation.sampling.wavelength_nm == 550
+    assert simulation.inputs.zernike_coefficients == {(4, 0): 0.15}
+
+
+def test_polychromatic_diagnostics_reject_unknown_wavelength() -> None:
+    with pytest.raises(ValueError, match="diagnostic_wavelength_nm"):
+        compute_simulation(
+            10,
+            {},
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            wavelength_weights=[(656, 1), (550, 1), (486, 1)],
+            zernike_coefficients_by_wavelength=[{}, {}, {}],
+            diagnostic_wavelength_nm=600,
+        )
+
+
 def test_jupiter_polychromatic_target_uses_rgb_wavelength_assets() -> None:
     red_target = targets._make_jupiter_target(
         "jupiter_658nm.npz",

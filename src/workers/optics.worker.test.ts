@@ -48,6 +48,7 @@ describe('optics worker', () => {
     gaussianApodizationSigmaRatio: 0.5
   } as const;
   const defaultMonochromaticChannels = {
+    diagnosticWavelengthNm: 550,
     wavelengthWeights: [[550, 1]],
     zernikeCoefficientsByWavelength: [[550, {}]]
   } as const;
@@ -157,6 +158,7 @@ describe('optics worker', () => {
         gaussianApodizationSigmaRatio: 0.5
       },
       apertureDiameterMm: 3,
+      diagnosticWavelengthNm: 550,
       showScaleBar: true,
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
@@ -279,6 +281,7 @@ describe('optics worker', () => {
     await api.computeConvolvedImage({
       apertureSettings: defaultApertureSettings,
       apertureDiameterMm: 3,
+      diagnosticWavelengthNm: 656,
       showScaleBar: true,
       spectralMode: 'polychromatic',
       targetId: 'siemensstar',
@@ -300,6 +303,7 @@ describe('optics worker', () => {
       expect.objectContaining({
         globals: expect.objectContaining({
           spectral_mode: 'polychromatic',
+          diagnostic_wavelength_nm: 656,
           wavelength_weights: [
             [550, 1],
             [656, 1],
