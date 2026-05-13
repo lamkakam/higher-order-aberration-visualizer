@@ -21,11 +21,35 @@ from hoa_visualizer_utils.simulation.compute import (
     LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION,
     LOGMAR_CHART_WIDEST_ROW_ARCMIN,
     SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION,
-    compute_simulation,
+    compute_simulation as _compute_simulation,
 )
 from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 from hoa_visualizer_utils.simulation import targets
 from hoa_visualizer_utils.simulation.targets import SUPPORTED_TARGET_IDS
+
+
+def compute_simulation(
+    entrance_pupil_diameter_mm: float,
+    zernike_coefficients: dict[tuple[int, int], float],
+    target_id: str,
+    *,
+    wavelength_nm: float = 550.0,
+    wavelength_weights: list[tuple[float, float]] | None = None,
+    zernike_coefficients_by_wavelength: list[dict[tuple[int, int], float]] | None = None,
+    **kwargs: object,
+):
+    if wavelength_weights is None:
+        wavelength_weights = [(wavelength_nm, 1)]
+    if zernike_coefficients_by_wavelength is None:
+        zernike_coefficients_by_wavelength = [zernike_coefficients]
+
+    return _compute_simulation(
+        entrance_pupil_diameter_mm,
+        wavelength_weights,
+        zernike_coefficients_by_wavelength,
+        target_id,
+        **kwargs,
+    )
 
 
 def test_compute_simulation_rejects_invalid_inputs() -> None:
@@ -112,9 +136,53 @@ def test_compute_simulation_monochrome_contract_stays_2d() -> None:
     assert simulation.inputs.zernike_coefficients == {}
 
 
+def test_compute_simulation_requires_plural_channel_inputs() -> None:
+    with pytest.raises(TypeError, match="required positional argument"):
+        _compute_simulation(10, "siemensstar", pupil_samples=32, image_samples=64)  # type: ignore[call-arg]
+
+
+@pytest.mark.parametrize(
+    "wavelength_weights, zernike_coefficients_by_wavelength, expected_message",
+    [
+        ([], [], "wavelength_weights"),
+        ([(550, 1), (650, 1)], [{}, {}], "wavelength_weights"),
+        ([(450, 1), (550, 1), (650, 1), (700, 1)], [{}, {}, {}, {}], "wavelength_weights"),
+        ([(550, 1)], [{}, {}], "zernike_coefficients_by_wavelength"),
+        ([(550, 1), (650, 1), (450, 1)], [{}, {}], "zernike_coefficients_by_wavelength"),
+    ],
+)
+def test_compute_simulation_rejects_invalid_channel_lengths(
+    wavelength_weights: list[tuple[float, float]],
+    zernike_coefficients_by_wavelength: list[dict[tuple[int, int], float]],
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        _compute_simulation(
+            10,
+            wavelength_weights,
+            zernike_coefficients_by_wavelength,
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+        )
+
+
+def test_compute_simulation_rejects_invalid_wavelength_weight_pairs() -> None:
+    with pytest.raises(ValueError, match="wavelength_weights"):
+        _compute_simulation(
+            10,
+            [(550, 1, 0)],  # type: ignore[list-item]
+            [{}],
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+        )
+
+
 @pytest.mark.parametrize(
     "wavelength_weights",
     [
+        [],
         [(450, 1), (550, 1)],
         [(450, 1), (550, 1), (650, 1), (700, 1)],
         [(math.nan, 1), (550, 1), (650, 1)],

@@ -150,27 +150,16 @@ async function computeConvolvedImage(
     aperture_diameter_mm: input.apertureDiameterMm,
     show_scale_bar: input.showScaleBar,
     target_id: input.targetId,
-    ...(input.spectralMode === 'polychromatic'
-      ? {
-          spectral_mode: input.spectralMode,
-          wavelength_weights: input.wavelengthWeights,
-          zernike_coefficients_by_wavelength_input: input.zernikeCoefficientsByWavelength
-        }
-      : {}),
+    spectral_mode: input.spectralMode,
+    wavelength_weights: input.wavelengthWeights,
+    zernike_coefficients_by_wavelength_input: input.zernikeCoefficientsByWavelength,
     wavefront_legend_unit: input.wavefrontLegendUnit,
-    zernike_coefficients: input.zernikeCoefficients
   });
 
-  const simulationSource =
-    input.spectralMode === 'polychromatic'
-      ? `
+  const simulationSource = `
 from hoa_visualizer_utils.simulation.compute import compute_simulation
 from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 
-coefficients = {
-    tuple(int(index) for index in key.split(",")): float(value)
-    for key, value in zernike_coefficients.items()
-}
 zernike_coefficients_by_wavelength = [
     {
         tuple(int(index) for index in key.split(",")): float(value)
@@ -192,38 +181,8 @@ aperture = ApertureSpec(
 )
 simulation = compute_simulation(
     entrance_pupil_diameter_mm=float(aperture_diameter_mm),
-    zernike_coefficients=coefficients,
-    target_id=str(target_id),
-    pupil_samples=256,
-    image_samples=512,
-    aperture=aperture,
     wavelength_weights=wavelength_weights,
     zernike_coefficients_by_wavelength=zernike_coefficients_by_wavelength,
-)
-`
-      : `
-from hoa_visualizer_utils.simulation.compute import compute_simulation
-from hoa_visualizer_utils.simulation.aperture import ApertureSpec
-
-coefficients = {
-    tuple(int(index) for index in key.split(",")): float(value)
-    for key, value in zernike_coefficients.items()
-}
-aperture = ApertureSpec(
-    shape=str(aperture_settings["shape"]),
-    rotation_degrees=float(aperture_settings["rotationDegrees"]),
-    central_obstruction_shape=str(aperture_settings["centralObstructionShape"]),
-    central_obstruction_rotation_degrees=float(aperture_settings["centralObstructionRotationDegrees"]),
-    central_obstruction_ratio=float(aperture_settings["centralObstructionRatio"]),
-    spider_vane_count=float(aperture_settings["spiderVaneCount"]),
-    spider_vane_width_ratio=float(aperture_settings["spiderVaneWidthRatio"]),
-    spider_vane_rotation_degrees=float(aperture_settings["spiderVaneRotationDegrees"]),
-    gaussian_apodization_enabled=bool(aperture_settings["gaussianApodizationEnabled"]),
-    gaussian_apodization_sigma_ratio=float(aperture_settings["gaussianApodizationSigmaRatio"]),
-)
-simulation = compute_simulation(
-    entrance_pupil_diameter_mm=float(aperture_diameter_mm),
-    zernike_coefficients=coefficients,
     target_id=str(target_id),
     pupil_samples=256,
     image_samples=512,

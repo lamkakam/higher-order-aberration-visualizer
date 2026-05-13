@@ -42,10 +42,9 @@ export interface ConvolvedImageInput {
   showScaleBar: boolean;
   spectralMode: SpectralMode;
   targetId: SupportedTargetId;
-  wavelengthWeights?: readonly (readonly [number, number])[];
+  wavelengthWeights: readonly (readonly [number, number])[];
   wavefrontLegendUnit: WavefrontLegendUnit;
-  zernikeCoefficients: Record<ZernikeCoefficientKey, number>;
-  zernikeCoefficientsByWavelength?: readonly (readonly [
+  zernikeCoefficientsByWavelength: readonly (readonly [
     number,
     Record<ZernikeCoefficientKey, number>
   ])[];

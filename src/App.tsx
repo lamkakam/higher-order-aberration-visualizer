@@ -10,7 +10,7 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AberrationSlidersCard,
   AppHeader,
@@ -129,6 +129,21 @@ export function App({ workerClient }: AppProps) {
   const effectiveSpectralMode: SpectralMode =
     displayMode === 'advanced' ? spectralMode : 'monochromatic';
   const isPolychromatic = effectiveSpectralMode === 'polychromatic';
+  const simulationWavelengths = useMemo(
+    () => (isPolychromatic ? spectralWavelengths : ([550] as const)),
+    [isPolychromatic]
+  );
+  const wavelengthWeights = useMemo(
+    () => simulationWavelengths.map((wavelength) => [wavelength, 1] as const),
+    [simulationWavelengths]
+  );
+  const simulationCoefficientsByWavelength = useMemo(
+    () =>
+      simulationWavelengths.map(
+        (wavelength) => [wavelength, zernikeCoefficientsByWavelength[wavelength]] as const
+      ),
+    [simulationWavelengths, zernikeCoefficientsByWavelength]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -143,19 +158,9 @@ export function App({ workerClient }: AppProps) {
           showScaleBar,
           spectralMode: effectiveSpectralMode,
           targetId,
-          ...(isPolychromatic
-            ? {
-                wavelengthWeights: spectralWavelengths.map(
-                  (wavelength) => [wavelength, 1] as const
-                ),
-                zernikeCoefficientsByWavelength: spectralWavelengths.map(
-                  (wavelength) =>
-                    [wavelength, zernikeCoefficientsByWavelength[wavelength]] as const
-                )
-              }
-            : {}),
+          wavelengthWeights,
           wavefrontLegendUnit,
-          zernikeCoefficients
+          zernikeCoefficientsByWavelength: simulationCoefficientsByWavelength
         }),
         computeTimeoutMs
       )
@@ -187,12 +192,11 @@ export function App({ workerClient }: AppProps) {
     apertureSettings,
     client,
     effectiveSpectralMode,
-    isPolychromatic,
     showScaleBar,
     targetId,
     wavefrontLegendUnit,
-    zernikeCoefficients,
-    zernikeCoefficientsByWavelength
+    simulationCoefficientsByWavelength,
+    wavelengthWeights
   ]);
 
   const updateZernikeCoefficient = useCallback(

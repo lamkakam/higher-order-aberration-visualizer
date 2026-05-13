@@ -33,10 +33,10 @@ _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 def compute_simulation(
     entrance_pupil_diameter_mm: float,
-    zernike_coefficients: Mapping[tuple[int, int], float],
+    wavelength_weights: Sequence[tuple[float, float]],
+    zernike_coefficients_by_wavelength: Sequence[Mapping[tuple[int, int], float]],
     target_id: str,
     *,
-    wavelength_nm: float = 550.0,
     pupil_samples: int = 1024,
     image_samples: int = 2048,
     image_dx_arcmin: float | None = cast(
@@ -44,22 +44,17 @@ def compute_simulation(
         _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL,
     ),
     aperture: ApertureSpec | None = None,
-    wavelength_weights: Sequence[tuple[float, float]] | None = None,
-    zernike_coefficients_by_wavelength: Sequence[Mapping[tuple[int, int], float]]
-    | None = None,
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
     resolved_aperture = (aperture or ApertureSpec()).validated()
-    polychromatic_channels = _validate_polychromatic_inputs(
+    validated_channels = _validate_wavelength_channels(
         wavelength_weights,
         zernike_coefficients_by_wavelength,
     )
-    representative_wavelength_nm = (
-        wavelength_nm
-        if polychromatic_channels is None
-        else polychromatic_channels[1][0]
-    )
+    is_rgb = len(validated_channels) == 3
+    representative_index = 1 if is_rgb else 0
+    representative_wavelength_nm = validated_channels[representative_index][0]
     resolved_image_dx_arcmin = _resolve_image_dx_arcmin(
         target_id,
         image_samples,
@@ -81,16 +76,29 @@ def compute_simulation(
     amp = resolved_aperture.amplitude(aperture_radius_mm, xi, eta, r)
     pupil_mask = amp > 0
 
-    if polychromatic_channels is None:
-        coefficients = _validate_inputs(
-            entrance_pupil_diameter_mm,
-            zernike_coefficients,
-            target_id,
-            wavelength_nm,
-            pupil_samples,
-            image_samples,
-            resolved_image_dx_arcmin,
+    channels = [
+        (
+            channel_wavelength_nm,
+            channel_weight,
+            _validate_inputs(
+                entrance_pupil_diameter_mm,
+                channel_coefficients,
+                target_id,
+                channel_wavelength_nm,
+                pupil_samples,
+                image_samples,
+                resolved_image_dx_arcmin,
+            ),
         )
+        for (
+            channel_wavelength_nm,
+            channel_weight,
+            channel_coefficients,
+        ) in validated_channels
+    ]
+
+    if not is_rgb:
+        wavelength_nm, channel_weight, coefficients = channels[0]
         psf, wavefront_nm, focused_dx_um = _compute_psf(
             amp,
             r,
@@ -111,29 +119,11 @@ def compute_simulation(
             y,
             image_dx_arcmin=resolved_image_dx_arcmin,
         )
-        convolved_image = _convolve_target(target, psf, target_id, convolution)
+        convolved_image = (
+            _convolve_target(target, psf, target_id, convolution) * channel_weight
+        )
         representative_coefficients = coefficients
     else:
-        validated_channels = [
-            (
-                channel_wavelength_nm,
-                channel_weight,
-                _validate_inputs(
-                    entrance_pupil_diameter_mm,
-                    channel_coefficients,
-                    target_id,
-                    channel_wavelength_nm,
-                    pupil_samples,
-                    image_samples,
-                    resolved_image_dx_arcmin,
-                ),
-            )
-            for (
-                channel_wavelength_nm,
-                channel_weight,
-                channel_coefficients,
-            ) in polychromatic_channels
-        ]
         channel_results = [
             _compute_psf(
                 amp,
@@ -148,13 +138,12 @@ def compute_simulation(
                 image_samples=image_samples,
                 propagation=propagation,
             )
-            for channel_wavelength_nm, _, channel_coefficients in validated_channels
+            for channel_wavelength_nm, _, channel_coefficients in channels
         ]
-        representative_index = 1
         psf = channel_results[representative_index][0]
         wavefront_nm = channel_results[representative_index][1]
         focused_dx_um = channel_results[representative_index][2]
-        representative_coefficients = validated_channels[representative_index][2]
+        representative_coefficients = channels[representative_index][2]
         x, y = coordinates.make_xy_grid(psf.shape, dx=focused_dx_um)
         if target_id == "jupiter_502nm":
             target = _make_jupiter_rgb_target(
@@ -178,7 +167,7 @@ def compute_simulation(
                 for channel_target, (channel_psf, _, _), (_, channel_weight, _) in zip(
                     target_channels,
                     channel_results,
-                    validated_channels,
+                    channels,
                 )
             ],
             axis=-1,
@@ -209,26 +198,21 @@ def compute_simulation(
     )
 
 
-def _validate_polychromatic_inputs(
-    wavelength_weights: Sequence[tuple[float, float]] | None,
-    zernike_coefficients_by_wavelength: Sequence[Mapping[tuple[int, int], float]]
-    | None,
-) -> list[tuple[float, float, Mapping[tuple[int, int], float]]] | None:
-    """Validate optional RGB channel inputs and sort them into RGB order."""
+def _validate_wavelength_channels(
+    wavelength_weights: Sequence[tuple[float, float]],
+    zernike_coefficients_by_wavelength: Sequence[Mapping[tuple[int, int], float]],
+) -> list[tuple[float, float, Mapping[tuple[int, int], float]]]:
+    """Validate required channel inputs and sort RGB entries into display order."""
 
-    if wavelength_weights is None and zernike_coefficients_by_wavelength is None:
-        return None
-    if wavelength_weights is None:
-        raise ValueError("wavelength_weights must be supplied for polychromatic runs")
-    if zernike_coefficients_by_wavelength is None:
+    if len(wavelength_weights) not in (1, 3):
+        raise ValueError("wavelength_weights must contain exactly 1 or 3 entries")
+    if len(zernike_coefficients_by_wavelength) not in (1, 3):
         raise ValueError(
-            "zernike_coefficients_by_wavelength must be supplied for polychromatic runs"
+            "zernike_coefficients_by_wavelength must contain exactly 1 or 3 entries"
         )
-    if len(wavelength_weights) != 3:
-        raise ValueError("wavelength_weights must contain exactly 3 entries")
-    if len(zernike_coefficients_by_wavelength) != 3:
+    if len(wavelength_weights) != len(zernike_coefficients_by_wavelength):
         raise ValueError(
-            "zernike_coefficients_by_wavelength must contain exactly 3 entries"
+            "wavelength_weights and zernike_coefficients_by_wavelength must have matching lengths"
         )
 
     channels = []
@@ -246,6 +230,8 @@ def _validate_polychromatic_inputs(
             raise ValueError("wavelength_weights weights must be finite and non-negative")
         channels.append((channel_wavelength_nm, channel_weight, coefficients))
 
+    if len(channels) == 1:
+        return channels
     return sorted(channels, key=lambda channel: channel[0], reverse=True)
 
 

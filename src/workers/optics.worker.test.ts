@@ -47,6 +47,10 @@ describe('optics worker', () => {
     gaussianApodizationEnabled: false,
     gaussianApodizationSigmaRatio: 0.5
   } as const;
+  const defaultMonochromaticChannels = {
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, {}]]
+  } as const;
 
   it('exposes the Jupiter HST target id', () => {
     expect(supportedTargetIds).toContain('jupiter_502nm');
@@ -68,7 +72,7 @@ describe('optics worker', () => {
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
-      zernikeCoefficients: {}
+      ...defaultMonochromaticChannels
     });
 
     expect(loadPackage).toHaveBeenCalledWith([
@@ -104,7 +108,7 @@ describe('optics worker', () => {
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
-      zernikeCoefficients: {}
+      ...defaultMonochromaticChannels
     });
 
     expect(mkdirTree).toHaveBeenCalledWith('/home/pyodide/hoa_visualizer_utils');
@@ -157,10 +161,11 @@ describe('optics worker', () => {
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'micron',
-      zernikeCoefficients: {
+      wavelengthWeights: [[550, 1]],
+      zernikeCoefficientsByWavelength: [[550, {
         '2,0': 0.25,
         '4,0': 0
-      }
+      }]]
     });
 
     expect(result.imageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
@@ -230,7 +235,7 @@ describe('optics worker', () => {
     );
   });
 
-  it('omits polychromatic simulation arguments for monochromatic payloads', async () => {
+  it('passes single-channel wavelength weights and scoped coefficients for monochromatic payloads', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');
 
@@ -242,23 +247,23 @@ describe('optics worker', () => {
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
-      zernikeCoefficients: {}
+      ...defaultMonochromaticChannels
     });
 
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('simulation = compute_simulation('),
-      expect.not.objectContaining({
+      expect.objectContaining({
         globals: expect.objectContaining({
-          wavelength_weights: expect.anything(),
-          zernike_coefficients_by_wavelength: expect.anything()
+          wavelength_weights: [[550, 1]],
+          zernike_coefficients_by_wavelength_input: [[550, {}]]
         })
       })
     );
-    expect(runPythonAsync).not.toHaveBeenCalledWith(
+    expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('wavelength_weights=wavelength_weights'),
       expect.any(Object)
     );
-    expect(runPythonAsync).not.toHaveBeenCalledWith(
+    expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining(
         'zernike_coefficients_by_wavelength=zernike_coefficients_by_wavelength'
       ),
@@ -283,9 +288,6 @@ describe('optics worker', () => {
         [486, 1]
       ],
       wavefrontLegendUnit: 'wave',
-      zernikeCoefficients: {
-        '4,0': 0.25
-      },
       zernikeCoefficientsByWavelength: [
         [550, { '4,0': 0.25 }],
         [656, { '4,0': 0.5 }],
@@ -393,7 +395,7 @@ describe('optics worker', () => {
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
-      zernikeCoefficients: {}
+      ...defaultMonochromaticChannels
     });
 
     expect(runPythonAsync).toHaveBeenCalledWith(
@@ -508,7 +510,7 @@ describe('optics worker', () => {
       spectralMode: 'monochromatic',
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'wave',
-      zernikeCoefficients: {}
+      ...defaultMonochromaticChannels
     });
 
     expect(runPythonAsync).toHaveBeenCalledWith(

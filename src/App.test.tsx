@@ -416,9 +416,8 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -507,9 +506,8 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -561,9 +559,8 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -633,9 +630,8 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -763,9 +759,8 @@ it('confirms aperture mask changes and sends them in the next simulation payload
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1040,9 +1035,6 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
       [486, 1]
     ],
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 1
-    }),
     zernikeCoefficientsByWavelength: [
       [550, expect.objectContaining({ '4,0': 1 })],
       [656, expect.objectContaining({ '4,0': 2 })],
@@ -1123,9 +1115,8 @@ it('commits micron zernike textbox values to the worker payload in waves', async
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 2
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 2 })]]
   });
 });
 
@@ -1191,9 +1182,8 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 4.5
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 4.5 })]]
   });
 });
 
@@ -1242,9 +1232,8 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 3.25
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 3.25 })]]
   });
 });
 
@@ -1386,9 +1375,8 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1438,9 +1426,8 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1494,9 +1481,8 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0.05
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0.05 })]]
   });
 });
 
@@ -1566,9 +1552,8 @@ it('keeps pointer slider movement out of the textbox until release, then commits
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 1.25
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 1.25 })]]
   });
 });
 
@@ -1603,11 +1588,14 @@ it('debounces worker calls using the current UI payload', async () => {
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '5,-5': 0,
-      '6,0': 0,
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [
+      [550, expect.objectContaining({
+        '5,-5': 0,
+        '6,0': 0,
+        '4,0': 0
+      })]
+    ]
   });
 
   fireEvent.change(screen.getByLabelText('Aperture Diameter (mm)'), {
@@ -1640,10 +1628,13 @@ it('debounces worker calls using the current UI payload', async () => {
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '2,0': 0.05,
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [
+      [550, expect.objectContaining({
+        '2,0': 0.05,
+        '4,0': 0
+      })]
+    ]
   });
 });
 
@@ -1682,9 +1673,8 @@ it('sends enabled scale bar preference to the worker payload', async () => {
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
@@ -1730,9 +1720,8 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
     spectralMode: 'monochromatic',
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'micron',
-    zernikeCoefficients: expect.objectContaining({
-      '4,0': 0
-    })
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0 })]]
   });
 });
 
