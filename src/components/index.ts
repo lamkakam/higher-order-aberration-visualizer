@@ -8,7 +8,13 @@ export {
   type DisplayMode,
   type ThemeMode
 } from './SettingsDrawer';
-export { SimulatedImageCard } from './SimulatedImageCard';
+export {
+  ImageResultDetailsAccordion,
+  ImageResultDetailsContent,
+  ImageResultPreview,
+  SimulatedImageCard,
+  type ImageResultPanelProps
+} from './SimulatedImageCard';
 export {
   createDefaultZernikeCoefficients,
   micronsToWaves,

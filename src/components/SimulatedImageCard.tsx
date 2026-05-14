@@ -1,10 +1,14 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 
 interface SimulatedImageCardProps {
   readonly imageUrl: string | undefined;
@@ -17,6 +21,8 @@ interface SimulatedImageCardProps {
   readonly altText?: string;
   readonly bottomContent?: ReactNode;
 }
+
+export interface ImageResultPanelProps extends SimulatedImageCardProps {}
 
 interface PreviewableImageProps {
   readonly imageUrl: string;
@@ -113,62 +119,167 @@ function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
   );
 }
 
-export function SimulatedImageCard({
+function getPreviewImageUrl(
+  imageUrl: string | undefined,
+  error: string | undefined,
+  isLoading: boolean
+) {
+  return imageUrl && !error && !isLoading ? imageUrl : undefined;
+}
+
+function shouldShowEnlargementHint(
+  previewImageUrl: string | undefined,
+  error: string | undefined,
+  isLoading: boolean
+) {
+  return !error && (Boolean(previewImageUrl) || isLoading);
+}
+
+export function ImageResultPreview({
   imageUrl,
   statusText,
   isLoading,
   error,
   title = 'Simulated Image',
+  altText = 'Convolved simulated target'
+}: Pick<
+  ImageResultPanelProps,
+  'imageUrl' | 'statusText' | 'isLoading' | 'error' | 'title' | 'altText'
+>) {
+  const previewImageUrl = getPreviewImageUrl(imageUrl, error, isLoading);
+
+  return (
+    <Box
+      sx={{
+        alignItems: 'center',
+        bgcolor: 'background.default',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 1,
+        display: 'flex',
+        height: '25vh',
+        justifyContent: 'center',
+        minHeight: 160,
+        overflow: 'hidden'
+      }}
+    >
+      {previewImageUrl ? (
+        <PreviewableImage imageUrl={previewImageUrl} title={title} altText={altText} />
+      ) : (
+        <Typography color={error ? 'error' : 'text.secondary'}>
+          {error ?? (isLoading ? 'Preparing image...' : statusText)}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+export function ImageResultDetailsAccordion({
+  imageUrl,
+  isLoading,
+  error,
+  title = 'Simulated Image',
   description = 'This shows how the selected picture would look through the current optical settings.',
   supplementalDescription,
-  altText = 'Convolved simulated target',
   bottomContent
-}: SimulatedImageCardProps) {
-  const previewImageUrl = imageUrl && !error && !isLoading ? imageUrl : undefined;
-  const shouldShowEnlargementHint = !error && (Boolean(previewImageUrl) || isLoading);
+}: Pick<
+  ImageResultPanelProps,
+  | 'imageUrl'
+  | 'isLoading'
+  | 'error'
+  | 'title'
+  | 'description'
+  | 'supplementalDescription'
+  | 'bottomContent'
+>) {
+  const previewImageUrl = getPreviewImageUrl(imageUrl, error, isLoading);
+  const showEnlargementHint = shouldShowEnlargementHint(previewImageUrl, error, isLoading);
+  const accordionId = useId();
 
+  return (
+    <Accordion
+      defaultExpanded
+      disableGutters
+      sx={{
+        '&::before': {
+          display: 'none'
+        },
+        border: 1,
+        borderColor: 'divider',
+        boxShadow: 'none'
+      }}
+    >
+      <AccordionSummary
+        aria-controls={`${accordionId}-content`}
+        expandIcon={<ExpandMoreIcon />}
+        id={`${accordionId}-header`}
+      >
+        <Typography variant="h6" component="span">
+          {title}
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails
+        id={`${accordionId}-content`}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}
+      >
+        <ImageResultDetailsContent
+          description={description}
+          supplementalDescription={supplementalDescription}
+          showEnlargementHint={showEnlargementHint}
+          bottomContent={bottomContent}
+        />
+      </AccordionDetails>
+    </Accordion>
+  );
+}
+
+interface ImageResultDetailsContentProps {
+  readonly description: string;
+  readonly supplementalDescription: string | undefined;
+  readonly showEnlargementHint: boolean;
+  readonly bottomContent: ReactNode | undefined;
+}
+
+export function ImageResultDetailsContent({
+  description,
+  supplementalDescription,
+  showEnlargementHint,
+  bottomContent
+}: ImageResultDetailsContentProps) {
+  return (
+    <>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      {supplementalDescription ? (
+        <Typography variant="body2" color="text.secondary">
+          {supplementalDescription}
+        </Typography>
+      ) : undefined}
+      {showEnlargementHint ? (
+        <Typography variant="body2" color="text.secondary">
+          Click the image to view it enlarged.
+        </Typography>
+      ) : undefined}
+      {bottomContent}
+    </>
+  );
+}
+
+export function ImageResultPanel(props: ImageResultPanelProps) {
+  return (
+    <>
+      <ImageResultPreview {...props} />
+      <ImageResultDetailsAccordion {...props} />
+    </>
+  );
+}
+
+export function SimulatedImageCard(props: SimulatedImageCardProps) {
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>
       <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Box
-          sx={{
-            alignItems: 'center',
-            bgcolor: 'background.default',
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            display: 'flex',
-            height: '25vh',
-            justifyContent: 'center',
-            minHeight: 160,
-            overflow: 'hidden'
-          }}
-        >
-          {previewImageUrl ? (
-            <PreviewableImage imageUrl={previewImageUrl} title={title} altText={altText} />
-          ) : (
-            <Typography color={error ? 'error' : 'text.secondary'}>
-              {error ?? (isLoading ? 'Preparing image...' : statusText)}
-            </Typography>
-          )}
-        </Box>
-        <Typography variant="h5" component="h2">
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {description}
-        </Typography>
-        {supplementalDescription ? (
-          <Typography variant="body2" color="text.secondary">
-            {supplementalDescription}
-          </Typography>
-        ) : undefined}
-        {shouldShowEnlargementHint ? (
-          <Typography variant="body2" color="text.secondary">
-            Click the image to view it enlarged.
-          </Typography>
-        ) : undefined}
-        {bottomContent}
+        <ImageResultPanel {...props} />
       </CardContent>
     </Card>
   );

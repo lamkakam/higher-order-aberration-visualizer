@@ -1,6 +1,12 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
 import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -10,17 +16,21 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import {
   AberrationSlidersCard,
   AppHeader,
   createDefaultZernikeCoefficients,
+  ImageResultDetailsContent,
+  ImageResultPreview,
   OpticalSystemConfigCard,
   SettingsDrawer,
   SimulatedImageCard,
   supplementalDescriptions,
   targetOptions,
   type DisplayMode,
+  type ImageResultPanelProps,
   type ThemeMode,
   type WavefrontLegendUnit
 } from './components';
@@ -66,6 +76,108 @@ const spectralWavelengths = [550, 656, 486] as const;
 type SpectralWavelength = (typeof spectralWavelengths)[number];
 type ZernikeCoefficientMap = Record<ZernikeCoefficientKey, number>;
 type ZernikeCoefficientsByWavelength = Record<SpectralWavelength, ZernikeCoefficientMap>;
+type AdvancedResultPanel = ImageResultPanelProps & {
+  readonly id: string;
+};
+
+interface AdvancedResultCardProps {
+  readonly panels: readonly AdvancedResultPanel[];
+}
+
+function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
+  const gridTemplateColumns = `repeat(${panels.length}, minmax(0, 1fr))`;
+  const showSharedEnlargementHint = panels.some(
+    (panel) => !panel.error && (panel.isLoading || (Boolean(panel.imageUrl) && !panel.isLoading))
+  );
+  const accordionId = useId();
+
+  return (
+    <Card variant="outlined" sx={{ height: '100%' }}>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns }}>
+          {panels.map((panel) => (
+            <ImageResultPreview key={panel.id} {...panel} />
+          ))}
+        </Box>
+        <Accordion
+          defaultExpanded
+          disableGutters
+          sx={{
+            '&::before': {
+              display: 'none'
+            },
+            border: 1,
+            borderColor: 'divider',
+            boxShadow: 'none'
+          }}
+        >
+          <AccordionSummary
+            aria-controls={`${accordionId}-content`}
+            aria-label="Image Descriptions"
+            expandIcon={<ExpandMoreIcon />}
+            id={`${accordionId}-header`}
+          >
+            <Typography variant="h6" component="span">
+              Image Descriptions
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails
+            id={`${accordionId}-content`}
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns,
+              pt: 0
+            }}
+          >
+            {panels.map((panel, index) => {
+              const title = panel.title ?? 'Simulated Image';
+
+              return (
+                <Box
+                  key={panel.id}
+                  role="group"
+                  aria-label={`${title} description`}
+                  sx={{
+                    borderLeft: index === 0 ? 0 : 1,
+                    borderColor: 'divider',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    px: 2,
+                    '&:first-of-type': {
+                      pl: 0
+                    }
+                  }}
+                >
+                  <Typography variant="subtitle2">{title}</Typography>
+                  <ImageResultDetailsContent
+                    description={
+                      panel.description ??
+                      'This shows how the selected picture would look through the current optical settings.'
+                    }
+                    supplementalDescription={panel.supplementalDescription}
+                    showEnlargementHint={false}
+                    bottomContent={panel.bottomContent}
+                  />
+                </Box>
+              );
+            })}
+            {showSharedEnlargementHint ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ gridColumn: '1 / -1' }}
+              >
+                Click the image to view it enlarged.
+              </Typography>
+            ) : undefined}
+          </AccordionDetails>
+        </Accordion>
+      </CardContent>
+    </Card>
+  );
+}
 
 function createDefaultZernikeCoefficientsByWavelength(): ZernikeCoefficientsByWavelength {
   return {
@@ -96,13 +208,14 @@ export function App({ workerClient }: AppProps) {
   const [error, setError] = useState<string | undefined>(undefined);
 
   const theme = useAppTheme(themeMode);
+  const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
   const isWorkerInitializing = diagnostics.status === 'initializing';
   const isImageLoading = isLoading && !isWorkerInitializing;
   const selectedTarget = targetOptions.find((target) => target.id === targetId) ?? targetOptions[0];
   const simulatedImageDescription = `This shows how the selected picture would look through the current optical settings. Current target: ${selectedTarget.description}`;
   const psfSupplementalDescription = supplementalDescriptions[targetId];
-  const visibleAdvancedCardCount = targetId === 'point_source' ? 2 : 3;
   const desktopAdvancedMaskOffset = displayMode === 'advanced' ? `-${advancedGridHalfGapPx}px` : 0;
+  const shouldMergeAdvancedResults = displayMode === 'advanced' && isSmUp;
   const stickyImageCardMaskSx = {
     '&::before': {
       bgcolor: 'background.default',
@@ -235,6 +348,66 @@ export function App({ workerClient }: AppProps) {
     [client]
   );
 
+  const wavefrontLegendUnitControl = (
+    <Box>
+      <Typography
+        id="wavefront-legend-unit-button-group-label"
+        variant="subtitle1"
+        sx={{ mb: 1 }}
+      >
+        Legend Unit
+      </Typography>
+      <ButtonGroup aria-labelledby="wavefront-legend-unit-button-group-label" fullWidth>
+        {wavefrontLegendUnitOptions.map((option) => (
+          <Button
+            key={option.value}
+            aria-label={option.label}
+            variant={wavefrontLegendUnit === option.value ? 'contained' : 'outlined'}
+            onClick={() => {
+              setWavefrontLegendUnit(option.value);
+            }}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </ButtonGroup>
+    </Box>
+  );
+  const simulatedImagePanel: AdvancedResultPanel = {
+    id: 'simulated-image',
+    imageUrl: result?.imageUrl,
+    statusText: diagnostics.message,
+    isLoading: isImageLoading,
+    error,
+    description: simulatedImageDescription
+  };
+  const psfPanel: AdvancedResultPanel = {
+    id: 'psf',
+    imageUrl: result?.psfImageUrl,
+    statusText: diagnostics.message,
+    isLoading: isImageLoading,
+    error,
+    title: 'PSF',
+    description: 'The rendered point spread function for the current optical system.',
+    supplementalDescription: psfSupplementalDescription,
+    altText: 'Rendered point spread function'
+  };
+  const wavefrontPanel: AdvancedResultPanel = {
+    id: 'wavefront-map',
+    imageUrl: result?.wavefrontImageUrl,
+    statusText: diagnostics.message,
+    isLoading: isImageLoading,
+    error,
+    title: 'Wavefront Map',
+    description: 'The rendered wavefront map for the current Zernike aberration values.',
+    altText: 'Rendered wavefront map',
+    bottomContent: wavefrontLegendUnitControl
+  };
+  const advancedResultPanels =
+    targetId === 'point_source'
+      ? ([simulatedImagePanel, wavefrontPanel] as const)
+      : ([simulatedImagePanel, psfPanel, wavefrontPanel] as const);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -261,105 +434,62 @@ export function App({ workerClient }: AppProps) {
             sx={{
               display: 'grid',
               gap: 3,
-              gridTemplateColumns:
-                displayMode === 'advanced'
-                  ? {
-                      xs: '1fr',
-                      sm: `repeat(${visibleAdvancedCardCount}, minmax(0, 1fr))`
-                    }
-                  : '1fr'
+              gridTemplateColumns: '1fr'
             }}
           >
-            <Box
-              sx={{
-                ...stickyImageCardMaskSx,
-                alignSelf: { xs: 'start', sm: 'stretch' },
-                position: 'sticky',
-                top: { xs: mobileStickyTopPx, sm: desktopStickyTopPx },
-                zIndex: 3
-              }}
-            >
-              <SimulatedImageCard
-                imageUrl={result?.imageUrl}
-                statusText={diagnostics.message}
-                isLoading={isImageLoading}
-                error={error}
-                description={simulatedImageDescription}
-              />
-            </Box>
-            {displayMode === 'advanced' && targetId !== 'point_source' ? (
+            {shouldMergeAdvancedResults ? (
               <Box
                 sx={{
-                  ...desktopStickyImageCardMaskSx,
-                  alignSelf: { xs: 'start', sm: 'stretch' },
-                  position: { xs: 'static', sm: 'sticky' },
-                  top: { sm: desktopStickyTopPx },
-                  zIndex: { sm: 2 }
+                  ...stickyImageCardMaskSx,
+                  alignSelf: 'stretch',
+                  position: 'sticky',
+                  top: desktopStickyTopPx,
+                  zIndex: 3
                 }}
               >
-                <SimulatedImageCard
-                  imageUrl={result?.psfImageUrl}
-                  statusText={diagnostics.message}
-                  isLoading={isImageLoading}
-                  error={error}
-                  title="PSF"
-                  description="The rendered point spread function for the current optical system."
-                  supplementalDescription={psfSupplementalDescription}
-                  altText="Rendered point spread function"
-                />
+                <AdvancedResultCard panels={advancedResultPanels} />
               </Box>
-            ) : undefined}
-            {displayMode === 'advanced' ? (
-              <Box
-                sx={{
-                  ...desktopStickyImageCardMaskSx,
-                  alignSelf: { xs: 'start', sm: 'stretch' },
-                  position: { xs: 'static', sm: 'sticky' },
-                  top: { sm: desktopStickyTopPx },
-                  zIndex: { sm: 2 }
-                }}
-              >
-                <SimulatedImageCard
-                  imageUrl={result?.wavefrontImageUrl}
-                  statusText={diagnostics.message}
-                  isLoading={isImageLoading}
-                  error={error}
-                  title="Wavefront Map"
-                  description="The rendered wavefront map for the current Zernike aberration values."
-                  altText="Rendered wavefront map"
-                  bottomContent={
-                    <Box>
-                      <Typography
-                        id="wavefront-legend-unit-button-group-label"
-                        variant="subtitle1"
-                        sx={{ mb: 1 }}
-                      >
-                        Legend Unit
-                      </Typography>
-                      <ButtonGroup
-                        aria-labelledby="wavefront-legend-unit-button-group-label"
-                        fullWidth
-                      >
-                        {wavefrontLegendUnitOptions.map((option) => (
-                          <Button
-                            key={option.value}
-                            aria-label={option.label}
-                            variant={
-                              wavefrontLegendUnit === option.value ? 'contained' : 'outlined'
-                            }
-                            onClick={() => {
-                              setWavefrontLegendUnit(option.value);
-                            }}
-                          >
-                            {option.label}
-                          </Button>
-                        ))}
-                      </ButtonGroup>
-                    </Box>
-                  }
-                />
-              </Box>
-            ) : undefined}
+            ) : (
+              <>
+                <Box
+                  sx={{
+                    ...stickyImageCardMaskSx,
+                    alignSelf: { xs: 'start', sm: 'stretch' },
+                    position: 'sticky',
+                    top: { xs: mobileStickyTopPx, sm: desktopStickyTopPx },
+                    zIndex: 3
+                  }}
+                >
+                  <SimulatedImageCard {...simulatedImagePanel} />
+                </Box>
+                {displayMode === 'advanced' && targetId !== 'point_source' ? (
+                  <Box
+                    sx={{
+                      ...desktopStickyImageCardMaskSx,
+                      alignSelf: { xs: 'start', sm: 'stretch' },
+                      position: { xs: 'static', sm: 'sticky' },
+                      top: { sm: desktopStickyTopPx },
+                      zIndex: { sm: 2 }
+                    }}
+                  >
+                    <SimulatedImageCard {...psfPanel} />
+                  </Box>
+                ) : undefined}
+                {displayMode === 'advanced' ? (
+                  <Box
+                    sx={{
+                      ...desktopStickyImageCardMaskSx,
+                      alignSelf: { xs: 'start', sm: 'stretch' },
+                      position: { xs: 'static', sm: 'sticky' },
+                      top: { sm: desktopStickyTopPx },
+                      zIndex: { sm: 2 }
+                    }}
+                  >
+                    <SimulatedImageCard {...wavefrontPanel} />
+                  </Box>
+                ) : undefined}
+              </>
+            )}
             <Stack spacing={3} sx={{ gridColumn: '1 / -1' }}>
               <OpticalSystemConfigCard
                 apertureDiameterMm={apertureDiameterMm}

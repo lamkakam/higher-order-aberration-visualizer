@@ -11,6 +11,7 @@ import type {
 
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
+const enlargementHint = 'Click the image to view it enlarged.';
 const defaultApertureSettings = {
   shape: 'circle',
   rotationDegrees: 0,
@@ -70,8 +71,26 @@ function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
   });
 }
 
+function setMatchesSm(matches: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('min-width:600px') ? matches : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  });
+}
+
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 it('renders the header and settings drawer theme controls', async () => {
@@ -125,7 +144,9 @@ it('renders default aperture and supported target options', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toHaveClass(
+    'MuiTypography-h6'
+  );
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
@@ -819,7 +840,9 @@ it('shows zernike textbox values and resets changed values', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toHaveClass(
+    'MuiTypography-h6'
+  );
   expect(
     screen.getByRole('textbox', { name: 'Pentafoil (Vertical) Z(5,-5) coefficient' })
   ).toHaveValue('0.00');
@@ -2007,8 +2030,9 @@ it('does not expose image preview buttons for loading and error placeholders', a
   ).not.toBeInTheDocument();
 });
 
-it('shows PSF and wavefront cards in advanced display mode', async () => {
+it('shows PSF and wavefront panels in one image descriptions accordion on large screens', async () => {
   const user = userEvent.setup();
+  setMatchesSm(true);
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
@@ -2019,22 +2043,69 @@ it('shows PSF and wavefront cards in advanced display mode', async () => {
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
-  expect(screen.getByRole('heading', { name: 'PSF' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Wavefront Map' })).toBeInTheDocument();
+  const imageDescriptionsButton = screen.getByRole('button', {
+    name: 'Image Descriptions'
+  });
+  expect(within(imageDescriptionsButton).getByText('Image Descriptions')).toHaveClass(
+    'MuiTypography-h6'
+  );
+  expect(imageDescriptionsButton).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getAllByRole('button', { name: 'Image Descriptions' })).toHaveLength(1);
+  expect(screen.queryByRole('button', { name: 'PSF' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Wavefront Map' })).not.toBeInTheDocument();
+  expect(within(imageDescriptionsButton).queryByText('Simulated Image')).not.toBeInTheDocument();
+  expect(within(imageDescriptionsButton).queryByText('PSF')).not.toBeInTheDocument();
+  expect(within(imageDescriptionsButton).queryByText('Wavefront Map')).not.toBeInTheDocument();
 
-  const psfCardContent = screen.getByRole('heading', { name: 'PSF' }).closest('.MuiCardContent-root');
-  expect(psfCardContent).not.toBeNull();
-  expect(within(psfCardContent as HTMLElement).getByText(psfCutoffNote)).toBeInTheDocument();
+  const imageDescriptionsDetails = screen
+    .getByText(psfCutoffNote)
+    .closest('.MuiAccordionDetails-root');
+  expect(imageDescriptionsDetails).not.toBeNull();
+  expect(
+    within(imageDescriptionsDetails as HTMLElement).getByText('Simulated Image')
+  ).toBeInTheDocument();
+  expect(within(imageDescriptionsDetails as HTMLElement).getByText('PSF')).toBeInTheDocument();
+  expect(
+    within(imageDescriptionsDetails as HTMLElement).getByText('Wavefront Map')
+  ).toBeInTheDocument();
+
+  const psfDescription = screen.getByRole('group', { name: 'PSF description' });
+  expect(within(psfDescription).getByText(psfCutoffNote)).toBeInTheDocument();
+  const simulatedImageDescription = screen.getByRole('group', {
+    name: 'Simulated Image description'
+  });
+  const wavefrontDescription = screen.getByRole('group', {
+    name: 'Wavefront Map description'
+  });
+  const sharedEnlargementHint = within(imageDescriptionsDetails as HTMLElement).getByText(
+    enlargementHint
+  );
+  expect(within(imageDescriptionsDetails as HTMLElement).getAllByText(enlargementHint)).toHaveLength(
+    1
+  );
+  expect(
+    simulatedImageDescription.compareDocumentPosition(sharedEnlargementHint) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    psfDescription.compareDocumentPosition(sharedEnlargementHint) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    wavefrontDescription.compareDocumentPosition(sharedEnlargementHint) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText('Target'), {
     target: { value: 'siemensstar' }
   });
 
-  expect(within(psfCardContent as HTMLElement).queryByText(psfCutoffNote)).not.toBeInTheDocument();
+  expect(within(psfDescription).queryByText(psfCutoffNote)).not.toBeInTheDocument();
 });
 
 it('shows the legend unit selector at the bottom of the wavefront map card in advanced display mode', async () => {
   const user = userEvent.setup();
+  setMatchesSm(true);
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
@@ -2043,20 +2114,22 @@ it('shows the legend unit selector at the bottom of the wavefront map card in ad
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
-  const wavefrontDescription = screen.getByText(
-    'The rendered wavefront map for the current Zernike aberration values.'
+  expect(screen.getByRole('button', { name: 'Image Descriptions' })).toHaveAttribute(
+    'aria-expanded',
+    'true'
   );
-  const wavefrontCardContent = wavefrontDescription.closest('.MuiCardContent-root');
-  expect(wavefrontCardContent).not.toBeNull();
-
-  const wavefrontCard = within(wavefrontCardContent as HTMLElement);
+  const wavefrontCard = within(screen.getByRole('group', { name: 'Wavefront Map description' }));
+  expect(
+    wavefrontCard.getByText('The rendered wavefront map for the current Zernike aberration values.')
+  ).toBeInTheDocument();
   expect(wavefrontCard.getByText('Legend Unit')).toBeInTheDocument();
   expect(wavefrontCard.getByRole('button', { name: 'Wave' })).toHaveClass('MuiButton-contained');
   expect(wavefrontCard.getByRole('button', { name: 'Micron' })).toBeInTheDocument();
 });
 
-it('hides the PSF card for point source targets in advanced display mode', async () => {
+it('hides the PSF panel and keeps one image descriptions accordion for point source targets', async () => {
   const user = userEvent.setup();
+  setMatchesSm(true);
   render(<App workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Setting' }));
@@ -2066,7 +2139,62 @@ it('hides the PSF card for point source targets in advanced display mode', async
     target: { value: 'point_source' }
   });
 
-  expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Wavefront Map' })).toBeInTheDocument();
+  const imageDescriptionsButton = screen.getByRole('button', {
+    name: 'Image Descriptions'
+  });
+  expect(imageDescriptionsButton).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.queryByRole('button', { name: 'PSF' })).not.toBeInTheDocument();
+  expect(within(imageDescriptionsButton).queryByText('Simulated Image')).not.toBeInTheDocument();
+  expect(within(imageDescriptionsButton).queryByText('PSF')).not.toBeInTheDocument();
+  expect(within(imageDescriptionsButton).queryByText('Wavefront Map')).not.toBeInTheDocument();
+
+  const imageDescriptionsDetails = screen
+    .getByRole('group', { name: 'Wavefront Map description' })
+    .closest('.MuiAccordionDetails-root');
+  expect(imageDescriptionsDetails).not.toBeNull();
+  expect(
+    within(imageDescriptionsDetails as HTMLElement).getByText('Simulated Image')
+  ).toBeInTheDocument();
+  expect(within(imageDescriptionsDetails as HTMLElement).queryByText('PSF')).not.toBeInTheDocument();
+  expect(
+    within(imageDescriptionsDetails as HTMLElement).getByText('Wavefront Map')
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: 'PSF description' })).not.toBeInTheDocument();
+});
+
+it('keeps advanced result panels in separate cards on extra-small screens', async () => {
+  const user = userEvent.setup();
+  setMatchesSm(false);
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+
+  const simulatedImageCard = screen
+    .getByRole('heading', { name: 'Simulated Image' })
+    .closest('.MuiCard-root');
+  const psfCard = screen.getByRole('heading', { name: 'PSF' }).closest('.MuiCard-root');
+  const wavefrontCard = screen
+    .getByRole('heading', { name: 'Wavefront Map' })
+    .closest('.MuiCard-root');
+
+  expect(psfCard).not.toBe(simulatedImageCard);
+  expect(wavefrontCard).not.toBe(simulatedImageCard);
+  expect(wavefrontCard).not.toBe(psfCard);
+  expect(screen.queryByRole('button', { name: 'Image Descriptions' })).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('button', { name: 'Simulated Image' })).getByText('Simulated Image')
+  ).toHaveClass('MuiTypography-h6');
+  expect(within(screen.getByRole('button', { name: 'PSF' })).getByText('PSF')).toHaveClass(
+    'MuiTypography-h6'
+  );
+  expect(
+    within(screen.getByRole('button', { name: 'Wavefront Map' })).getByText('Wavefront Map')
+  ).toHaveClass('MuiTypography-h6');
+  expect(screen.getByRole('button', { name: 'PSF' })).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: 'Wavefront Map' })).toHaveAttribute(
+    'aria-expanded',
+    'true'
+  );
 });

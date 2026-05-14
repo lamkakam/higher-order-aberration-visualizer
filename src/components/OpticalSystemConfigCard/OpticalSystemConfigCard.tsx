@@ -58,7 +58,7 @@ export function OpticalSystemConfigCard({
     <Card variant="outlined">
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h5" component="h2">
+          <Typography variant="h6" component="h2">
             Optical System Config
           </Typography>
           <NumberField

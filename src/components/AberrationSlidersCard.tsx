@@ -53,7 +53,7 @@ export function AberrationSlidersCard({
     <Card variant="outlined">
       <CardContent>
         <Stack spacing={2.5}>
-          <Typography variant="h5" component="h2">
+          <Typography variant="h6" component="h2">
             Optical Aberrations (Zernike)
           </Typography>
           <Box>
