@@ -1256,6 +1256,25 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
 
 
+def test_rgb_convolved_image_renderer_can_show_scale_bar() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        wavelength_weights=[(650, 1), (550, 1), (450, 1)],
+        zernike_coefficients_by_wavelength=[{}, {}, {}],
+    )
+
+    assert simulation.convolved_image.shape == (64, 64, 3)
+    assert render_convolved_image(
+        simulation,
+        image_format="png",
+        show_scale_bar=True,
+    ).startswith(b"\x89PNG\r\n\x1a\n")
+
+
 @pytest.mark.parametrize(
     ("renderer", "figure_to_bytes_path"),
     [
