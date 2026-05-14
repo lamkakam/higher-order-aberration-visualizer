@@ -214,7 +214,7 @@ export function ImageResultDetailsAccordion({
         expandIcon={<ExpandMoreIcon />}
         id={`${accordionId}-header`}
       >
-        <Typography variant="h5" component="span">
+        <Typography variant="h6" component="span">
           {title}
         </Typography>
       </AccordionSummary>

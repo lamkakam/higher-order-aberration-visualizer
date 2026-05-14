@@ -144,7 +144,9 @@ it('renders default aperture and supported target options', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toHaveClass(
+    'MuiTypography-h6'
+  );
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
@@ -838,7 +840,9 @@ it('shows zernike textbox values and resets changed values', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toHaveClass(
+    'MuiTypography-h6'
+  );
   expect(
     screen.getByRole('textbox', { name: 'Pentafoil (Vertical) Z(5,-5) coefficient' })
   ).toHaveValue('0.00');
@@ -2042,6 +2046,9 @@ it('shows PSF and wavefront panels in one image descriptions accordion on large 
   const imageDescriptionsButton = screen.getByRole('button', {
     name: 'Image Descriptions'
   });
+  expect(within(imageDescriptionsButton).getByText('Image Descriptions')).toHaveClass(
+    'MuiTypography-h6'
+  );
   expect(imageDescriptionsButton).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getAllByRole('button', { name: 'Image Descriptions' })).toHaveLength(1);
   expect(screen.queryByRole('button', { name: 'PSF' })).not.toBeInTheDocument();
@@ -2176,6 +2183,15 @@ it('keeps advanced result panels in separate cards on extra-small screens', asyn
   expect(wavefrontCard).not.toBe(simulatedImageCard);
   expect(wavefrontCard).not.toBe(psfCard);
   expect(screen.queryByRole('button', { name: 'Image Descriptions' })).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('button', { name: 'Simulated Image' })).getByText('Simulated Image')
+  ).toHaveClass('MuiTypography-h6');
+  expect(within(screen.getByRole('button', { name: 'PSF' })).getByText('PSF')).toHaveClass(
+    'MuiTypography-h6'
+  );
+  expect(
+    within(screen.getByRole('button', { name: 'Wavefront Map' })).getByText('Wavefront Map')
+  ).toHaveClass('MuiTypography-h6');
   expect(screen.getByRole('button', { name: 'PSF' })).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByRole('button', { name: 'Wavefront Map' })).toHaveAttribute(
     'aria-expanded',
