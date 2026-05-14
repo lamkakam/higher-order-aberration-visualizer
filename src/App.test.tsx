@@ -11,6 +11,7 @@ import type {
 
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
+const enlargementHint = 'Click the image to view it enlarged.';
 const defaultApertureSettings = {
   shape: 'circle',
   rotationDegrees: 0,
@@ -2063,6 +2064,30 @@ it('shows PSF and wavefront panels in one image descriptions accordion on large 
 
   const psfDescription = screen.getByRole('group', { name: 'PSF description' });
   expect(within(psfDescription).getByText(psfCutoffNote)).toBeInTheDocument();
+  const simulatedImageDescription = screen.getByRole('group', {
+    name: 'Simulated Image description'
+  });
+  const wavefrontDescription = screen.getByRole('group', {
+    name: 'Wavefront Map description'
+  });
+  const sharedEnlargementHint = within(imageDescriptionsDetails as HTMLElement).getByText(
+    enlargementHint
+  );
+  expect(within(imageDescriptionsDetails as HTMLElement).getAllByText(enlargementHint)).toHaveLength(
+    1
+  );
+  expect(
+    simulatedImageDescription.compareDocumentPosition(sharedEnlargementHint) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    psfDescription.compareDocumentPosition(sharedEnlargementHint) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    wavefrontDescription.compareDocumentPosition(sharedEnlargementHint) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText('Target'), {
     target: { value: 'siemensstar' }

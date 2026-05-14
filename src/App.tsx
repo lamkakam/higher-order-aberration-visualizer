@@ -86,6 +86,9 @@ interface AdvancedResultCardProps {
 
 function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
   const gridTemplateColumns = `repeat(${panels.length}, minmax(0, 1fr))`;
+  const showSharedEnlargementHint = panels.some(
+    (panel) => !panel.error && (panel.isLoading || (Boolean(panel.imageUrl) && !panel.isLoading))
+  );
   const accordionId = useId();
 
   return (
@@ -129,9 +132,6 @@ function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
           >
             {panels.map((panel, index) => {
               const title = panel.title ?? 'Simulated Image';
-              const showEnlargementHint =
-                !panel.error &&
-                (panel.isLoading || (Boolean(panel.imageUrl) && !panel.isLoading));
 
               return (
                 <Box
@@ -157,12 +157,21 @@ function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
                       'This shows how the selected picture would look through the current optical settings.'
                     }
                     supplementalDescription={panel.supplementalDescription}
-                    showEnlargementHint={showEnlargementHint}
+                    showEnlargementHint={false}
                     bottomContent={panel.bottomContent}
                   />
                 </Box>
               );
             })}
+            {showSharedEnlargementHint ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ gridColumn: '1 / -1' }}
+              >
+                Click the image to view it enlarged.
+              </Typography>
+            ) : undefined}
           </AccordionDetails>
         </Accordion>
       </CardContent>
