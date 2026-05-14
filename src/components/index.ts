@@ -10,6 +10,7 @@ export {
 } from './SettingsDrawer';
 export {
   ImageResultDetailsAccordion,
+  ImageResultDetailsContent,
   ImageResultPreview,
   SimulatedImageCard,
   type ImageResultPanelProps

@@ -1,3 +1,7 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -13,12 +17,12 @@ import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import {
   AberrationSlidersCard,
   AppHeader,
   createDefaultZernikeCoefficients,
-  ImageResultDetailsAccordion,
+  ImageResultDetailsContent,
   ImageResultPreview,
   OpticalSystemConfigCard,
   SettingsDrawer,
@@ -82,6 +86,7 @@ interface AdvancedResultCardProps {
 
 function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
   const gridTemplateColumns = `repeat(${panels.length}, minmax(0, 1fr))`;
+  const accordionId = useId();
 
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>
@@ -91,11 +96,75 @@ function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
             <ImageResultPreview key={panel.id} {...panel} />
           ))}
         </Box>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns }}>
-          {panels.map((panel) => (
-            <ImageResultDetailsAccordion key={panel.id} {...panel} />
-          ))}
-        </Box>
+        <Accordion
+          defaultExpanded
+          disableGutters
+          sx={{
+            '&::before': {
+              display: 'none'
+            },
+            border: 1,
+            borderColor: 'divider',
+            boxShadow: 'none'
+          }}
+        >
+          <AccordionSummary
+            aria-controls={`${accordionId}-content`}
+            aria-label="Image Descriptions"
+            expandIcon={<ExpandMoreIcon />}
+            id={`${accordionId}-header`}
+          >
+            <Typography variant="h5" component="span">
+              Image Descriptions
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails
+            id={`${accordionId}-content`}
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns,
+              pt: 0
+            }}
+          >
+            {panels.map((panel, index) => {
+              const title = panel.title ?? 'Simulated Image';
+              const showEnlargementHint =
+                !panel.error &&
+                (panel.isLoading || (Boolean(panel.imageUrl) && !panel.isLoading));
+
+              return (
+                <Box
+                  key={panel.id}
+                  role="group"
+                  aria-label={`${title} description`}
+                  sx={{
+                    borderLeft: index === 0 ? 0 : 1,
+                    borderColor: 'divider',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    px: 2,
+                    '&:first-of-type': {
+                      pl: 0
+                    }
+                  }}
+                >
+                  <Typography variant="subtitle2">{title}</Typography>
+                  <ImageResultDetailsContent
+                    description={
+                      panel.description ??
+                      'This shows how the selected picture would look through the current optical settings.'
+                    }
+                    supplementalDescription={panel.supplementalDescription}
+                    showEnlargementHint={showEnlargementHint}
+                    bottomContent={panel.bottomContent}
+                  />
+                </Box>
+              );
+            })}
+          </AccordionDetails>
+        </Accordion>
       </CardContent>
     </Card>
   );

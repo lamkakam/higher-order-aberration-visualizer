@@ -218,23 +218,51 @@ export function ImageResultDetailsAccordion({
           {title}
         </Typography>
       </AccordionSummary>
-      <AccordionDetails sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}>
-        <Typography variant="body2" color="text.secondary">
-          {description}
-        </Typography>
-        {supplementalDescription ? (
-          <Typography variant="body2" color="text.secondary">
-            {supplementalDescription}
-          </Typography>
-        ) : undefined}
-        {showEnlargementHint ? (
-          <Typography variant="body2" color="text.secondary">
-            Click the image to view it enlarged.
-          </Typography>
-        ) : undefined}
-        {bottomContent}
+      <AccordionDetails
+        id={`${accordionId}-content`}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}
+      >
+        <ImageResultDetailsContent
+          description={description}
+          supplementalDescription={supplementalDescription}
+          showEnlargementHint={showEnlargementHint}
+          bottomContent={bottomContent}
+        />
       </AccordionDetails>
     </Accordion>
+  );
+}
+
+interface ImageResultDetailsContentProps {
+  readonly description: string;
+  readonly supplementalDescription: string | undefined;
+  readonly showEnlargementHint: boolean;
+  readonly bottomContent: ReactNode | undefined;
+}
+
+export function ImageResultDetailsContent({
+  description,
+  supplementalDescription,
+  showEnlargementHint,
+  bottomContent
+}: ImageResultDetailsContentProps) {
+  return (
+    <>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      {supplementalDescription ? (
+        <Typography variant="body2" color="text.secondary">
+          {supplementalDescription}
+        </Typography>
+      ) : undefined}
+      {showEnlargementHint ? (
+        <Typography variant="body2" color="text.secondary">
+          Click the image to view it enlarged.
+        </Typography>
+      ) : undefined}
+      {bottomContent}
+    </>
   );
 }
 
