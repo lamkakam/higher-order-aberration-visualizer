@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { SimulatedImageCard } from './SimulatedImageCard';
@@ -8,6 +8,31 @@ const enlargementHint = 'Click the image to view it enlarged.';
 const supplementalDescription = 'Additional chart context.';
 
 describe('SimulatedImageCard', () => {
+  it('renders text details inside an expanded accordion', () => {
+    render(
+      <SimulatedImageCard
+        imageUrl={imageUrl}
+        statusText="Ready"
+        isLoading={false}
+        error={undefined}
+        description="Card description"
+        supplementalDescription={supplementalDescription}
+        bottomContent={<div>Bottom controls</div>}
+      />
+    );
+
+    const accordionButton = screen.getByRole('button', { name: 'Simulated Image' });
+    expect(accordionButton).toHaveAttribute('aria-expanded', 'true');
+    expect(within(accordionButton).getByTestId('ExpandMoreIcon')).toBeInTheDocument();
+
+    const details = screen.getByText('Card description').closest('.MuiAccordionDetails-root');
+    expect(details).not.toBeNull();
+    const detailsQueries = within(details as HTMLElement);
+    expect(detailsQueries.getByText(supplementalDescription)).toBeInTheDocument();
+    expect(detailsQueries.getByText(enlargementHint)).toBeInTheDocument();
+    expect(detailsQueries.getByText('Bottom controls')).toBeInTheDocument();
+  });
+
   it('opens the enlarged image when the preview image is clicked', async () => {
     const user = userEvent.setup();
     render(

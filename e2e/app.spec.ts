@@ -71,53 +71,19 @@ async function expectPrimaryStickyGapIsMasked(page: Page) {
 }
 
 async function expectAdvancedStickyGapsAreMasked(page: Page) {
-  const cards = await Promise.all(
-    ['Simulated Image', 'PSF', 'Wavefront Map'].map(async (heading) => {
-      const card = page
-        .getByRole('heading', { name: heading })
-        .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
-      await expect(card).toBeVisible();
-
-      return card.elementHandle();
-    })
-  );
+  const card = page
+    .getByRole('heading', { name: 'Simulated Image' })
+    .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
+  await expect(card).toBeVisible();
 
   await expect(
-    page.evaluate((elements) => {
-      if (elements.some((element) => !element)) {
-        return false;
-      }
+    card.evaluate((element) => {
+      const stickyWrapper = element.parentElement;
+      const rect = element.getBoundingClientRect();
+      const topElement = document.elementFromPoint(rect.left + rect.width / 2, rect.top / 2);
 
-      const typedElements = elements as HTMLElement[];
-      const wrappers = typedElements.map((element) => element.parentElement);
-      const [primaryRect, psfRect, wavefrontRect] = typedElements.map((element) =>
-        element?.getBoundingClientRect()
-      );
-
-      if (
-        wrappers.some((wrapper) => !wrapper) ||
-        !primaryRect ||
-        !psfRect ||
-        !wavefrontRect
-      ) {
-        return false;
-      }
-
-      const topGapY = psfRect.top / 2;
-      const gutterY = psfRect.top + 16;
-      const points = [
-        { x: psfRect.left + psfRect.width / 2, y: topGapY },
-        { x: wavefrontRect.left + wavefrontRect.width / 2, y: topGapY },
-        { x: (primaryRect.right + psfRect.left) / 2, y: gutterY },
-        { x: (psfRect.right + wavefrontRect.left) / 2, y: gutterY }
-      ];
-
-      return points.every(({ x, y }) => {
-        const topElement = document.elementFromPoint(x, y);
-
-        return wrappers.some((wrapper) => topElement === wrapper);
-      });
-    }, cards)
+      return Boolean(stickyWrapper && topElement === stickyWrapper);
+    })
   ).resolves.toBe(true);
 }
 
@@ -144,7 +110,7 @@ async function enableAdvancedMode(page: Page) {
   await page.getByRole('button', { name: 'Setting' }).click();
   await page.getByRole('button', { name: 'Advanced' }).click();
   await page.mouse.click(20, 20);
-  await expect(page.getByText('Mode')).toBeHidden();
+  await expect(page.getByText('Mode', { exact: true })).toBeHidden();
 }
 
 test('app loads the simulator controls', async ({ page }) => {
