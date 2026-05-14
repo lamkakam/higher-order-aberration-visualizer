@@ -20,7 +20,7 @@ class ScaleBarSpec:
 def add_scale_bar(ax, simulation: OpticalSimulation) -> None:
     """Draw an angular scale bar in image data coordinates."""
 
-    height_px, width_px = simulation.convolved_image.shape
+    height_px, width_px = simulation.convolved_image.shape[:2]
     spec = _scale_bar_spec(
         image_width_px=width_px,
         image_dx_arcmin=simulation.sampling.image_dx_arcmin,
