@@ -101,6 +101,28 @@ export function micronsToWaves(microns: number, wavelengthNm: number): number {
   return microns / (wavelengthNm / 1000);
 }
 
+export function computeRmsWavefrontError(
+  coefficients: Record<ZernikeCoefficientKey, number>
+): number {
+  return Math.sqrt(
+    Object.values(coefficients).reduce((sum, coefficient) => sum + coefficient ** 2, 0)
+  );
+}
+
+export function approximateStrehlRatio(
+  coefficients: Record<ZernikeCoefficientKey, number>
+): number {
+  const rmsWaves = computeRmsWavefrontError(coefficients);
+
+  return Math.exp(-((2 * Math.PI * rmsWaves) ** 2));
+}
+
+export function formatApproximateStrehlRatio(
+  coefficients: Record<ZernikeCoefficientKey, number>
+): string {
+  return `Approx. Strehl Ratio: ${(approximateStrehlRatio(coefficients) * 100).toFixed(1)}%`;
+}
+
 export function createDefaultZernikeCoefficients(): Record<ZernikeCoefficientKey, number> {
   return Object.fromEntries(zernikeTerms.map((term) => [term.key, 0])) as Record<
     ZernikeCoefficientKey,
