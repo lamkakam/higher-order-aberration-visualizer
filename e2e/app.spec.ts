@@ -132,12 +132,70 @@ test('app loads the simulator controls', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Optical System Config' })).toBeVisible();
   await expect(page.getByLabel('Aperture Diameter (mm)')).toHaveValue('6');
   await expect(page.getByLabel('Target')).toContainText('Eye Chart (logMAR)');
+  await expectOpticalConfigLabelIsLeftOfControl(page, 'Aperture Diameter (mm)');
+  await expectOpticalConfigLabelIsLeftOfControl(page, 'Target');
   await expect(page.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset aberrations' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Simulated Image' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'PSF' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Wavefront Map' })).toBeVisible();
 });
+
+async function expectOpticalConfigLabelIsLeftOfControl(page: Page, labelText: string) {
+  const label = page.locator('label', { hasText: labelText });
+  const control = page.getByLabel(labelText);
+  await expect(label).toBeVisible();
+  await expect(control).toBeVisible();
+
+  const [labelBox, controlBox] = await Promise.all([label.boundingBox(), control.boundingBox()]);
+  expect(labelBox).not.toBeNull();
+  expect(controlBox).not.toBeNull();
+
+  if (!labelBox || !controlBox) {
+    return;
+  }
+
+  expect(labelBox.x + labelBox.width).toBeLessThan(controlBox.x);
+  expect(Math.abs(labelBox.y - controlBox.y)).toBeLessThanOrEqual(12);
+}
+
+async function expectAdvancedConfigTextIsLeftOfControl(
+  page: Page,
+  text: string,
+  control: ReturnType<Page['getByRole']>
+) {
+  const label = page.getByText(text, { exact: true });
+  await expect(label).toBeVisible();
+  await expect(control).toBeVisible();
+
+  const [labelBox, controlBox] = await Promise.all([label.boundingBox(), control.boundingBox()]);
+  expect(labelBox).not.toBeNull();
+  expect(controlBox).not.toBeNull();
+
+  if (!labelBox || !controlBox) {
+    return;
+  }
+
+  expect(labelBox.x + labelBox.width).toBeLessThan(controlBox.x);
+}
+
+async function expectTextIsBelowText(page: Page, lowerText: string, upperText: string) {
+  const lower = page.getByText(lowerText, { exact: true });
+  const upper = page.getByText(upperText, { exact: true });
+  await expect(lower).toBeVisible();
+  await expect(upper).toBeVisible();
+
+  const [lowerBox, upperBox] = await Promise.all([lower.boundingBox(), upper.boundingBox()]);
+  expect(lowerBox).not.toBeNull();
+  expect(upperBox).not.toBeNull();
+
+  if (!lowerBox || !upperBox) {
+    return;
+  }
+
+  expect(lowerBox.y).toBeGreaterThan(upperBox.y);
+  expect(Math.abs(lowerBox.x - upperBox.x)).toBeLessThanOrEqual(2);
+}
 
 test('keeps the simulated image card sticky in basic mode on desktop', async ({ page }) => {
   await page.goto('/');
@@ -155,6 +213,22 @@ test('masks the gap above the sticky simulated image card on desktop', async ({ 
 test('keeps all advanced image cards sticky on desktop', async ({ page }) => {
   await page.goto('/');
   await enableAdvancedMode(page);
+  await expectAdvancedConfigTextIsLeftOfControl(
+    page,
+    'Aperture Mask',
+    page.getByRole('button', { name: 'Edit aperture mask' })
+  );
+  await expectAdvancedConfigTextIsLeftOfControl(
+    page,
+    'Circle, 0% obstruction',
+    page.getByRole('button', { name: 'Edit aperture mask' })
+  );
+  await expectAdvancedConfigTextIsLeftOfControl(
+    page,
+    'Spectral Mode',
+    page.getByRole('button', { name: 'Monochromatic' })
+  );
+  await expectTextIsBelowText(page, 'Circle, 0% obstruction', 'Aperture Mask');
 
   await page.evaluate(() => window.scrollTo(0, 260));
   const primaryTop = await getCardTopByHeading(page, 'Simulated Image');

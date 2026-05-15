@@ -155,9 +155,16 @@ it('renders default aperture and supported target options', async () => {
     overflow: 'hidden'
   });
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
+  expect(screen.getByText('Aperture Diameter (mm)', { selector: 'label' })).toHaveAttribute(
+    'for',
+    screen.getByLabelText('Aperture Diameter (mm)').id
+  );
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
   await user.click(screen.getByLabelText('Target'));
+
+  expect(screen.getByText('Target', { selector: 'label' })).toHaveAttribute('for', 'target-select');
+  expect(screen.getByLabelText('Target')).toHaveAttribute('id', 'target-select');
 
   const targetOptions = screen.getAllByRole('option');
   expect(targetOptions[0]).toHaveTextContent('Eye Chart (logMAR)');
@@ -182,6 +189,7 @@ it('shows aperture mask controls only in advanced mode', async () => {
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
   expect(screen.getByRole('button', { name: 'Edit aperture mask' })).toBeInTheDocument();
+  expect(screen.getByText('Aperture Mask')).toBeInTheDocument();
   expect(screen.getByText('Circle, 0% obstruction')).toBeInTheDocument();
 });
 
@@ -962,6 +970,7 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
   expect(screen.getByText('Spectral Mode')).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Spectral Mode' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Monochromatic' })).toHaveAttribute(
     'aria-pressed',
     'true'
