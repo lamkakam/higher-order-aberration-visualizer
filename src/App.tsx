@@ -271,16 +271,21 @@ export function App({ workerClient }: AppProps) {
     [simulationWavelengths, zernikeCoefficientsByWavelength]
   );
   const diagnosticWavelengthNm = isPolychromatic ? selectedWavelength : 550;
+  const shouldWrapPolychromaticStrehl = isPolychromatic && !isSmUp;
   const approximateStrehlContent =
     displayMode === 'advanced' ? (
       <Stack
         direction="row"
         spacing={1}
+        useFlexGap
+        style={{
+          flexWrap: shouldWrapPolychromaticStrehl ? 'wrap' : 'nowrap',
+          overflowX: shouldWrapPolychromaticStrehl ? 'visible' : 'auto',
+          whiteSpace: shouldWrapPolychromaticStrehl ? 'normal' : 'nowrap'
+        }}
         sx={{
           alignItems: 'center',
-          minWidth: 0,
-          overflowX: 'auto',
-          whiteSpace: 'nowrap'
+          minWidth: 0
         }}
       >
         {isPolychromatic ? (
@@ -290,7 +295,9 @@ export function App({ workerClient }: AppProps) {
             </Typography>
             {simulationWavelengths.map((wavelength, index) => (
               <Fragment key={wavelength}>
-                {index > 0 ? <Divider flexItem orientation="vertical" /> : undefined}
+                {index > 0 && !shouldWrapPolychromaticStrehl ? (
+                  <Divider flexItem orientation="vertical" />
+                ) : undefined}
                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                   {wavelength} nm:{' '}
                   {(
