@@ -208,6 +208,7 @@ export function App({ workerClient }: AppProps) {
   const [showScaleBar, setShowScaleBar] = useState(false);
   const [spectralMode, setSpectralMode] = useState<SpectralMode>('monochromatic');
   const [selectedWavelength, setSelectedWavelength] = useState<SpectralWavelength>(550);
+  const [syncWavelengthCoefficients, setSyncWavelengthCoefficients] = useState(true);
   const [wavefrontLegendUnit, setWavefrontLegendUnit] =
     useState<WavefrontLegendUnit>('wave');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
@@ -374,15 +375,34 @@ export function App({ workerClient }: AppProps) {
 
   const updateZernikeCoefficient = useCallback(
     (wavelength: SpectralWavelength, key: ZernikeCoefficientKey, value: number) => {
-      setZernikeCoefficientsByWavelength((currentValues) => ({
-        ...currentValues,
-        [wavelength]: {
-          ...currentValues[wavelength],
-          [key]: value
+      setZernikeCoefficientsByWavelength((currentValues) => {
+        if (effectiveSpectralMode === 'polychromatic' && syncWavelengthCoefficients) {
+          return {
+            550: {
+              ...currentValues[550],
+              [key]: value
+            },
+            656: {
+              ...currentValues[656],
+              [key]: value
+            },
+            486: {
+              ...currentValues[486],
+              [key]: value
+            }
+          };
         }
-      }));
+
+        return {
+          ...currentValues,
+          [wavelength]: {
+            ...currentValues[wavelength],
+            [key]: value
+          }
+        };
+      });
     },
-    []
+    [effectiveSpectralMode, syncWavelengthCoefficients]
   );
 
   const resetZernikeCoefficients = useCallback((wavelength: SpectralWavelength) => {
@@ -390,6 +410,10 @@ export function App({ workerClient }: AppProps) {
       ...currentValues,
       [wavelength]: createDefaultZernikeCoefficients()
     }));
+  }, []);
+
+  const resetAllZernikeCoefficientsByWavelength = useCallback(() => {
+    setZernikeCoefficientsByWavelength(createDefaultZernikeCoefficientsByWavelength());
   }, []);
 
   const updateSpectralMode = useCallback((nextMode: SpectralMode) => {
@@ -590,6 +614,10 @@ export function App({ workerClient }: AppProps) {
                     onReset={() => {
                       resetZernikeCoefficients(selectedWavelength);
                     }}
+                    showWavelengthSyncControls
+                    syncWavelengthCoefficients={syncWavelengthCoefficients}
+                    onSyncWavelengthCoefficientsChange={setSyncWavelengthCoefficients}
+                    onResetAllWavelengths={resetAllZernikeCoefficientsByWavelength}
                   />
                 </Stack>
               ) : (

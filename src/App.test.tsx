@@ -998,9 +998,12 @@ it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode',
   expect(screen.queryByRole('tab', { name: '486 nm' })).not.toBeInTheDocument();
 });
 
-it('shows wavelength tabs in Advanced Polychromatic mode', async () => {
+it('shows wavelength tabs and sync controls in Advanced Polychromatic mode', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByRole('switch', { name: 'Sync wavelengths' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Reset all wavelengths' })).not.toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'Setting' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1010,9 +1013,11 @@ it('shows wavelength tabs in Advanced Polychromatic mode', async () => {
   expect(screen.getByRole('tab', { name: '550 nm' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('tab', { name: '656 nm' })).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: '486 nm' })).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Sync wavelengths' })).toBeChecked();
+  expect(screen.getByRole('button', { name: 'Reset all wavelengths' })).toBeInTheDocument();
 });
 
-it('keeps polychromatic wavelength aberration values independent', async () => {
+it('syncs changed polychromatic coefficient values across wavelength tabs by default', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
@@ -1027,6 +1032,66 @@ it('keeps polychromatic wavelength aberration values independent', async () => {
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.00');
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+
+  await user.click(screen.getByRole('tab', { name: '550 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+});
+
+it('leaves untouched polychromatic coefficients unchanged when syncing one coefficient', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const defocusName = 'Defocus Z(2,0) coefficient';
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: defocusName }));
+  await user.type(screen.getByRole('textbox', { name: defocusName }), '1.50');
+  fireEvent.blur(screen.getByRole('textbox', { name: defocusName }));
+  await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
+
+  await user.click(screen.getByRole('tab', { name: '550 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+  expect(screen.getByRole('textbox', { name: defocusName })).toHaveValue('1.50');
+
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+  expect(screen.getByRole('textbox', { name: defocusName })).toHaveValue('0.00');
+});
+
+it('keeps polychromatic wavelength aberration values independent when sync is off', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+  await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
   expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
   await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
@@ -1034,14 +1099,58 @@ it('keeps polychromatic wavelength aberration values independent', async () => {
 
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
   expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
-  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '3.00');
-  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '550 nm' }));
   expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.00');
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
   expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+});
+
+it('resets only the selected polychromatic wavelength when sync is on', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+
+  await user.click(screen.getByRole('tab', { name: '550 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.25');
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.25');
+});
+
+it('resets all polychromatic wavelength coefficient values', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('button', { name: 'Reset all wavelengths' }));
+
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
 });
 
 it('shares monochromatic aberration edits with the 550 nm polychromatic tab', async () => {
@@ -1100,16 +1209,6 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
     target: { value: '1.00' }
   });
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
-  fireEvent.click(screen.getByRole('tab', { name: '656 nm' }));
-  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
-    target: { value: '2.00' }
-  });
-  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
-  fireEvent.click(screen.getByRole('tab', { name: '486 nm' }));
-  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
-    target: { value: '3.00' }
-  });
-  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1118,7 +1217,7 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
   expect(computeConvolvedImage).toHaveBeenLastCalledWith({
     apertureSettings: defaultApertureSettings,
     apertureDiameterMm: 6,
-    diagnosticWavelengthNm: 486,
+    diagnosticWavelengthNm: 550,
     showScaleBar: false,
     spectralMode: 'polychromatic',
     targetId: 'logmar_chart',
@@ -1130,8 +1229,8 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
     wavefrontLegendUnit: 'wave',
     zernikeCoefficientsByWavelength: [
       [550, expect.objectContaining({ '4,0': 1 })],
-      [656, expect.objectContaining({ '4,0': 2 })],
-      [486, expect.objectContaining({ '4,0': 3 })]
+      [656, expect.objectContaining({ '4,0': 1 })],
+      [486, expect.objectContaining({ '4,0': 1 })]
     ]
   });
 });
@@ -1216,6 +1315,7 @@ it('converts polychromatic zernike textbox values using the selected wavelength 
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+  await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
@@ -2238,6 +2338,7 @@ it('shows independent approximate Strehl ratios for each polychromatic wavelengt
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+  await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
