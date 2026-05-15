@@ -2268,6 +2268,33 @@ it('shows independent approximate Strehl ratios for each polychromatic wavelengt
   expect(card.getAllByRole('separator')).toHaveLength(2);
 });
 
+it('wraps small-screen polychromatic approximate Strehl ratios inside the simulated image card', async () => {
+  const user = userEvent.setup();
+  setMatchesSm(false);
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const simulatedImageCard = screen
+    .getByRole('button', { name: 'Simulated Image' })
+    .closest('.MuiCard-root');
+  expect(simulatedImageCard).not.toBeNull();
+
+  const card = within(simulatedImageCard as HTMLElement);
+  const strehlLabel = card.getByText('Approx. Strehl Ratio:');
+  const strehlBlock = strehlLabel.parentElement;
+  expect(strehlBlock).not.toBeNull();
+
+  expect(card.getAllByText('Approx. Strehl Ratio:')).toHaveLength(1);
+  expect(card.getAllByText('550 nm: 100.0%')).toHaveLength(1);
+  expect(card.getAllByText('656 nm: 100.0%')).toHaveLength(1);
+  expect(card.getAllByText('486 nm: 100.0%')).toHaveLength(1);
+  expect(strehlBlock).toHaveStyle({ flexWrap: 'wrap', overflowX: 'visible' });
+});
+
 it('does not show the approximate Strehl ratio in basic mode', () => {
   render(<App workerClient={createMockWorkerClient()} />);
 
