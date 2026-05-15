@@ -144,9 +144,16 @@ it('renders default aperture and supported target options', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toHaveClass(
-    'MuiTypography-h6'
-  );
+  const opticalSystemSummary = screen.getByRole('button', { name: 'Optical System Config' });
+  const opticalSystemAccordion = opticalSystemSummary.closest('.MuiAccordion-root');
+
+  expect(opticalSystemSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(opticalSystemSummary).toHaveStyle({
+    backgroundColor: 'rgb(255, 255, 255)'
+  });
+  expect(opticalSystemAccordion).toHaveStyle({
+    overflow: 'hidden'
+  });
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 

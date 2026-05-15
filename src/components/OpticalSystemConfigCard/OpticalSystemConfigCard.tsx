@@ -1,6 +1,8 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import NativeSelect from '@mui/material/NativeSelect';
@@ -9,7 +11,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import type { ChangeEvent } from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type {
   ApertureMaskResult,
   ApertureSettings,
@@ -48,6 +50,7 @@ export function OpticalSystemConfigCard({
   onTargetChange
 }: OpticalSystemConfigCardProps) {
   const apertureHasError = !Number.isFinite(apertureDiameterMm) || apertureDiameterMm < 0.5;
+  const accordionId = useId();
   const [isApertureModalOpen, setIsApertureModalOpen] = useState(false);
 
   function handleTargetChange(event: ChangeEvent<HTMLSelectElement>) {
@@ -55,12 +58,35 @@ export function OpticalSystemConfigCard({
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
+    <Accordion
+      defaultExpanded
+      disableGutters
+      sx={{
+        '&::before': {
+          display: 'none'
+        },
+        '& .MuiAccordionDetails-root, & .MuiAccordionSummary-root': {
+          bgcolor: 'background.paper'
+        },
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 1,
+        bgcolor: 'background.paper',
+        boxShadow: 'none',
+        overflow: 'hidden'
+      }}
+    >
+      <AccordionSummary
+        aria-controls={`${accordionId}-content`}
+        expandIcon={<ExpandMoreIcon />}
+        id={`${accordionId}-header`}
+      >
+        <Typography variant="h6" component="span">
+          Optical System Config
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails id={`${accordionId}-content`} sx={{ pt: 0 }}>
         <Stack spacing={2}>
-          <Typography variant="h6" component="h2">
-            Optical System Config
-          </Typography>
           <NumberField
             label="Aperture Diameter (mm)"
             min={0.5}
@@ -130,7 +156,7 @@ export function OpticalSystemConfigCard({
             </Stack>
           ) : undefined}
         </Stack>
-      </CardContent>
+      </AccordionDetails>
       <ApertureMaskModal
         open={isApertureModalOpen}
         apertureSettings={apertureSettings}
@@ -143,6 +169,6 @@ export function OpticalSystemConfigCard({
         }}
         onRenderApertureMask={onRenderApertureMask}
       />
-    </Card>
+    </Accordion>
   );
 }
