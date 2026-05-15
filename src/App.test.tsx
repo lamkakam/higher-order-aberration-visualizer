@@ -144,9 +144,16 @@ it('renders default aperture and supported target options', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toHaveClass(
-    'MuiTypography-h6'
-  );
+  const opticalSystemSummary = screen.getByRole('button', { name: 'Optical System Config' });
+  const opticalSystemAccordion = opticalSystemSummary.closest('.MuiAccordion-root');
+
+  expect(opticalSystemSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(opticalSystemSummary).toHaveStyle({
+    backgroundColor: 'rgb(255, 255, 255)'
+  });
+  expect(opticalSystemAccordion).toHaveStyle({
+    overflow: 'hidden'
+  });
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
@@ -881,6 +888,54 @@ it('shows zernike textbox values and resets changed values', async () => {
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
   expect(sphericalCoefficient).toHaveValue('0.00');
+});
+
+it('groups lower and higher order zernike controls in expanded accordions', () => {
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  const lowerOrderSummary = screen.getByRole('button', {
+    name: 'Lower Order Aberrations (Generally Correctable with Ordinary Eyeglasses)'
+  });
+  const higherOrderSummary = screen.getByRole('button', {
+    name: 'Higher Order Aberrations'
+  });
+  expect(lowerOrderSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(higherOrderSummary).toHaveAttribute('aria-expanded', 'true');
+
+  const lowerOrderDetails = lowerOrderSummary
+    .closest('.MuiAccordion-root')
+    ?.querySelector('.MuiAccordionDetails-root');
+  const higherOrderDetails = higherOrderSummary
+    .closest('.MuiAccordion-root')
+    ?.querySelector('.MuiAccordionDetails-root');
+  expect(lowerOrderDetails).toBeInstanceOf(HTMLElement);
+  expect(higherOrderDetails).toBeInstanceOf(HTMLElement);
+
+  expect(
+    within(lowerOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Astigmatism (Oblique) Z(2,-2) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(lowerOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Defocus Z(2,0) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(lowerOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Astigmatism (Vertical) Z(2,2) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(higherOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Primary Spherical Aberration Z(4,0) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(lowerOrderDetails as HTMLElement).queryByRole('slider', {
+      name: 'Primary Spherical Aberration Z(4,0) coefficient'
+    })
+  ).not.toBeInTheDocument();
 });
 
 it('shows the zernike coefficient unit selector defaulting to wave', async () => {
