@@ -1,3 +1,7 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -5,7 +9,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useId, useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
 import { CommitSlider } from './CommitSlider';
 import {
@@ -27,6 +31,16 @@ const coefficientDisplayUnits = [
   readonly value: CoefficientDisplayUnit;
   readonly label: string;
 }[];
+
+type ZernikeTerm = (typeof zernikeTerms)[number];
+
+const lowerOrderZernikeKeys = new Set<ZernikeCoefficientKey>(['2,-2', '2,0', '2,2']);
+const lowerOrderZernikeTerms = zernikeTerms.filter((term) =>
+  lowerOrderZernikeKeys.has(term.key)
+);
+const higherOrderZernikeTerms = zernikeTerms.filter(
+  (term) => !lowerOrderZernikeKeys.has(term.key)
+);
 
 interface AberrationSlidersCardProps {
   readonly wavelengthNm: number;
@@ -78,25 +92,98 @@ export function AberrationSlidersCard({
               ))}
             </ButtonGroup>
           </Stack>
-          {zernikeTerms.map((term) => (
-            <AberrationCoefficientRow
-              key={term.key}
-              term={term}
-              value={values[term.key]}
+          <Stack spacing={1.5}>
+            <ZernikeControlsAccordion
+              title="Lower Order Aberrations (Generally Correctable with Ordinary Eyeglasses)"
+              terms={lowerOrderZernikeTerms}
+              values={values}
               wavelengthNm={wavelengthNm}
               displayUnit={displayUnit}
               resetVersion={resetVersion}
               onValueChange={onValueChange}
             />
-          ))}
+            <ZernikeControlsAccordion
+              title="Higher Order Aberrations"
+              terms={higherOrderZernikeTerms}
+              values={values}
+              wavelengthNm={wavelengthNm}
+              displayUnit={displayUnit}
+              resetVersion={resetVersion}
+              onValueChange={onValueChange}
+            />
+          </Stack>
         </Stack>
       </CardContent>
     </Card>
   );
 }
 
+interface ZernikeControlsAccordionProps {
+  readonly title: string;
+  readonly terms: readonly ZernikeTerm[];
+  readonly values: Record<ZernikeCoefficientKey, number>;
+  readonly wavelengthNm: number;
+  readonly displayUnit: CoefficientDisplayUnit;
+  readonly resetVersion: number;
+  readonly onValueChange: (key: ZernikeCoefficientKey, value: number) => void;
+}
+
+function ZernikeControlsAccordion({
+  title,
+  terms,
+  values,
+  wavelengthNm,
+  displayUnit,
+  resetVersion,
+  onValueChange
+}: ZernikeControlsAccordionProps) {
+  const accordionId = useId();
+
+  return (
+    <Accordion
+      defaultExpanded
+      disableGutters
+      sx={{
+        '&::before': {
+          display: 'none'
+        },
+        border: 1,
+        borderColor: 'divider',
+        boxShadow: 'none'
+      }}
+    >
+      <AccordionSummary
+        aria-controls={`${accordionId}-content`}
+        aria-label={title}
+        expandIcon={<ExpandMoreIcon />}
+        id={`${accordionId}-header`}
+      >
+        <Typography variant="h6" component="span">
+          {title}
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails
+        id={`${accordionId}-content`}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}
+      >
+        {terms.map((term) => (
+          <AberrationCoefficientRow
+            key={term.key}
+            term={term}
+            value={values[term.key]}
+            wavelengthNm={wavelengthNm}
+            displayUnit={displayUnit}
+            resetVersion={resetVersion}
+            onValueChange={onValueChange}
+          />
+        ))}
+      </AccordionDetails>
+    </Accordion>
+  );
+}
+
 interface AberrationCoefficientRowProps {
-  readonly term: (typeof zernikeTerms)[number];
+  readonly term: ZernikeTerm;
   readonly value: number;
   readonly wavelengthNm: number;
   readonly displayUnit: CoefficientDisplayUnit;
