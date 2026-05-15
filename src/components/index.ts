@@ -16,7 +16,10 @@ export {
   type ImageResultPanelProps
 } from './SimulatedImageCard';
 export {
+  approximateStrehlRatio,
   createDefaultZernikeCoefficients,
+  computeRmsWavefrontError,
+  formatApproximateStrehlRatio,
   micronsToWaves,
   supplementalDescriptions,
   wavelengthNm,

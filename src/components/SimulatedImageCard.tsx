@@ -19,6 +19,7 @@ interface SimulatedImageCardProps {
   readonly description?: string;
   readonly supplementalDescription?: string;
   readonly altText?: string;
+  readonly aboveAccordionContent?: ReactNode;
   readonly bottomContent?: ReactNode;
 }
 
@@ -181,6 +182,7 @@ export function ImageResultDetailsAccordion({
   title = 'Simulated Image',
   description = 'This shows how the selected picture would look through the current optical settings.',
   supplementalDescription,
+  aboveAccordionContent,
   bottomContent
 }: Pick<
   ImageResultPanelProps,
@@ -190,6 +192,7 @@ export function ImageResultDetailsAccordion({
   | 'title'
   | 'description'
   | 'supplementalDescription'
+  | 'aboveAccordionContent'
   | 'bottomContent'
 >) {
   const previewImageUrl = getPreviewImageUrl(imageUrl, error, isLoading);
@@ -197,39 +200,43 @@ export function ImageResultDetailsAccordion({
   const accordionId = useId();
 
   return (
-    <Accordion
-      defaultExpanded
-      disableGutters
-      sx={{
-        '&::before': {
-          display: 'none'
-        },
-        border: 1,
-        borderColor: 'divider',
-        boxShadow: 'none'
-      }}
-    >
-      <AccordionSummary
-        aria-controls={`${accordionId}-content`}
-        expandIcon={<ExpandMoreIcon />}
-        id={`${accordionId}-header`}
+    <>
+      {aboveAccordionContent}
+      <Accordion
+        defaultExpanded
+        disableGutters
+        sx={{
+          '&::before': {
+            display: 'none'
+          },
+          border: 1,
+          borderColor: 'divider',
+          boxShadow: 'none'
+        }}
       >
-        <Typography variant="h6" component="span">
-          {title}
-        </Typography>
-      </AccordionSummary>
-      <AccordionDetails
-        id={`${accordionId}-content`}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}
-      >
-        <ImageResultDetailsContent
-          description={description}
-          supplementalDescription={supplementalDescription}
-          showEnlargementHint={showEnlargementHint}
-          bottomContent={bottomContent}
-        />
-      </AccordionDetails>
-    </Accordion>
+        <AccordionSummary
+          aria-controls={`${accordionId}-content`}
+          aria-label={title}
+          expandIcon={<ExpandMoreIcon />}
+          id={`${accordionId}-header`}
+        >
+          <Typography variant="h6" component="span">
+            {title}
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails
+          id={`${accordionId}-content`}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}
+        >
+          <ImageResultDetailsContent
+            description={description}
+            supplementalDescription={supplementalDescription}
+            showEnlargementHint={showEnlargementHint}
+            bottomContent={bottomContent}
+          />
+        </AccordionDetails>
+      </Accordion>
+    </>
   );
 }
 

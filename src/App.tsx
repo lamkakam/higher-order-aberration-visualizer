@@ -9,6 +9,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Container from '@mui/material/Container';
 import CssBaseline from '@mui/material/CssBaseline';
+import Divider from '@mui/material/Divider';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
@@ -17,11 +18,21 @@ import Typography from '@mui/material/Typography';
 import { ThemeProvider } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import {
+  Fragment,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState
+} from 'react';
 import {
   AberrationSlidersCard,
   AppHeader,
+  approximateStrehlRatio,
   createDefaultZernikeCoefficients,
+  formatApproximateStrehlRatio,
   ImageResultDetailsContent,
   ImageResultPreview,
   OpticalSystemConfigCard,
@@ -82,9 +93,10 @@ type AdvancedResultPanel = ImageResultPanelProps & {
 
 interface AdvancedResultCardProps {
   readonly panels: readonly AdvancedResultPanel[];
+  readonly sharedAboveAccordionContent?: ReactNode;
 }
 
-function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
+function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedResultCardProps) {
   const gridTemplateColumns = `repeat(${panels.length}, minmax(0, 1fr))`;
   const showSharedEnlargementHint = panels.some(
     (panel) => !panel.error && (panel.isLoading || (Boolean(panel.imageUrl) && !panel.isLoading))
@@ -99,6 +111,7 @@ function AdvancedResultCard({ panels }: AdvancedResultCardProps) {
             <ImageResultPreview key={panel.id} {...panel} />
           ))}
         </Box>
+        {sharedAboveAccordionContent}
         <Accordion
           defaultExpanded
           disableGutters
@@ -258,6 +271,43 @@ export function App({ workerClient }: AppProps) {
     [simulationWavelengths, zernikeCoefficientsByWavelength]
   );
   const diagnosticWavelengthNm = isPolychromatic ? selectedWavelength : 550;
+  const approximateStrehlContent =
+    displayMode === 'advanced' ? (
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+          minWidth: 0,
+          overflowX: 'auto',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {isPolychromatic ? (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+              Approx. Strehl Ratio:
+            </Typography>
+            {simulationWavelengths.map((wavelength, index) => (
+              <Fragment key={wavelength}>
+                {index > 0 ? <Divider flexItem orientation="vertical" /> : undefined}
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                  {wavelength} nm:{' '}
+                  {(
+                    approximateStrehlRatio(zernikeCoefficientsByWavelength[wavelength]) * 100
+                  ).toFixed(1)}
+                  %
+                </Typography>
+              </Fragment>
+            ))}
+          </>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            {formatApproximateStrehlRatio(zernikeCoefficientsByWavelength[550])}
+          </Typography>
+        )}
+      </Stack>
+    ) : undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -379,7 +429,8 @@ export function App({ workerClient }: AppProps) {
     statusText: diagnostics.message,
     isLoading: isImageLoading,
     error,
-    description: simulatedImageDescription
+    description: simulatedImageDescription,
+    aboveAccordionContent: shouldMergeAdvancedResults ? undefined : approximateStrehlContent
   };
   const psfPanel: AdvancedResultPanel = {
     id: 'psf',
@@ -447,7 +498,10 @@ export function App({ workerClient }: AppProps) {
                   zIndex: 3
                 }}
               >
-                <AdvancedResultCard panels={advancedResultPanels} />
+                <AdvancedResultCard
+                  panels={advancedResultPanels}
+                  sharedAboveAccordionContent={approximateStrehlContent}
+                />
               </Box>
             ) : (
               <>

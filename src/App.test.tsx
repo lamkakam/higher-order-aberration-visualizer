@@ -2167,6 +2167,113 @@ it('shows PSF and wavefront panels in one image descriptions accordion on large 
   expect(within(psfDescription).queryByText(psfCutoffNote)).not.toBeInTheDocument();
 });
 
+it('shows the approximate Strehl ratio above the small-screen advanced simulated image accordion', async () => {
+  const user = userEvent.setup();
+  setMatchesSm(false);
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+
+  const simulatedImageCard = screen
+    .getByRole('button', { name: 'Simulated Image' })
+    .closest('.MuiCard-root');
+  expect(simulatedImageCard).not.toBeNull();
+
+  const strehl = within(simulatedImageCard as HTMLElement).getByText(
+    'Approx. Strehl Ratio: 100.0%'
+  );
+  const simulatedImageSummary = within(simulatedImageCard as HTMLElement).getByRole('button', {
+    name: 'Simulated Image'
+  });
+
+  expect(
+    strehl.compareDocumentPosition(simulatedImageSummary) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(within(simulatedImageSummary).queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
+  expect(strehl).toBeInTheDocument();
+  expect(screen.getAllByText(/Approx\. Strehl Ratio/)).toHaveLength(1);
+});
+
+it('shows the approximate Strehl ratio once above the large-screen combined image descriptions accordion', async () => {
+  const user = userEvent.setup();
+  setMatchesSm(true);
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+
+  const advancedResultCard = screen
+    .getByRole('button', {
+      name: 'Image Descriptions'
+    })
+    .closest('.MuiCard-root');
+  expect(advancedResultCard).not.toBeNull();
+
+  const strehl = within(advancedResultCard as HTMLElement).getByText(
+    'Approx. Strehl Ratio: 100.0%'
+  );
+  const imageDescriptionsSummary = within(advancedResultCard as HTMLElement).getByRole('button', {
+    name: 'Image Descriptions'
+  });
+
+  expect(
+    strehl.compareDocumentPosition(imageDescriptionsSummary) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(within(imageDescriptionsSummary).queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
+  expect(strehl).toBeInTheDocument();
+  expect(screen.getAllByText(/Approx\. Strehl Ratio/)).toHaveLength(1);
+});
+
+it('shows independent approximate Strehl ratios for each polychromatic wavelength', async () => {
+  const user = userEvent.setup();
+  setMatchesSm(true);
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  await user.keyboard('{Escape}');
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '0.10');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '0.20');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+  await user.clear(screen.getByRole('textbox', { name: sphericalName }));
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '0.30');
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+
+  const advancedResultCard = screen
+    .getByRole('button', {
+      name: 'Image Descriptions'
+    })
+    .closest('.MuiCard-root');
+  expect(advancedResultCard).not.toBeNull();
+  const card = within(advancedResultCard as HTMLElement);
+
+  expect(card.getByText('550 nm: 67.4%')).toBeInTheDocument();
+  expect(card.getByText('656 nm: 20.6%')).toBeInTheDocument();
+  expect(card.getByText('486 nm: 2.9%')).toBeInTheDocument();
+  expect(card.getAllByRole('separator')).toHaveLength(2);
+});
+
+it('does not show the approximate Strehl ratio in basic mode', () => {
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
+});
+
 it('shows the legend unit selector at the bottom of the wavefront map card in advanced display mode', async () => {
   const user = userEvent.setup();
   setMatchesSm(true);
@@ -2236,11 +2343,11 @@ it('keeps advanced result panels in separate cards on extra-small screens', asyn
   await user.keyboard('{Escape}');
 
   const simulatedImageCard = screen
-    .getByRole('heading', { name: 'Simulated Image' })
+    .getByRole('button', { name: 'Simulated Image' })
     .closest('.MuiCard-root');
-  const psfCard = screen.getByRole('heading', { name: 'PSF' }).closest('.MuiCard-root');
+  const psfCard = screen.getByRole('button', { name: 'PSF' }).closest('.MuiCard-root');
   const wavefrontCard = screen
-    .getByRole('heading', { name: 'Wavefront Map' })
+    .getByRole('button', { name: 'Wavefront Map' })
     .closest('.MuiCard-root');
 
   expect(psfCard).not.toBe(simulatedImageCard);
