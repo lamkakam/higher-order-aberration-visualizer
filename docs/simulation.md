@@ -84,7 +84,7 @@ The worker renders three PNG outputs from each `OpticalSimulation`:
 - log-scaled PSF image from [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - wavefront OPD map from [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
 
-The Python renderers use a default 10 by 9 inch Matplotlib figure size, which produces approximately 1000 by 900 pixel PNG outputs at Matplotlib's default 100 DPI.
+The PSF and wavefront Python renderers use a default 10 by 9 inch Matplotlib figure size, which produces approximately 1000 by 900 pixel PNG outputs at Matplotlib's default 100 DPI. Convolved target PNGs render borderless with a canvas matching the convolved array aspect ratio, so a square target renders as a square PNG without Matplotlib's default white figure padding.
 
 The web worker renders the convolved target image with `display_scale="perceptual"`, a fixed `log1p(10 * x) / log1p(10)` display transform applied after clipping to `[0, 1]`. This improves visibility of low-intensity detail in the PNG only; the underlying `simulation.convolved_image` data stays linear.
 

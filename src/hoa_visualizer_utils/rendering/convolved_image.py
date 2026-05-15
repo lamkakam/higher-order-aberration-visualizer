@@ -19,6 +19,12 @@ from hoa_visualizer_utils.utils.figures import (
 PERCEPTUAL_DISPLAY_SCALE_STRENGTH = 10
 
 
+def _convolved_image_figure_size(image_shape: tuple[int, ...]) -> tuple[float, float]:
+    rows, columns = image_shape[:2]
+    width_inches = DEFAULT_FIGURE_SIZE_INCHES[0]
+    return (width_inches, width_inches * rows / columns)
+
+
 def render_convolved_image(
     simulation: OpticalSimulation,
     *,
@@ -39,10 +45,10 @@ def render_convolved_image(
         raise ValueError("display_scale must be 'linear' or 'perceptual'")
 
     plt = _load_pyplot()
-    fig, ax = plt.subplots(
-        figsize=DEFAULT_FIGURE_SIZE_INCHES,
-        constrained_layout=True,
-    )
+    fig = plt.figure(figsize=_convolved_image_figure_size(display_image.shape), frameon=False)
+    fig.patch.set_facecolor("black")
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set_facecolor("black")
     ax.imshow(
         display_image,
         cmap="gray",
