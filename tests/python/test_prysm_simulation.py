@@ -1,6 +1,8 @@
 import math
+from io import BytesIO
 from dataclasses import replace
 
+from matplotlib.image import imread
 from matplotlib.colors import LogNorm
 from matplotlib.ticker import LogFormatterSciNotation, ScalarFormatter
 import numpy as np
@@ -50,6 +52,30 @@ def compute_simulation(
         target_id,
         **kwargs,
     )
+
+
+def _png_pixels(png_bytes: bytes) -> np.ndarray:
+    return imread(BytesIO(png_bytes), format="png")
+
+
+def _outer_pixels(image: np.ndarray) -> np.ndarray:
+    return np.concatenate(
+        [
+            image[0, :, :3],
+            image[-1, :, :3],
+            image[:, 0, :3],
+            image[:, -1, :3],
+        ],
+        axis=0,
+    )
+
+
+def _visible_content_bbox(image: np.ndarray) -> tuple[int, int]:
+    foreground = np.abs(image - float(image[0, 0])) > 0.05
+    rows, columns = np.nonzero(foreground)
+    if rows.size == 0 or columns.size == 0:
+        return (0, 0)
+    return (int(rows.max() - rows.min() + 1), int(columns.max() - columns.min() + 1))
 
 
 def test_compute_simulation_rejects_invalid_inputs() -> None:
@@ -1275,21 +1301,97 @@ def test_rgb_convolved_image_renderer_can_show_scale_bar() -> None:
     ).startswith(b"\x89PNG\r\n\x1a\n")
 
 
+@pytest.mark.parametrize("edge_value", [0.0, 0.85])
+def test_convolved_image_png_has_no_white_figure_border(edge_value: float) -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    convolved_image = np.full((64, 64), edge_value, dtype=float)
+    convolved_image[20:44, 20:44] = 1 - edge_value
+    simulation = replace(simulation, convolved_image=convolved_image)
+
+    png_bytes = render_convolved_image(simulation, image_format="png")
+    pixels = _png_pixels(png_bytes)
+
+    assert png_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(png_bytes) > 100
+    assert pixels.shape[0] == pixels.shape[1]
+    assert not np.allclose(_outer_pixels(pixels), 1.0, atol=1 / 255)
+
+
+def test_convolved_image_borderless_png_keeps_scale_bar_rendering() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    simulation = replace(simulation, convolved_image=np.zeros((64, 64), dtype=float))
+
+    png_bytes = render_convolved_image(
+        simulation,
+        image_format="png",
+        show_scale_bar=True,
+    )
+    pixels = _png_pixels(png_bytes)
+
+    assert png_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(png_bytes) > 100
+    assert pixels.shape[0] == pixels.shape[1]
+    assert pixels[..., :3].max() > 0.9
+
+
+def test_supported_targets_keep_same_convolved_grid_with_current_visible_sizes() -> None:
+    visible_sizes = {}
+    for target_id in sorted(SUPPORTED_TARGET_IDS):
+        simulation = compute_simulation(
+            10,
+            {},
+            target_id,
+            pupil_samples=32,
+            image_samples=128,
+        )
+
+        assert simulation.convolved_image.shape == (128, 128)
+        visible_sizes[target_id] = _visible_content_bbox(simulation.target)
+
+    assert visible_sizes == {
+        "jupiter_502nm": (90, 90),
+        "logmar_chart": (76, 104),
+        "point_source": (1, 1),
+        "siemensstar": (101, 101),
+        "slantededge": (128, 68),
+        "snellen_e_20_20": (15, 15),
+        "tiltedsquare": (47, 47),
+    }
+
+
 @pytest.mark.parametrize(
-    ("renderer", "figure_to_bytes_path"),
+    ("renderer", "figure_to_bytes_path", "expected_figure_size"),
     [
         (
             render_convolved_image,
             "hoa_visualizer_utils.rendering.convolved_image._figure_to_bytes",
+            (10, 10),
         ),
-        (render_psf, "hoa_visualizer_utils.rendering.psf._figure_to_bytes"),
-        (render_wavefront, "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes"),
+        (render_psf, "hoa_visualizer_utils.rendering.psf._figure_to_bytes", (10, 9)),
+        (
+            render_wavefront,
+            "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+            (10, 9),
+        ),
     ],
 )
 def test_render_helpers_use_large_default_figure_size(
     monkeypatch: pytest.MonkeyPatch,
     renderer,
     figure_to_bytes_path: str,
+    expected_figure_size: tuple[int, int],
 ) -> None:
     simulation = compute_simulation(
         10,
@@ -1310,7 +1412,7 @@ def test_render_helpers_use_large_default_figure_size(
 
     fig = rendered_figures[0]
     try:
-        assert tuple(fig.get_size_inches()) == pytest.approx((10, 9))
+        assert tuple(fig.get_size_inches()) == pytest.approx(expected_figure_size)
     finally:
         _load_pyplot().close(fig)
 
