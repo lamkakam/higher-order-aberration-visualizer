@@ -2265,7 +2265,7 @@ it('shows independent approximate Strehl ratios for each polychromatic wavelengt
   expect(card.getByText('550 nm: 67.4%')).toBeInTheDocument();
   expect(card.getByText('656 nm: 20.6%')).toBeInTheDocument();
   expect(card.getByText('486 nm: 2.9%')).toBeInTheDocument();
-  expect(card.getAllByRole('separator')).toHaveLength(3);
+  expect(card.getAllByRole('separator')).toHaveLength(2);
 });
 
 it('does not show the approximate Strehl ratio in basic mode', () => {

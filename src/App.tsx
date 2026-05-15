@@ -288,9 +288,9 @@ export function App({ workerClient }: AppProps) {
             <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
               Approx. Strehl Ratio:
             </Typography>
-            {simulationWavelengths.map((wavelength) => (
+            {simulationWavelengths.map((wavelength, index) => (
               <Fragment key={wavelength}>
-                <Divider flexItem orientation="vertical" />
+                {index > 0 ? <Divider flexItem orientation="vertical" /> : undefined}
                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                   {wavelength} nm:{' '}
                   {(
