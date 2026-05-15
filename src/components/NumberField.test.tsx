@@ -14,6 +14,29 @@ describe('NumberField', () => {
     expect(screen.getByLabelText('Aperture')).toHaveValue('3');
   });
 
+  it('can use an external label without rendering an embedded label', () => {
+    render(
+      <>
+        <label htmlFor="aperture-input">Aperture</label>
+        <NumberField
+          id="aperture-input"
+          label="Aperture"
+          labelMode="external"
+          value={3}
+          min={0.5}
+          onChange={vi.fn()}
+        />
+      </>
+    );
+
+    expect(screen.getByText('Aperture', { selector: 'label' })).toHaveAttribute(
+      'for',
+      'aperture-input'
+    );
+    expect(screen.getByLabelText('Aperture')).toHaveValue('3');
+    expect(document.querySelector('.MuiInputLabel-root')).not.toBeInTheDocument();
+  });
+
   it('updates draft text immediately without committing after timers advance', async () => {
     vi.useFakeTimers();
     const onChange = vi.fn();

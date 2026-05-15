@@ -6,7 +6,9 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import { useCallback, useId, useState } from 'react';
 
 interface NumberFieldProps {
+  readonly id?: string;
   readonly label: string;
+  readonly labelMode?: 'embedded' | 'external';
   readonly value: number;
   readonly min: number;
   readonly error?: boolean;
@@ -14,18 +16,22 @@ interface NumberFieldProps {
 }
 
 export function NumberField({
+  id: providedId,
   label,
+  labelMode = 'embedded',
   value,
   min,
   error = false,
   onChange
 }: NumberFieldProps) {
-  const id = useId();
+  const generatedId = useId();
+  const id = providedId ?? generatedId;
 
   return (
     <NumberFieldInput
       id={id}
       label={label}
+      labelMode={labelMode}
       value={value}
       min={min}
       error={error}
@@ -41,6 +47,7 @@ interface NumberFieldInputProps extends NumberFieldProps {
 function NumberFieldInput({
   id,
   label,
+  labelMode = 'embedded',
   value,
   min,
   error = false,
@@ -102,10 +109,10 @@ function NumberFieldInput({
       }}
     >
       <FormControl fullWidth error={error} variant="outlined" size="small">
-        <InputLabel htmlFor={id}>{label}</InputLabel>
+        {labelMode === 'embedded' ? <InputLabel htmlFor={id}>{label}</InputLabel> : undefined}
         <OutlinedInput
           id={id}
-          label={label}
+          label={labelMode === 'embedded' ? label : undefined}
           type="text"
           value={currentDraftState.draftValue}
           inputProps={{ inputMode: 'decimal', min, step: 0.1 }}
