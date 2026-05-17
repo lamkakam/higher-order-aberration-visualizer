@@ -7,7 +7,9 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import { memo, useCallback, useId, useState } from 'react';
 import type { ZernikeCoefficientKey } from '../workers/types';
@@ -47,13 +49,21 @@ interface AberrationSlidersCardProps {
   readonly values: Record<ZernikeCoefficientKey, number>;
   readonly onValueChange: (key: ZernikeCoefficientKey, value: number) => void;
   readonly onReset: () => void;
+  readonly showWavelengthSyncControls?: boolean;
+  readonly syncWavelengthCoefficients?: boolean;
+  readonly onSyncWavelengthCoefficientsChange?: (enabled: boolean) => void;
+  readonly onResetAllWavelengths?: () => void;
 }
 
 export function AberrationSlidersCard({
   wavelengthNm,
   values,
   onValueChange,
-  onReset
+  onReset,
+  showWavelengthSyncControls = false,
+  syncWavelengthCoefficients = true,
+  onSyncWavelengthCoefficientsChange,
+  onResetAllWavelengths
 }: AberrationSlidersCardProps) {
   const [displayUnit, setDisplayUnit] = useState<CoefficientDisplayUnit>('wave');
   const [resetVersion, setResetVersion] = useState(0);
@@ -63,6 +73,11 @@ export function AberrationSlidersCard({
     onReset();
   }, [onReset]);
 
+  const handleResetAllWavelengths = useCallback(() => {
+    setResetVersion((currentVersion) => currentVersion + 1);
+    onResetAllWavelengths?.();
+  }, [onResetAllWavelengths]);
+
   return (
     <Card variant="outlined">
       <CardContent>
@@ -70,10 +85,19 @@ export function AberrationSlidersCard({
           <Typography variant="h6" component="h2">
             Optical Aberrations (Zernike)
           </Typography>
-          <Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Button aria-label="Reset aberrations" variant="outlined" onClick={handleReset}>
               Reset
             </Button>
+            {showWavelengthSyncControls ? (
+              <Button
+                aria-label="Reset all wavelengths"
+                variant="outlined"
+                onClick={handleResetAllWavelengths}
+              >
+                Reset all wavelengths
+              </Button>
+            ) : undefined}
           </Box>
           <Stack spacing={1}>
             <Typography variant="body2">Coefficient Unit (RMS)</Typography>
@@ -91,6 +115,19 @@ export function AberrationSlidersCard({
                 </Button>
               ))}
             </ButtonGroup>
+            {showWavelengthSyncControls ? (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={syncWavelengthCoefficients}
+                    onChange={(_, checked) => {
+                      onSyncWavelengthCoefficientsChange?.(checked);
+                    }}
+                  />
+                }
+                label="Sync wavelengths"
+              />
+            ) : undefined}
           </Stack>
           <Stack spacing={1.5}>
             <ZernikeControlsAccordion
