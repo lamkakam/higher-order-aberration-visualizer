@@ -367,6 +367,7 @@ export function App({ workerClient }: AppProps) {
     diagnosticWavelengthNm,
     effectiveSpectralMode,
     showScaleBar,
+    setDiagnostics,
     targetId,
     wavefrontLegendUnit,
     simulationCoefficientsByWavelength,
