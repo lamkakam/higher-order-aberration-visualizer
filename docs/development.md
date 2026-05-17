@@ -16,11 +16,15 @@ Run the Vite dev server:
 npm run dev
 ```
 
+`npm run dev` first builds the internal Python wheel into `public/pyodide` through the `predev` npm lifecycle hook.
+
 Build the production bundle:
 
 ```sh
 npm run build
 ```
+
+`npm run build` first builds the internal Python wheel into `public/pyodide` through the `prebuild` npm lifecycle hook.
 
 Preview the production bundle locally:
 
@@ -39,6 +43,8 @@ Run Vitest once:
 ```sh
 npm test
 ```
+
+`npm test` runs Vitest first, then runs the Python test suite.
 
 Run Vitest in watch mode:
 

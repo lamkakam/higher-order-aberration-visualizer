@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "scripts/build-pyodide-wheel.sh",
     "dev": "vite",
+    "prebuild": "scripts/build-pyodide-wheel.sh",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && scripts/test-python.sh",
     "test:watch": "vitest",
     "e2e": "playwright test"
   },
