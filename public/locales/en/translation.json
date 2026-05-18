@@ -72,8 +72,8 @@
       "label": "Snellen Chart Letter E on 20/20",
       "description": "An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target."
     },
-    "jupiter_502nm": {
-      "label": "Jupiter (HST 502 nm, 50 arcsec)",
+    "jupiter": {
+      "label": "Jupiter (angular diameter 50 arcsecond)",
       "description": "A telescope-style picture of Jupiter used to see how fine details are softened."
     },
     "point_source": {

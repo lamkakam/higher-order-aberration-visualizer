@@ -53,8 +53,9 @@ describe('optics worker', () => {
     zernikeCoefficientsByWavelength: [[550, {}]]
   } as const;
 
-  it('exposes the Jupiter HST target id', () => {
-    expect(supportedTargetIds).toContain('jupiter_502nm');
+  it('exposes the Jupiter target id without the asset wavelength suffix', () => {
+    expect(supportedTargetIds).toContain('jupiter');
+    expect(supportedTargetIds).not.toContain('jupiter_502nm');
   });
 
   it('exposes the point source target id', () => {

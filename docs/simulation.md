@@ -41,13 +41,13 @@ Supported target ids are defined in both [`src/workers/types.ts`](../src/workers
 
 - `snellen_e_20_20`
 - `logmar_chart`
-- `jupiter_502nm`
+- `jupiter`
 - `point_source`
 - `siemensstar`
 - `slantededge`
 - `tiltedsquare`
 
-`targets.py` builds synthetic Siemens star, slanted edge, tilted square, Snellen E, LogMAR, and point-source targets. The monochrome Jupiter target uses the packaged [`jupiter_502nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz) asset. In polychromatic runs, Jupiter uses [`jupiter_658nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz) for red, `jupiter_502nm.npz` for green, and [`jupiter_395nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz) for blue. The simulation reads the committed packaged Jupiter assets directly. Each Jupiter asset is normalized to a dark-background, bright-disk representation, cropped to the detected disk frame, resized to the requested angular diameter, and centered on the output grid so RGB wavelength channels share the same spatial registration.
+`targets.py` builds synthetic Siemens star, slanted edge, tilted square, Snellen E, LogMAR, Jupiter, and point-source targets. The public Jupiter target id is `jupiter`, while the monochrome Jupiter target continues to use the packaged [`jupiter_502nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz) asset. In polychromatic runs, Jupiter uses [`jupiter_658nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz) for red, `jupiter_502nm.npz` for green, and [`jupiter_395nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz) for blue. The simulation reads the committed packaged Jupiter assets directly. Each Jupiter asset is normalized to a dark-background, bright-disk representation, cropped to the detected disk frame, resized to the requested angular diameter, and centered on the output grid so RGB wavelength channels share the same spatial registration.
 
 ## Computation Path
 

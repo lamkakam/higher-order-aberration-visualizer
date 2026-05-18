@@ -17,7 +17,7 @@ SUPPORTED_TARGET_IDS = frozenset(
         "tiltedsquare",
         "snellen_e_20_20",
         "logmar_chart",
-        "jupiter_502nm",
+        "jupiter",
         "point_source",
     }
 )
@@ -131,8 +131,8 @@ def _make_target(
             x.shape,
             image_dx_arcmin=image_dx_arcmin,
         )
-    if target_id == "jupiter_502nm":
-        return _make_jupiter_502nm(
+    if target_id == "jupiter":
+        return _make_jupiter(
             x.shape,
             image_dx_arcmin=image_dx_arcmin,
         )
@@ -248,7 +248,7 @@ def _logmar_stroke_px(
     return max(1.0, stroke_arcmin / image_dx_arcmin)
 
 
-def _make_jupiter_502nm(
+def _make_jupiter(
     shape: tuple[int, int],
     *,
     image_dx_arcmin: float,
@@ -302,7 +302,7 @@ def _make_jupiter_target(
     diameter_px = max(1, round(JUPITER_502NM_DIAMETER_ARCMIN / image_dx_arcmin))
     rows, columns = shape
     if diameter_px > rows or diameter_px > columns:
-        raise ValueError("jupiter_502nm target is larger than the image grid")
+        raise ValueError("jupiter target is larger than the image grid")
 
     source = _load_prepared_jupiter_asset(asset_filename)
     zoom = (diameter_px / source.shape[0], diameter_px / source.shape[1])

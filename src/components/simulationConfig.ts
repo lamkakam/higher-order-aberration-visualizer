@@ -11,8 +11,8 @@ export const targetOptions = [
     label: 'Snellen Chart Letter E on 20/20'
   },
   {
-    id: 'jupiter_502nm',
-    label: 'Jupiter (HST 502 nm, 50 arcsec)'
+    id: 'jupiter',
+    label: 'Jupiter (angular diameter 50 arcsecond)'
   },
   {
     id: 'point_source',
