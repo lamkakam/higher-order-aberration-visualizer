@@ -58,7 +58,7 @@
     "spectralMode": "Spectral Mode",
     "monochromatic": "Monochromatic",
     "polychromatic": "Polychromatic",
-    "polychromaticWavelength": "Polychromatic wavelength",
+    "polychromaticWavelength": "Wavelengths",
     "legendUnit": "Legend Unit",
     "wave": "Wave",
     "micron": "Micron"
@@ -71,11 +71,11 @@
     },
     "snellen_e_20_20": {
       "label": "Snellen Chart Letter E on 20/20",
-      "description": "An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target."
+      "description": "An eye-chart letter E from the 20/20 (6/6) line. An eye with standard vision should be able to resolve this target from 20 feet or 6 meters away."
     },
     "jupiter": {
       "label": "Jupiter (angular diameter 50 arcsecond)",
-      "description": "A telescope-style picture of Jupiter used to see how fine details are softened."
+      "description": "A picture of Jupiter used for showing how fine details are softened by aberrations."
     },
     "point_source": {
       "label": "Point Source (Airy Disc)",
@@ -83,7 +83,7 @@
     },
     "siemensstar": {
       "label": "Siemens Star",
-      "description": "A circular pattern of black-and-white spokes, useful for showing where fine details become blurred."
+      "description": "A circular pattern of black-and-white spokes, useful for showing defocus and astigmatism."
     },
     "slantededge": {
       "label": "Slanted Edge",
@@ -102,18 +102,18 @@
     "obstructionShape": "Obstruction Shape",
     "obstructionRotation": "Obstruction Rotation",
     "spiderVanes": "Spider Vanes",
-    "vaneWidth": "Vane Width (x Aperture Diameter)",
+    "vaneWidth": "Vane Width (times Aperture Diameter)",
     "vaneRotation": "Vane Rotation",
     "gaussianApodization": "Gaussian Apodization",
-    "standardDeviation": "Standard Deviation (x Aperture Diameter)",
+    "standardDeviation": "Standard Deviation (times Aperture Diameter)",
     "preview": "Preview",
-    "preparing": "Preparing aperture mask...",
+    "preparing": "Preparing aperture mask preview...",
     "previewAlt": "Aperture mask preview",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "cancelAria": "Cancel aperture mask",
     "confirmAria": "Confirm aperture mask",
-    "previewFailed": "Aperture preview failed",
+    "previewFailed": "Aperture mask preview failed",
     "circle": "Circle",
     "square": "Square",
     "regularHexagon": "Regular Hexagon"
