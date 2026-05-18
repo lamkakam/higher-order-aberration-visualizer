@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from './App';
+import i18n, { cachedLanguageKey } from './i18n';
 import { createMockWorkerClient } from './test/workerMock';
 import type {
   ApertureMaskResult,
@@ -89,9 +90,18 @@ function setMatchesSm(matches: boolean) {
 }
 
 afterEach(() => {
+  window.localStorage.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
+function setNavigatorLanguages(language: string, languages: readonly string[]) {
+  vi.stubGlobal('navigator', {
+    ...window.navigator,
+    language,
+    languages
+  });
+}
 
 it('renders the header and settings drawer theme controls', async () => {
   const user = userEvent.setup();
@@ -99,7 +109,7 @@ it('renders the header and settings drawer theme controls', async () => {
 
   expect(screen.getByText('HOA Visualizer')).toBeInTheDocument();
   expect(screen.getByText('Optical Aberration Simulator')).toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('browser');
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
 
   await user.click(screen.getByRole('button', { name: 'Setting' }));
 
@@ -115,23 +125,50 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
-it('renders the language selector before the settings button and supports explicit English', async () => {
-  const user = userEvent.setup();
+it('renders the language selector before the settings button and supports explicit English', () => {
+  const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
   render(<App workerClient={createMockWorkerClient()} />);
 
   const languageSelect = screen.getByRole('combobox', { name: 'Language' });
   const settingsButton = screen.getByRole('button', { name: 'Setting' });
 
-  expect(languageSelect).toHaveValue('browser');
-  expect(screen.getByRole('option', { name: 'Browser default' })).toBeInTheDocument();
+  expect(languageSelect).toHaveValue('en');
+  expect(screen.queryByRole('option', { name: 'Browser default' })).not.toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument();
   expect(
     languageSelect.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
 
-  await user.selectOptions(languageSelect, 'en');
+  fireEvent.change(languageSelect, { target: { value: 'en' } });
 
+  expect(changeLanguage).toHaveBeenCalledWith('en');
+  changeLanguage.mockRestore();
   expect(languageSelect).toHaveValue('en');
+});
+
+it('uses cached supported language before checking browser languages', async () => {
+  window.localStorage.setItem(cachedLanguageKey, 'en');
+  setNavigatorLanguages('fr-FR', ['fr-FR']);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+});
+
+it('matches browser language variants to a supported language', async () => {
+  setNavigatorLanguages('en-US', ['en-US']);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+});
+
+it('falls back to English for unsupported browser languages', async () => {
+  setNavigatorLanguages('fr-FR', ['fr-FR']);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
 });
 
 it('renders core UI text through the English translation file', async () => {

@@ -8,7 +8,8 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n, { cachedLanguageKey } from '../i18n';
+import i18n, { resolveSupportedLanguage, supportedLanguageCodes } from '../i18n';
+import type { SupportedLanguageCode } from '../i18n';
 
 interface AppHeaderProps {
   readonly onOpenSettings: () => void;
@@ -17,8 +18,8 @@ interface AppHeaderProps {
 export function AppHeader({ onOpenSettings }: AppHeaderProps) {
   const { t } = useTranslation();
   const languageSelectId = useId();
-  const [languageMode, setLanguageMode] = useState<'browser' | 'en'>(() =>
-    window.localStorage.getItem(cachedLanguageKey) === 'en' ? 'en' : 'browser'
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguageCode>(
+    resolveSupportedLanguage
   );
 
   return (
@@ -36,26 +37,22 @@ export function AppHeader({ onOpenSettings }: AppHeaderProps) {
           <FormControl size="small">
             <InputLabel htmlFor={languageSelectId}>{t('language.label')}</InputLabel>
             <NativeSelect
-              value={languageMode}
+              value={selectedLanguage}
               onChange={(event) => {
-                const nextMode = event.target.value === 'en' ? 'en' : 'browser';
-                setLanguageMode(nextMode);
-
-                if (nextMode === 'browser') {
-                  window.localStorage.removeItem(cachedLanguageKey);
-                  void i18n.changeLanguage();
-                  return;
-                }
-
-                void i18n.changeLanguage('en');
+                const nextLanguage = event.target.value as SupportedLanguageCode;
+                setSelectedLanguage(nextLanguage);
+                void i18n.changeLanguage(nextLanguage);
               }}
               inputProps={{
                 id: languageSelectId,
                 'aria-label': t('language.label')
               }}
             >
-              <option value="browser">{t('language.browserDefault')}</option>
-              <option value="en">{t('language.english')}</option>
+              {supportedLanguageCodes.map((languageCode) => (
+                <option key={languageCode} value={languageCode}>
+                  {t(`language.options.${languageCode}`)}
+                </option>
+              ))}
             </NativeSelect>
           </FormControl>
           <Button aria-label={t('settings.open')} variant="contained" onClick={onOpenSettings}>

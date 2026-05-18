@@ -62,7 +62,7 @@ Playwright configuration is in [`playwright.config.ts`](../playwright.config.ts)
 
 ## Translations
 
-The app uses [`src/i18n.ts`](../src/i18n.ts) for client-side i18next setup. Locale files live under [`public/locales/<language>/translation.json`](../public/locales/en/translation.json) and are loaded lazily in the browser from `/locales/{{lng}}/{{ns}}.json`.
+The app uses [`src/i18n.ts`](../src/i18n.ts) for client-side i18next setup. Locale files live under [`public/locales/<language>/translation.json`](../public/locales/en/translation.json) and are loaded lazily in the browser from `/locales/{{lng}}/{{ns}}.json`. The header language selector shows concrete supported languages only; first-load browser locale matching is handled in code rather than by a visible browser-default option.
 
 To add a future language, add a matching `public/locales/<language>/translation.json`, add the language code to `supportedLngs` in `src/i18n.ts`, and expose it in the header language selector. Keep translation keys stable and update React/Vitest and Playwright coverage when user-visible labels or accessible names change.
 

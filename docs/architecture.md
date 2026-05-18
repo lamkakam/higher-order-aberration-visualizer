@@ -20,7 +20,7 @@ Input controls keep fast-moving draft text and slider positions local so typing 
 
 Client-side translations are configured in [`src/i18n.ts`](../src/i18n.ts) with `i18next`, `react-i18next`, `i18next-http-backend`, and `i18next-browser-languagedetector`. Runtime locale files are served from [`public/locales`](../public/locales) using the backend path `/locales/{{lng}}/{{ns}}.json`.
 
-English is currently the only supported language. The i18n instance uses `supportedLngs: ['en']`, `fallbackLng: 'en'`, and `load: 'languageOnly'`, so unsupported browser locales resolve to English. The header language selector can either follow the browser detector or explicitly select English through `changeLanguage('en')`; returning to Browser default clears the cached explicit language before re-running detection.
+English is currently the only supported language. The i18n instance uses `supportedLngs: ['en']`, `fallbackLng: 'en'`, and `load: 'languageOnly'`, so unsupported browser locales resolve to English. The header language selector always shows a concrete supported language. On first load it uses a cached supported language when available, otherwise matches browser locales by exact or base language code, such as `en-US` to `en`, and falls back to English.
 
 ## Worker Boundary
 

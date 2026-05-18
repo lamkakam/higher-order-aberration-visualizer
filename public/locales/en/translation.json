@@ -5,8 +5,9 @@
   },
   "language": {
     "label": "Language",
-    "browserDefault": "Browser default",
-    "english": "English"
+    "options": {
+      "en": "English"
+    }
   },
   "settings": {
     "open": "Setting",

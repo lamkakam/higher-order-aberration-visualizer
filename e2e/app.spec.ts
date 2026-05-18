@@ -127,8 +127,6 @@ test('app loads the simulator controls', async ({ page }) => {
 
   await expect(page.getByText('HOA Visualizer')).toBeVisible();
   await expect(page.getByText('Optical Aberration Simulator')).toBeVisible();
-  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('browser');
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('en');
   await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
 
   await page.getByRole('button', { name: 'Setting' }).click();
