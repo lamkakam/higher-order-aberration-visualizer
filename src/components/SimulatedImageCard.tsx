@@ -9,6 +9,7 @@ import CardContent from '@mui/material/CardContent';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import { type ReactNode, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SimulatedImageCardProps {
   readonly imageUrl: string | undefined;
@@ -32,6 +33,7 @@ interface PreviewableImageProps {
 }
 
 function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
+  const { t } = useTranslation();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   return (
@@ -39,7 +41,7 @@ function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
       <Box
         component="button"
         type="button"
-        aria-label={`Open enlarged ${title} image`}
+        aria-label={t('results.openEnlarged', { title })}
         onClick={() => {
           setIsPreviewOpen(true);
         }}
@@ -68,11 +70,11 @@ function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
         onClose={() => {
           setIsPreviewOpen(false);
         }}
-        aria-label={`${title} enlarged image`}
+        aria-label={t('results.enlargedDialog', { title })}
       >
         <Box
           role="dialog"
-          aria-label={`${title} enlarged image`}
+          aria-label={t('results.enlargedDialog', { title })}
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setIsPreviewOpen(false);
@@ -101,7 +103,7 @@ function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
             }}
           />
           <Button
-            aria-label="Close enlarged image"
+            aria-label={t('results.closeEnlarged')}
             variant="contained"
             onClick={() => {
               setIsPreviewOpen(false);
@@ -112,7 +114,7 @@ function PreviewableImage({ imageUrl, title, altText }: PreviewableImageProps) {
               top: 16
             }}
           >
-            Close enlarged image
+            {t('results.closeEnlarged')}
           </Button>
         </Box>
       </Modal>
@@ -141,12 +143,15 @@ export function ImageResultPreview({
   statusText,
   isLoading,
   error,
-  title = 'Simulated Image',
-  altText = 'Convolved simulated target'
+  title,
+  altText
 }: Pick<
   ImageResultPanelProps,
   'imageUrl' | 'statusText' | 'isLoading' | 'error' | 'title' | 'altText'
 >) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('results.simulatedImage');
+  const resolvedAltText = altText ?? t('results.convolvedAlt');
   const previewImageUrl = getPreviewImageUrl(imageUrl, error, isLoading);
 
   return (
@@ -165,10 +170,10 @@ export function ImageResultPreview({
       }}
     >
       {previewImageUrl ? (
-        <PreviewableImage imageUrl={previewImageUrl} title={title} altText={altText} />
+        <PreviewableImage imageUrl={previewImageUrl} title={resolvedTitle} altText={resolvedAltText} />
       ) : (
         <Typography color={error ? 'error' : 'text.secondary'}>
-          {error ?? (isLoading ? 'Preparing image...' : statusText)}
+          {error ?? (isLoading ? t('status.preparingImage') : statusText)}
         </Typography>
       )}
     </Box>
@@ -179,8 +184,8 @@ export function ImageResultDetailsAccordion({
   imageUrl,
   isLoading,
   error,
-  title = 'Simulated Image',
-  description = 'This shows how the selected picture would look through the current optical settings.',
+  title,
+  description,
   supplementalDescription,
   aboveAccordionContent,
   bottomContent
@@ -195,6 +200,9 @@ export function ImageResultDetailsAccordion({
   | 'aboveAccordionContent'
   | 'bottomContent'
 >) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('results.simulatedImage');
+  const resolvedDescription = description ?? t('results.simulatedDescription');
   const previewImageUrl = getPreviewImageUrl(imageUrl, error, isLoading);
   const showEnlargementHint = shouldShowEnlargementHint(previewImageUrl, error, isLoading);
   const accordionId = useId();
@@ -216,12 +224,12 @@ export function ImageResultDetailsAccordion({
       >
         <AccordionSummary
           aria-controls={`${accordionId}-content`}
-          aria-label={title}
+          aria-label={resolvedTitle}
           expandIcon={<ExpandMoreIcon />}
           id={`${accordionId}-header`}
         >
           <Typography variant="h6" component="span">
-            {title}
+            {resolvedTitle}
           </Typography>
         </AccordionSummary>
         <AccordionDetails
@@ -229,7 +237,7 @@ export function ImageResultDetailsAccordion({
           sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0 }}
         >
           <ImageResultDetailsContent
-            description={description}
+            description={resolvedDescription}
             supplementalDescription={supplementalDescription}
             showEnlargementHint={showEnlargementHint}
             bottomContent={bottomContent}
@@ -253,6 +261,8 @@ export function ImageResultDetailsContent({
   showEnlargementHint,
   bottomContent
 }: ImageResultDetailsContentProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <Typography variant="body2" color="text.secondary">
@@ -265,7 +275,7 @@ export function ImageResultDetailsContent({
       ) : undefined}
       {showEnlargementHint ? (
         <Typography variant="body2" color="text.secondary">
-          Click the image to view it enlarged.
+          {t('results.enlargementHint')}
         </Typography>
       ) : undefined}
       {bottomContent}

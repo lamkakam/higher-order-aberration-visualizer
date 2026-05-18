@@ -27,6 +27,7 @@ import {
   useMemo,
   useState
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AberrationSlidersCard,
   AppHeader,
@@ -80,8 +81,8 @@ const mobileStickyTopPx = 16;
 const desktopStickyTopPx = 24;
 const advancedGridHalfGapPx = 12;
 const wavefrontLegendUnitOptions = [
-  { value: 'wave', label: 'Wave' },
-  { value: 'micron', label: 'Micron' }
+  { value: 'wave', labelKey: 'opticalSystem.wave' },
+  { value: 'micron', labelKey: 'opticalSystem.micron' }
 ] as const;
 const spectralWavelengths = [550, 656, 486] as const;
 type SpectralWavelength = (typeof spectralWavelengths)[number];
@@ -97,6 +98,7 @@ interface AdvancedResultCardProps {
 }
 
 function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedResultCardProps) {
+  const { t } = useTranslation();
   const gridTemplateColumns = `repeat(${panels.length}, minmax(0, 1fr))`;
   const showSharedEnlargementHint = panels.some(
     (panel) => !panel.error && (panel.isLoading || (Boolean(panel.imageUrl) && !panel.isLoading))
@@ -126,12 +128,12 @@ function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedRes
         >
           <AccordionSummary
             aria-controls={`${accordionId}-content`}
-            aria-label="Image Descriptions"
+            aria-label={t('results.imageDescriptions')}
             expandIcon={<ExpandMoreIcon />}
             id={`${accordionId}-header`}
           >
             <Typography variant="h6" component="span">
-              Image Descriptions
+              {t('results.imageDescriptions')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails
@@ -144,13 +146,13 @@ function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedRes
             }}
           >
             {panels.map((panel, index) => {
-              const title = panel.title ?? 'Simulated Image';
+              const title = panel.title ?? t('results.simulatedImage');
 
               return (
                 <Box
                   key={panel.id}
                   role="group"
-                  aria-label={`${title} description`}
+                  aria-label={t('results.descriptionGroup', { title })}
                   sx={{
                     borderLeft: index === 0 ? 0 : 1,
                     borderColor: 'divider',
@@ -167,7 +169,7 @@ function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedRes
                   <ImageResultDetailsContent
                     description={
                       panel.description ??
-                      'This shows how the selected picture would look through the current optical settings.'
+                      t('results.simulatedDescription')
                     }
                     supplementalDescription={panel.supplementalDescription}
                     showEnlargementHint={false}
@@ -182,7 +184,7 @@ function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedRes
                 color="text.secondary"
                 sx={{ gridColumn: '1 / -1' }}
               >
-                Click the image to view it enlarged.
+                {t('results.enlargementHint')}
               </Typography>
             ) : undefined}
           </AccordionDetails>
@@ -202,6 +204,7 @@ function createDefaultZernikeCoefficientsByWavelength(): ZernikeCoefficientsByWa
 
 export function App({ workerClient }: AppProps) {
   const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
+  const { t } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
@@ -226,8 +229,13 @@ export function App({ workerClient }: AppProps) {
   const isWorkerInitializing = diagnostics.status === 'initializing';
   const isImageLoading = isLoading && !isWorkerInitializing;
   const selectedTarget = targetOptions.find((target) => target.id === targetId) ?? targetOptions[0];
-  const simulatedImageDescription = `This shows how the selected picture would look through the current optical settings. Current target: ${selectedTarget.description}`;
-  const psfSupplementalDescription = supplementalDescriptions[targetId];
+  const selectedTargetDescription = t(`targets.${selectedTarget.id}.description`);
+  const simulatedImageDescription = t('results.simulatedDescriptionWithTarget', {
+    description: selectedTargetDescription
+  });
+  const psfSupplementalDescription = supplementalDescriptions[targetId]
+    ? t(`targets.${targetId}.supplementalDescription`)
+    : undefined;
   const desktopAdvancedMaskOffset = displayMode === 'advanced' ? `-${advancedGridHalfGapPx}px` : 0;
   const shouldMergeAdvancedResults = displayMode === 'advanced' && isSmUp;
   const stickyImageCardMaskSx = {
@@ -292,7 +300,7 @@ export function App({ workerClient }: AppProps) {
         {isPolychromatic ? (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-              Approx. Strehl Ratio:
+              {t('aberrations.approxStrehl')}
             </Typography>
             {simulationWavelengths.map((wavelength, index) => (
               <Fragment key={wavelength}>
@@ -311,7 +319,7 @@ export function App({ workerClient }: AppProps) {
           </>
         ) : (
           <Typography variant="body2" color="text.secondary">
-            {formatApproximateStrehlRatio(zernikeCoefficientsByWavelength[550])}
+            {formatApproximateStrehlRatio(zernikeCoefficientsByWavelength[550], t)}
           </Typography>
         )}
       </Stack>
@@ -335,7 +343,8 @@ export function App({ workerClient }: AppProps) {
           wavefrontLegendUnit,
           zernikeCoefficientsByWavelength: simulationCoefficientsByWavelength
         }),
-        computeTimeoutMs
+        computeTimeoutMs,
+        t('status.computeTimedOut')
       )
         .then((nextResult) => {
           if (!cancelled) {
@@ -346,7 +355,7 @@ export function App({ workerClient }: AppProps) {
         })
         .catch((caughtError) => {
           if (!cancelled) {
-            setError(caughtError instanceof Error ? caughtError.message : 'Simulation failed');
+            setError(caughtError instanceof Error ? caughtError.message : t('status.simulationFailed'));
           }
         })
         .finally(() => {
@@ -368,6 +377,7 @@ export function App({ workerClient }: AppProps) {
     effectiveSpectralMode,
     showScaleBar,
     setDiagnostics,
+    t,
     targetId,
     wavefrontLegendUnit,
     simulationCoefficientsByWavelength,
@@ -437,19 +447,19 @@ export function App({ workerClient }: AppProps) {
         variant="subtitle1"
         sx={{ mb: 1 }}
       >
-        Legend Unit
+        {t('opticalSystem.legendUnit')}
       </Typography>
       <ButtonGroup aria-labelledby="wavefront-legend-unit-button-group-label" fullWidth>
         {wavefrontLegendUnitOptions.map((option) => (
           <Button
             key={option.value}
-            aria-label={option.label}
+            aria-label={t(option.labelKey)}
             variant={wavefrontLegendUnit === option.value ? 'contained' : 'outlined'}
             onClick={() => {
               setWavefrontLegendUnit(option.value);
             }}
           >
-            {option.label}
+            {t(option.labelKey)}
           </Button>
         ))}
       </ButtonGroup>
@@ -470,10 +480,10 @@ export function App({ workerClient }: AppProps) {
     statusText: diagnostics.message,
     isLoading: isImageLoading,
     error,
-    title: 'PSF',
-    description: 'The rendered point spread function for the current optical system.',
+    title: t('results.psf'),
+    description: t('results.psfDescription'),
     supplementalDescription: psfSupplementalDescription,
-    altText: 'Rendered point spread function'
+    altText: t('results.psfAlt')
   };
   const wavefrontPanel: AdvancedResultPanel = {
     id: 'wavefront-map',
@@ -481,9 +491,9 @@ export function App({ workerClient }: AppProps) {
     statusText: diagnostics.message,
     isLoading: isImageLoading,
     error,
-    title: 'Wavefront Map',
-    description: 'The rendered wavefront map for the current Zernike aberration values.',
-    altText: 'Rendered wavefront map',
+    title: t('results.wavefrontMap'),
+    description: t('results.wavefrontDescription'),
+    altText: t('results.wavefrontAlt'),
     bottomContent: wavefrontLegendUnitControl
   };
   const advancedResultPanels =
@@ -592,7 +602,7 @@ export function App({ workerClient }: AppProps) {
               {isPolychromatic ? (
                 <Stack spacing={2}>
                   <Tabs
-                    aria-label="Polychromatic wavelength"
+                    aria-label={t('opticalSystem.polychromaticWavelength')}
                     value={selectedWavelength}
                     onChange={(_, nextWavelength: SpectralWavelength) => {
                       setSelectedWavelength(nextWavelength);
@@ -639,7 +649,7 @@ export function App({ workerClient }: AppProps) {
         {isWorkerInitializing ? (
           <Box
             role="status"
-            aria-label="Worker initialization"
+            aria-label={t('status.workerInitialization')}
             sx={{
               alignItems: 'center',
               backdropFilter: 'blur(2px)',
@@ -654,9 +664,9 @@ export function App({ workerClient }: AppProps) {
           >
             <Stack spacing={2} sx={{ width: 'min(320px, 100%)' }}>
               <Typography variant="h6" component="p" sx={{ textAlign: 'center' }}>
-                Initializing...
+                {t('status.initializing')}
               </Typography>
-              <LinearProgress aria-label="Initialization progress" />
+              <LinearProgress aria-label={t('status.initializationProgress')} />
             </Stack>
           </Box>
         ) : undefined}
@@ -665,11 +675,15 @@ export function App({ workerClient }: AppProps) {
   );
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> {
   let timeoutId: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = window.setTimeout(() => {
-      reject(new Error('Compute failed: worker is still initializing'));
+      reject(new Error(timeoutMessage));
     }, timeoutMs);
   });
 

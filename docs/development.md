@@ -60,6 +60,12 @@ npm run e2e
 
 Playwright configuration is in [`playwright.config.ts`](../playwright.config.ts), and end-to-end tests live in [`e2e/`](../e2e).
 
+## Translations
+
+The app uses [`src/i18n.ts`](../src/i18n.ts) for client-side i18next setup. Locale files live under [`public/locales/<language>/translation.json`](../public/locales/en/translation.json) and are loaded lazily in the browser from `/locales/{{lng}}/{{ns}}.json`.
+
+To add a future language, add a matching `public/locales/<language>/translation.json`, add the language code to `supportedLngs` in `src/i18n.ts`, and expose it in the header language selector. Keep translation keys stable and update React/Vitest and Playwright coverage when user-visible labels or accessible names change.
+
 ## Python Commands
 
 Run the Python test suite:

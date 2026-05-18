@@ -99,6 +99,7 @@ it('renders the header and settings drawer theme controls', async () => {
 
   expect(screen.getByText('HOA Visualizer')).toBeInTheDocument();
   expect(screen.getByText('Optical Aberration Simulator')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('browser');
 
   await user.click(screen.getByRole('button', { name: 'Setting' }));
 
@@ -112,6 +113,35 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.queryByText('Wavefront legend unit')).not.toBeInTheDocument();
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
+});
+
+it('renders the language selector before the settings button and supports explicit English', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  const languageSelect = screen.getByRole('combobox', { name: 'Language' });
+  const settingsButton = screen.getByRole('button', { name: 'Setting' });
+
+  expect(languageSelect).toHaveValue('browser');
+  expect(screen.getByRole('option', { name: 'Browser default' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument();
+  expect(
+    languageSelect.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+
+  await user.selectOptions(languageSelect, 'en');
+
+  expect(languageSelect).toHaveValue('en');
+});
+
+it('renders core UI text through the English translation file', async () => {
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
+  expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reset aberrations' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
 });
 
 it('shows an app-level initialization mask while the worker initializes', async () => {
@@ -166,7 +196,7 @@ it('renders default aperture and supported target options', async () => {
   expect(screen.getByText('Target', { selector: 'label' })).toHaveAttribute('for', 'target-select');
   expect(screen.getByLabelText('Target')).toHaveAttribute('id', 'target-select');
 
-  const targetOptions = screen.getAllByRole('option');
+  const targetOptions = within(screen.getByLabelText('Target')).getAllByRole('option');
   expect(targetOptions[0]).toHaveTextContent('Eye Chart (logMAR)');
   expect(targetOptions[0]).toHaveValue('logmar_chart');
   expect(screen.getByRole('option', { name: 'Eye Chart (logMAR)' })).toBeInTheDocument();

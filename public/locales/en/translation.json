@@ -1,0 +1,161 @@
+{
+  "app": {
+    "name": "HOA Visualizer",
+    "subtitle": "Optical Aberration Simulator"
+  },
+  "language": {
+    "label": "Language",
+    "browserDefault": "Browser default",
+    "english": "English"
+  },
+  "settings": {
+    "open": "Setting",
+    "mode": "Mode",
+    "light": "Light",
+    "system": "System",
+    "dark": "Dark",
+    "display": "Display",
+    "basic": "Basic",
+    "advanced": "Advanced",
+    "showScaleBar": "Show scale bar"
+  },
+  "status": {
+    "workerInitialization": "Worker initialization",
+    "initializing": "Initializing...",
+    "initializationProgress": "Initialization progress",
+    "simulationFailed": "Simulation failed",
+    "computeTimedOut": "Compute failed: worker is still initializing",
+    "preparingImage": "Preparing image..."
+  },
+  "results": {
+    "simulatedImage": "Simulated Image",
+    "simulatedDescription": "This shows how the selected picture would look through the current optical settings.",
+    "simulatedDescriptionWithTarget": "This shows how the selected picture would look through the current optical settings. Current target: {{description}}",
+    "convolvedAlt": "Convolved simulated target",
+    "imageDescriptions": "Image Descriptions",
+    "descriptionGroup": "{{title}} description",
+    "enlargementHint": "Click the image to view it enlarged.",
+    "openEnlarged": "Open enlarged {{title}} image",
+    "enlargedDialog": "{{title}} enlarged image",
+    "closeEnlarged": "Close enlarged image",
+    "psf": "PSF",
+    "psfDescription": "The rendered point spread function for the current optical system.",
+    "psfAlt": "Rendered point spread function",
+    "wavefrontMap": "Wavefront Map",
+    "wavefrontDescription": "The rendered wavefront map for the current Zernike aberration values.",
+    "wavefrontAlt": "Rendered wavefront map"
+  },
+  "opticalSystem": {
+    "title": "Optical System Config",
+    "apertureDiameter": "Aperture Diameter (mm)",
+    "target": "Target",
+    "minimumValue": "Minimum value is {{min}}.",
+    "apertureMask": "Aperture Mask",
+    "editApertureMask": "Edit aperture mask",
+    "edit": "Edit",
+    "spectralMode": "Spectral Mode",
+    "monochromatic": "Monochromatic",
+    "polychromatic": "Polychromatic",
+    "polychromaticWavelength": "Polychromatic wavelength",
+    "legendUnit": "Legend Unit",
+    "wave": "Wave",
+    "micron": "Micron"
+  },
+  "targets": {
+    "logmar_chart": {
+      "label": "Eye Chart (logMAR)",
+      "description": "The first six lines of an eye chart, with letters arranged in rows.",
+      "supplementalDescription": "The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation."
+    },
+    "snellen_e_20_20": {
+      "label": "Snellen Chart Letter E on 20/20",
+      "description": "An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target."
+    },
+    "jupiter_502nm": {
+      "label": "Jupiter (HST 502 nm, 50 arcsec)",
+      "description": "A telescope-style picture of Jupiter used to see how fine details are softened."
+    },
+    "point_source": {
+      "label": "Point Source (Airy Disc)",
+      "description": "A single tiny bright point, useful for showing how a perfect dot spreads out."
+    },
+    "siemensstar": {
+      "label": "Siemens Star",
+      "description": "A circular pattern of black-and-white spokes, useful for showing where fine details become blurred."
+    },
+    "slantededge": {
+      "label": "Slanted Edge",
+      "description": "A tilted black-and-white edge used to show how crisp an edge looks."
+    },
+    "tiltedsquare": {
+      "label": "Tilted Square",
+      "description": "A rotated square used to show how corners and edges change."
+    }
+  },
+  "apertureMask": {
+    "title": "Aperture Mask",
+    "shape": "Aperture Shape",
+    "rotation": "Aperture Rotation",
+    "centralObstructionRatio": "Central Obstruction Ratio",
+    "obstructionShape": "Obstruction Shape",
+    "obstructionRotation": "Obstruction Rotation",
+    "spiderVanes": "Spider Vanes",
+    "vaneWidth": "Vane Width (x Aperture Diameter)",
+    "vaneRotation": "Vane Rotation",
+    "gaussianApodization": "Gaussian Apodization",
+    "standardDeviation": "Standard Deviation (x Aperture Diameter)",
+    "preview": "Preview",
+    "preparing": "Preparing aperture mask...",
+    "previewAlt": "Aperture mask preview",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "cancelAria": "Cancel aperture mask",
+    "confirmAria": "Confirm aperture mask",
+    "previewFailed": "Aperture preview failed",
+    "circle": "Circle",
+    "square": "Square",
+    "regularHexagon": "Regular Hexagon"
+  },
+  "aberrations": {
+    "title": "Optical Aberrations (Zernike)",
+    "reset": "Reset",
+    "resetAria": "Reset aberrations",
+    "resetAllWavelengths": "Reset all wavelengths",
+    "coefficientUnit": "Coefficient Unit (RMS)",
+    "syncWavelengths": "Sync wavelengths",
+    "lowerOrder": "Lower Order Aberrations (Generally Correctable with Ordinary Eyeglasses)",
+    "higherOrder": "Higher Order Aberrations",
+    "coefficientLabel": "{{label}} Z({{n}},{{m}}) coefficient",
+    "termLabel": "{{label}} Z({{n}},{{m}})",
+    "rangeError": "Value must be between {{min}} and {{max}}.",
+    "approxStrehl": "Approx. Strehl Ratio:",
+    "approxStrehlValue": "Approx. Strehl Ratio: {{value}}%",
+    "terms": {
+      "2_-2": "Astigmatism (Oblique)",
+      "2_0": "Defocus",
+      "2_2": "Astigmatism (Vertical)",
+      "3_-3": "Trefoil (Vertical)",
+      "3_-1": "Coma (Vertical)",
+      "3_1": "Coma (Horizontal)",
+      "3_3": "Trefoil (Oblique)",
+      "4_-4": "Quadrafoil (Oblique)",
+      "4_-2": "Secondary Astigmatism (Oblique)",
+      "4_0": "Primary Spherical Aberration",
+      "4_2": "Secondary Astigmatism (Vertical)",
+      "4_4": "Quadrafoil (Vertical)",
+      "5_-5": "Pentafoil (Vertical)",
+      "5_-3": "Secondary Trefoil (Vertical)",
+      "5_-1": "Secondary Coma (Vertical)",
+      "5_1": "Secondary Coma (Horizontal)",
+      "5_3": "Secondary Trefoil (Oblique)",
+      "5_5": "Pentafoil (Oblique)",
+      "6_-6": "Hexafoil (Oblique)",
+      "6_-4": "Secondary Quadrafoil (Oblique)",
+      "6_-2": "Tertiary Astigmatism (Oblique)",
+      "6_0": "Secondary Spherical Aberration",
+      "6_2": "Tertiary Astigmatism (Vertical)",
+      "6_4": "Secondary Quadrafoil (Vertical)",
+      "6_6": "Hexafoil (Vertical)"
+    }
+  }
+}

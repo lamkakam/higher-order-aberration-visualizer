@@ -1,12 +1,18 @@
 import type { ApertureSettings, ApertureShape } from '../../workers/types';
+import type { TFunction } from 'i18next';
 
 export const apertureShapeOptions = [
-  { value: 'circle', label: 'Circle' },
-  { value: 'square', label: 'Square' },
-  { value: 'regular_hexagon', label: 'Regular Hexagon' }
+  { value: 'circle', label: 'Circle', labelKey: 'apertureMask.circle' },
+  { value: 'square', label: 'Square', labelKey: 'apertureMask.square' },
+  {
+    value: 'regular_hexagon',
+    label: 'Regular Hexagon',
+    labelKey: 'apertureMask.regularHexagon'
+  }
 ] as const satisfies readonly {
   readonly value: ApertureShape;
   readonly label: string;
+  readonly labelKey: string;
 }[];
 
 export const rotationSliderInput = {
@@ -191,13 +197,13 @@ export function normalizeApertureMaskDraft(
   };
 }
 
-export function formatApertureSummary(settings: ApertureSettings): string {
+export function formatApertureSummary(settings: ApertureSettings, t?: TFunction): string {
   const obstructionPercent = settings.centralObstructionRatio * 100;
   const obstructionLabel =
     settings.centralObstructionRatio > 0
-      ? ` ${formatShapeLabel(settings.centralObstructionShape).toLowerCase()}`
+      ? ` ${formatShapeLabel(settings.centralObstructionShape, t).toLowerCase()}`
       : '';
-  const maskSummary = `${formatShapeLabel(settings.shape)}, ${obstructionPercent.toLocaleString(undefined, {
+  const maskSummary = `${formatShapeLabel(settings.shape, t)}, ${obstructionPercent.toLocaleString(undefined, {
     maximumFractionDigits: 1
   })}%${obstructionLabel} obstruction`;
   const effects = [maskSummary];
@@ -287,6 +293,11 @@ function roundRatioValue(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-function formatShapeLabel(shape: ApertureShape): string {
-  return apertureShapeOptions.find((option) => option.value === shape)?.label ?? shape;
+function formatShapeLabel(shape: ApertureShape, t?: TFunction): string {
+  const option = apertureShapeOptions.find((nextOption) => nextOption.value === shape);
+  if (!option) {
+    return shape;
+  }
+
+  return t ? t(option.labelKey) : option.label;
 }

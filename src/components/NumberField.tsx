@@ -4,6 +4,7 @@ import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import { useCallback, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface NumberFieldProps {
   readonly id?: string;
@@ -53,6 +54,7 @@ function NumberFieldInput({
   error = false,
   onChange
 }: NumberFieldInputProps) {
+  const { t } = useTranslation();
   const [draftState, setDraftState] = useState({
     committedValue: value,
     draftValue: String(value)
@@ -126,7 +128,9 @@ function NumberFieldInput({
             }
           }}
         />
-        {error ? <FormHelperText>Minimum value is {min}.</FormHelperText> : undefined}
+        {error ? (
+          <FormHelperText>{t('opticalSystem.minimumValue', { min })}</FormHelperText>
+        ) : undefined}
       </FormControl>
     </BaseNumberField.Root>
   );
