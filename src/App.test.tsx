@@ -48,13 +48,13 @@ function getSpiderVanesSlider(container: HTMLElement = document.body) {
 
 function getSpiderVaneWidthTextbox(container: HTMLElement = document.body) {
   return within(container).getByRole('textbox', {
-    name: 'Vane Width (x Aperture Diameter)'
+    name: 'Vane Width (times Aperture Diameter)'
   });
 }
 
 function getSpiderVaneWidthSlider(container: HTMLElement = document.body) {
   return within(container).getByRole('slider', {
-    name: 'Vane Width (x Aperture Diameter)'
+    name: 'Vane Width (times Aperture Diameter)'
   });
 }
 
@@ -68,7 +68,7 @@ function getSpiderVaneRotationSlider(container: HTMLElement = document.body) {
 
 function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
   return within(container).getByRole('textbox', {
-    name: 'Standard Deviation (x Aperture Diameter)'
+    name: 'Standard Deviation (times Aperture Diameter)'
   });
 }
 
@@ -198,7 +198,7 @@ it('renders representative core UI text through the Traditional Chinese translat
   render(<App workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: '光學系統設定' })).toBeInTheDocument();
-  expect(screen.getByLabelText('光圈直徑 (mm)')).toHaveValue('6');
+  expect(screen.getByLabelText('口徑 (mm)')).toHaveValue('6');
   expect(screen.getByRole('heading', { name: '光學像差 (Zernike)' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '重設像差' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '模擬影像' })).toBeInTheDocument();
@@ -326,13 +326,13 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
   expect(
     within(modal).queryByRole('slider', {
-      name: 'Standard Deviation (x Aperture Diameter)'
+      name: 'Standard Deviation (times Aperture Diameter)'
     })
   ).not.toBeInTheDocument();
   expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
   expect(within(modal).getByText('Preview')).toBeInTheDocument();
-  expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
+  expect(within(modal).getByText('Preparing aperture mask preview...')).toBeInTheDocument();
   expect(within(modal).getByRole('button', { name: 'Confirm aperture mask' })).toBeInTheDocument();
   expect(within(modal).getByRole('button', { name: 'Cancel aperture mask' })).toBeInTheDocument();
 
@@ -396,7 +396,7 @@ it('shows Gaussian apodization SD controls only when enabled', async () => {
   expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
   expect(
     within(modal).queryByRole('textbox', {
-      name: 'Standard Deviation (x Aperture Diameter)'
+      name: 'Standard Deviation (times Aperture Diameter)'
     })
   ).not.toBeInTheDocument();
 
@@ -405,7 +405,7 @@ it('shows Gaussian apodization SD controls only when enabled', async () => {
   expect(getGaussianApodizationSwitch(modal)).toBeChecked();
   expect(
     within(modal).getByRole('slider', {
-      name: 'Standard Deviation (x Aperture Diameter)'
+      name: 'Standard Deviation (times Aperture Diameter)'
     })
   ).toBeInTheDocument();
   expect(getGaussianSigmaRatioTextbox(modal)).toHaveValue('0.5');
@@ -568,7 +568,7 @@ it('keeps the aperture preview panel height stable while loading and loaded', as
 
   const panel = screen.getByTestId('aperture-mask-preview-panel');
   expect(panel).toHaveStyle({ height: '280px', minHeight: '280px' });
-  expect(within(panel).getByText('Preparing aperture mask...')).toBeInTheDocument();
+  expect(within(panel).getByText('Preparing aperture mask preview...')).toBeInTheDocument();
 
   await act(async () => {
     resolvePreview({
@@ -937,7 +937,7 @@ it('updates the simulated image description when the target changes', async () =
 
   expect(
     screen.getByText(
-      'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
+      'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing defocus and astigmatism.'
     )
   ).toBeInTheDocument();
   expect(screen.queryByText(psfCutoffNote)).not.toBeInTheDocument();
