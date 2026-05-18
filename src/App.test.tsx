@@ -89,7 +89,8 @@ function setMatchesSm(matches: boolean) {
   });
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await i18n.changeLanguage('en');
   window.localStorage.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -125,7 +126,7 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
-it('renders the language selector before the settings button and supports explicit English', () => {
+it('renders the language selector before the settings button and supports explicit languages', () => {
   const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
   render(<App workerClient={createMockWorkerClient()} />);
 
@@ -135,41 +136,51 @@ it('renders the language selector before the settings button and supports explic
   expect(languageSelect).toHaveValue('en');
   expect(screen.queryByRole('option', { name: 'Browser default' })).not.toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '繁體中文' })).toBeInTheDocument();
   expect(
     languageSelect.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
 
-  fireEvent.change(languageSelect, { target: { value: 'en' } });
+  fireEvent.change(languageSelect, { target: { value: 'zh-Hant' } });
 
-  expect(changeLanguage).toHaveBeenCalledWith('en');
+  expect(changeLanguage).toHaveBeenCalledWith('zh-Hant');
   changeLanguage.mockRestore();
-  expect(languageSelect).toHaveValue('en');
+  expect(languageSelect).toHaveValue('zh-Hant');
 });
 
 it('uses cached supported language before checking browser languages', async () => {
-  window.localStorage.setItem(cachedLanguageKey, 'en');
-  setNavigatorLanguages('fr-FR', ['fr-FR']);
-
-  render(<App workerClient={createMockWorkerClient()} />);
-
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
-});
-
-it('matches browser language variants to a supported language', async () => {
+  window.localStorage.setItem(cachedLanguageKey, 'zh-Hant');
   setNavigatorLanguages('en-US', ['en-US']);
 
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('zh-Hant');
 });
 
-it('falls back to English for unsupported browser languages', async () => {
-  setNavigatorLanguages('fr-FR', ['fr-FR']);
+it.each([
+  ['en-US', 'en'],
+  ['zh-Hant', 'zh-Hant'],
+  ['zh-TW', 'zh-Hant'],
+  ['zh-HK', 'zh-Hant'],
+  ['zh-MO', 'zh-Hant']
+])('matches browser language variant %s to supported language %s', async (browserLanguage, expected) => {
+  setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
 });
+
+it.each(['zh-CN', 'zh-SG', 'zh', 'fr-FR'])(
+  'falls back to English for unsupported browser language %s',
+  async (browserLanguage) => {
+    setNavigatorLanguages(browserLanguage, [browserLanguage]);
+
+    render(<App workerClient={createMockWorkerClient()} />);
+
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+  }
+);
 
 it('renders core UI text through the English translation file', async () => {
   render(<App workerClient={createMockWorkerClient()} />);
@@ -179,6 +190,18 @@ it('renders core UI text through the English translation file', async () => {
   expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reset aberrations' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
+});
+
+it('renders representative core UI text through the Traditional Chinese translation file', async () => {
+  await i18n.changeLanguage('zh-Hant');
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: '光學系統設定' })).toBeInTheDocument();
+  expect(screen.getByLabelText('光圈直徑 (mm)')).toHaveValue('6');
+  expect(screen.getByRole('heading', { name: '光學像差 (Zernike)' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '重設像差' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '模擬影像' })).toBeInTheDocument();
 });
 
 it('shows an app-level initialization mask while the worker initializes', async () => {

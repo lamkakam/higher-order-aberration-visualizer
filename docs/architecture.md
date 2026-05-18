@@ -20,7 +20,9 @@ Input controls keep fast-moving draft text and slider positions local so typing 
 
 Client-side translations are configured in [`src/i18n.ts`](../src/i18n.ts) with `i18next`, `react-i18next`, `i18next-http-backend`, and `i18next-browser-languagedetector`. Runtime locale files are served from [`public/locales`](../public/locales) using the backend path `/locales/{{lng}}/{{ns}}.json`.
 
-English is currently the only supported language. The i18n instance uses `supportedLngs: ['en']`, `fallbackLng: 'en'`, and `load: 'languageOnly'`, so unsupported browser locales resolve to English. The header language selector always shows a concrete supported language. On first load it uses a cached supported language when available, otherwise matches browser locales by exact or base language code, such as `en-US` to `en`, and falls back to English.
+English and Traditional Chinese are the supported languages. Traditional Chinese is exposed as the single canonical `zh-Hant` option labelled `繁體中文`. The i18n instance uses `supportedLngs: ['en', 'zh-Hant']`, `fallbackLng: 'en'`, and `load: 'currentOnly'`, so `zh-Hant` loads `/locales/zh-Hant/translation.json`.
+
+The header language selector always shows a concrete supported language. On first load it uses a cached supported language when available, otherwise matches browser locales in code and falls back to English. English keeps base-language matching, such as `en-US` to `en`. Chinese matching is explicit: `zh-Hant`, `zh-TW`, `zh-HK`, and `zh-MO` resolve to `zh-Hant`, while generic `zh` and Simplified Chinese locales such as `zh-CN` and `zh-SG` fall back to English.
 
 ## Worker Boundary
 

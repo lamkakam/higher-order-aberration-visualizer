@@ -6,7 +6,8 @@
   "language": {
     "label": "Language",
     "options": {
-      "en": "English"
+      "en": "English",
+      "zh-Hant": "繁體中文"
     }
   },
   "settings": {
