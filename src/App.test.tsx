@@ -349,12 +349,12 @@ it('renders default aperture and supported target options', async () => {
   expect(targetOptions[0]).toHaveValue('logmar_chart');
   expect(screen.getByRole('option', { name: 'Eye Chart (logMAR)' })).toBeInTheDocument();
   expect(
-    screen.getByRole('option', { name: 'Eye Chart (logMAR, Inverted Contrast)' })
+    screen.getByRole('option', { name: 'Eye Chart (logMAR, Reverse Contrast)' })
   ).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Snellen Chart Letter E on 20/20' })).toBeInTheDocument();
   expect(
     screen.getByRole('option', {
-      name: 'Snellen Chart Letter E on 20/20 (Inverted Contrast)'
+      name: 'Snellen Chart Letter E on 20/20 (Reverse Contrast)'
     })
   ).toBeInTheDocument();
   expect(
