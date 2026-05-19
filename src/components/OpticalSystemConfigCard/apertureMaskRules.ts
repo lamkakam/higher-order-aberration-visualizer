@@ -203,25 +203,39 @@ export function formatApertureSummary(settings: ApertureSettings, t?: TFunction)
     settings.centralObstructionRatio > 0
       ? ` ${formatShapeLabel(settings.centralObstructionShape, t).toLowerCase()}`
       : '';
-  const maskSummary = `${formatShapeLabel(settings.shape, t)}, ${obstructionPercent.toLocaleString(undefined, {
+  const formattedObstructionPercent = obstructionPercent.toLocaleString(undefined, {
     maximumFractionDigits: 1
-  })}%${obstructionLabel} obstruction`;
+  });
+  const maskSummary = t
+    ? t('apertureMask.summaryObstruction', {
+        shape: formatShapeLabel(settings.shape, t),
+        percent: formattedObstructionPercent,
+        obstructionLabel
+      })
+    : `${formatShapeLabel(settings.shape)}, ${formattedObstructionPercent}%${obstructionLabel} obstruction`;
   const effects = [maskSummary];
   if (settings.spiderVaneCount > 0 && settings.spiderVaneWidthRatio > 0) {
+    const rotationDegrees = Math.round(settings.spiderVaneRotationDegrees);
+    const width = formatRatioValue(settings.spiderVaneWidthRatio);
     effects.push(
-      `${settings.spiderVaneCount}-vane spider rotated ${Math.round(
-        settings.spiderVaneRotationDegrees
-      )} deg, each vane ${formatRatioValue(settings.spiderVaneWidthRatio)}D wide`
+      t
+        ? t('apertureMask.summarySpiderVane', {
+            count: settings.spiderVaneCount,
+            rotationDegrees,
+            width
+          })
+        : `${settings.spiderVaneCount}-vane spider rotated ${rotationDegrees} deg, each vane ${width}D wide`
     );
   }
   if (!settings.gaussianApodizationEnabled) {
     return effects.join(', ');
   }
 
+  const sigma = formatRatioValue(settings.gaussianApodizationSigmaRatio);
   effects.push(
-    `Gaussian apodization with ${formatRatioValue(
-      settings.gaussianApodizationSigmaRatio
-    )}D sigma`
+    t
+      ? t('apertureMask.summaryGaussianApodization', { sigma })
+      : `Gaussian apodization with ${sigma}D sigma`
   );
   return effects.join(', ');
 }

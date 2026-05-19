@@ -116,7 +116,10 @@
     "previewFailed": "Aperture mask preview failed",
     "circle": "Circle",
     "square": "Square",
-    "regularHexagon": "Regular Hexagon"
+    "regularHexagon": "Regular Hexagon",
+    "summaryObstruction": "{{shape}}, {{percent}}%{{obstructionLabel}} obstruction",
+    "summarySpiderVane": "{{count}}-vane spider rotated {{rotationDegrees}} deg, each vane {{width}}D wide",
+    "summaryGaussianApodization": "Gaussian apodization with {{sigma}}D sigma"
   },
   "aberrations": {
     "title": "Optical Aberrations (Zernike)",

@@ -897,6 +897,68 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   });
 });
 
+it('renders the Traditional Chinese aperture mask summary without hardcoded English terms', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {
+    target: { value: 'zh-Hant' }
+  });
+  await user.click(screen.getByRole('button', { name: '設定' }));
+  await user.click(screen.getByRole('button', { name: '進階' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: '設定光圈遮罩' }));
+
+  fireEvent.change(screen.getByLabelText('光圈形狀'), {
+    target: { value: 'square' }
+  });
+  const modal = within(screen.getByRole('dialog'));
+  fireEvent.change(modal.getByRole('textbox', { name: '中央遮蔽比例' }), {
+    target: { value: '0.25' }
+  });
+  fireEvent.blur(modal.getByRole('textbox', { name: '中央遮蔽比例' }));
+  fireEvent.change(screen.getByLabelText('遮蔽物截面形狀'), {
+    target: { value: 'regular_hexagon' }
+  });
+  fireEvent.change(modal.getByRole('textbox', { name: '支架數量' }), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(modal.getByRole('textbox', { name: '支架數量' }));
+  fireEvent.change(
+    modal.getByRole('textbox', { name: '支架寬度 (單位為口徑倍數)' }),
+    {
+      target: { value: '0.03' }
+    }
+  );
+  fireEvent.blur(modal.getByRole('textbox', { name: '支架寬度 (單位為口徑倍數)' }));
+  fireEvent.change(modal.getByRole('textbox', { name: '支架旋轉角度' }), {
+    target: { value: '12' }
+  });
+  fireEvent.blur(modal.getByRole('textbox', { name: '支架旋轉角度' }));
+  fireEvent.click(modal.getByRole('switch', { name: '高斯變跡' }));
+  fireEvent.change(
+    modal.getByRole('textbox', {
+      name: '標準差 (單位為口徑倍數)'
+    }),
+    {
+      target: { value: '0.5' }
+    }
+  );
+  fireEvent.blur(
+    modal.getByRole('textbox', {
+      name: '標準差 (單位為口徑倍數)'
+    })
+  );
+  fireEvent.click(screen.getByRole('button', { name: '確認光圈遮罩設定' }));
+
+  const summary = screen.getByText(/25%/u);
+  expect(summary).toHaveTextContent('正方形');
+  expect(summary).toHaveTextContent('正六邊形');
+  expect(summary).not.toHaveTextContent(
+    /obstruction|spider|rotated|Gaussian apodization|sigma/iu
+  );
+});
+
 it('describes the default simulated image target in plain language', async () => {
   vi.useFakeTimers();
   await act(async () => {

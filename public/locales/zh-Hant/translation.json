@@ -116,7 +116,10 @@
     "previewFailed": "光圈遮罩預覽失敗",
     "circle": "圓形",
     "square": "正方形",
-    "regularHexagon": "正六邊形"
+    "regularHexagon": "正六邊形",
+    "summaryObstruction": "{{shape}}，{{percent}}%{{obstructionLabel}}遮蔽",
+    "summarySpiderVane": "{{count}} 個支架，旋轉 {{rotationDegrees}} 度，支架寬度 {{width}}倍口徑",
+    "summaryGaussianApodization": "高斯變跡，標準差 {{sigma}}倍口徑"
   },
   "aberrations": {
     "title": "光學像差 (Zernike)",

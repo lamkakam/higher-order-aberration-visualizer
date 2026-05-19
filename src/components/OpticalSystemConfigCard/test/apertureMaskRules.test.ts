@@ -127,7 +127,7 @@ describe('apertureMaskRules', () => {
     ).toBe(true);
   });
 
-  it('summarizes aperture settings with only active effects', () => {
+  it('summarizes aperture settings with only active effects without a translator', () => {
     expect(
       formatApertureSummary({
         ...defaultDraft,
