@@ -71,15 +71,15 @@
       "supplementalDescription": "點擴散函數算繪圖可能會在中心區域周圍顯示明顯的強度切截。為了保持快速算繪，以及降低記憶體用量，這個限制是刻意設計的。這不會影響光學模擬。"
     },
     "snellen_e_20_20": {
-      "label": "Snellen 視力檢查表 20/20 行的字母 E",
+      "label": "史奈侖視力檢查表 20/20 行的字母 E",
       "description": "20/20 (6/6) 行的視力表字母 E。標準肉眼視力應能在20英呎或6公尺距離分辨這個目標。"
     },
     "jupiter": {
       "label": "木星 (角直徑 50 弧秒)",
-      "description": "木星圖片，用於顯示細節如何被像差柔化。"
+      "description": "用於顯示細節如何被像差柔化的木星圖片。"
     },
     "point_source": {
-      "label": "點光源 (Airy 斑)",
+      "label": "點光源 (艾里繞射斑)",
       "description": "單一點光源，用於顯示理想點光源如何因繞射而擴散。"
     },
     "siemensstar": {
@@ -96,7 +96,7 @@
     }
   },
   "apertureMask": {
-    "title": "光圈遮罩",
+    "title": "設定光圈遮罩",
     "shape": "光圈形狀",
     "rotation": "光圈旋轉角度",
     "centralObstructionRatio": "中央遮蔽比例",
@@ -105,7 +105,7 @@
     "spiderVanes": "支架數量",
     "vaneWidth": "支架寬度 (單位為口徑倍數)",
     "vaneRotation": "支架旋轉角度",
-    "gaussianApodization": "高斯變跡",
+    "gaussianApodization": "高斯變跡 (Gaussian Apodization)",
     "standardDeviation": "標準差 (單位為口徑倍數)",
     "preview": "預覽",
     "preparing": "正在準備光圈遮罩預覽...",
@@ -134,8 +134,8 @@
     "coefficientLabel": "{{label}} Z({{n}},{{m}}) 係數",
     "termLabel": "{{label}} Z({{n}},{{m}})",
     "rangeError": "值必須介於 {{min}} 和 {{max}} 之間。",
-    "approxStrehl": "近似 Strehl 比：",
-    "approxStrehlValue": "近似 Strehl 比：{{value}}%",
+    "approxStrehl": "近似 Strehl 率：",
+    "approxStrehlValue": "近似 Strehl 率：{{value}}%",
     "terms": {
       "2_-2": "像散/散光 (斜向)",
       "2_0": "離焦",
