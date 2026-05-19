@@ -14,13 +14,10 @@ export function AppHeader({ onOpenSettings }: AppHeaderProps) {
 
   return (
     <AppBar position="static" color="default" elevation={0}>
-      <Toolbar sx={{ gap: 2, justifyContent: 'space-between' }}>
-        <Box>
-          <Typography component="p" variant="h6">
+      <Toolbar sx={{ gap: 2, justifyContent: 'space-between', rowGap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ flex: '0 0 auto' }}>
+          <Typography component="p" variant="h6" noWrap>
             {t('app.name')}
-          </Typography>
-          <Typography component="p" variant="body2" color="text.secondary">
-            {t('app.subtitle')}
           </Typography>
         </Box>
         <Box sx={{ alignItems: 'center', display: 'flex', gap: 1.5 }}>

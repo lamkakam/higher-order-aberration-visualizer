@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "HOA Visualizer",
-    "subtitle": "Optical Aberration Simulator"
+    "name": "Higher-Order Aberration Simulator"
   },
   "language": {
     "label": "Language",

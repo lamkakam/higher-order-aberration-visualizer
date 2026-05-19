@@ -117,7 +117,7 @@ function renderAtPath(path: string) {
 
 async function openSettingsDrawer() {
   const user = userEvent.setup();
-  await user.click(await screen.findByRole('button', { name: /^(Setting|設定|设置)$/ }));
+  await user.click(await screen.findByRole('button', { name: /^(Settings|設定|设置)$/ }));
 }
 
 function getSettingsLanguageSelect(label?: string) {
@@ -131,8 +131,12 @@ function getSettingsLanguageSelect(label?: string) {
 it('renders the header and settings drawer theme controls', async () => {
   renderAtPath('/');
 
-  expect(screen.getByText('HOA Visualizer')).toBeInTheDocument();
-  expect(screen.getByText('Optical Aberration Simulator')).toBeInTheDocument();
+  const banner = screen.getByRole('banner');
+  const appTitle = within(banner).getByText('Higher-Order Aberration Simulator');
+
+  expect(appTitle).toBeInTheDocument();
+  expect(appTitle.tagName).toBe('P');
+  expect(within(banner).queryByText('Simulator')).not.toBeInTheDocument();
   expect(within(screen.getByRole('banner')).queryByRole('combobox')).not.toBeInTheDocument();
 
   await openSettingsDrawer();
@@ -397,7 +401,7 @@ it('shows aperture mask controls only in advanced mode', async () => {
 
   expect(screen.queryByRole('button', { name: 'Edit aperture mask' })).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
@@ -417,7 +421,7 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   );
   render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -489,7 +493,7 @@ it('keeps aperture mask modal actions outside the scrollable content', async () 
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -515,7 +519,7 @@ it('shows Gaussian apodization SD controls only when enabled', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -543,7 +547,7 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -601,7 +605,7 @@ it('toggles aperture obstruction controls from the ratio slider and textbox', as
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -642,7 +646,7 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -696,7 +700,7 @@ it('keeps the aperture preview panel height stable while loading and loaded', as
   );
   render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -740,7 +744,7 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -797,7 +801,7 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -851,7 +855,7 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -906,7 +910,7 @@ it('omits spider vane settings from the aperture summary when width is zero', as
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -925,7 +929,7 @@ it('omits spider vane settings from the aperture summary when count is zero', as
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -965,7 +969,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
@@ -1266,7 +1270,7 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
 
   expect(screen.queryByText('Spectral Mode')).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
@@ -1290,7 +1294,7 @@ it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode',
   expect(screen.queryByRole('tab', { name: '656 nm' })).not.toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: '486 nm' })).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
@@ -1306,7 +1310,7 @@ it('shows wavelength tabs and sync controls in Advanced Polychromatic mode', asy
   expect(screen.queryByRole('switch', { name: 'Sync wavelengths' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Reset all wavelengths' })).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1322,7 +1326,7 @@ it('syncs changed polychromatic coefficient values across wavelength tabs by def
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1349,7 +1353,7 @@ it('leaves untouched polychromatic coefficients unchanged when syncing one coeff
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1381,7 +1385,7 @@ it('keeps polychromatic wavelength aberration values independent when sync is of
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1411,7 +1415,7 @@ it('resets only the selected polychromatic wavelength when sync is on', async ()
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1435,7 +1439,7 @@ it('resets all polychromatic wavelength coefficient values', async () => {
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1463,7 +1467,7 @@ it('shares monochromatic aberration edits with the 550 nm polychromatic tab', as
   await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1500,7 +1504,7 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1557,7 +1561,7 @@ it('recomputes polychromatic diagnostics for the selected wavelength tab', async
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -1612,7 +1616,7 @@ it('converts polychromatic zernike textbox values using the selected wavelength 
   const user = userEvent.setup();
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -2251,7 +2255,7 @@ it('sends enabled scale bar preference to the worker payload', async () => {
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'Show scale bar' }));
 
   await act(async () => {
@@ -2292,7 +2296,7 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
   });
   computeConvolvedImage.mockClear();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
@@ -2454,7 +2458,7 @@ it('opens enlarged previews from advanced PSF and wavefront images', async () =>
 
   await screen.findByRole('button', { name: 'Open enlarged Simulated Image image' });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Setting' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
@@ -2504,7 +2508,7 @@ it('shows PSF and wavefront panels in one image descriptions accordion on large 
   expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Wavefront Map' })).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
@@ -2584,7 +2588,7 @@ it('shows the approximate Strehl ratio above the small-screen advanced simulated
 
   expect(screen.queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
@@ -2613,7 +2617,7 @@ it('shows the approximate Strehl ratio once above the large-screen combined imag
   setMatchesSm(true);
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
@@ -2644,7 +2648,7 @@ it('shows independent approximate Strehl ratios for each polychromatic wavelengt
   setMatchesSm(true);
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -2684,7 +2688,7 @@ it('wraps small-screen polychromatic approximate Strehl ratios inside the simula
   setMatchesSm(false);
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
@@ -2719,7 +2723,7 @@ it('shows the legend unit selector at the bottom of the wavefront map card in ad
 
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
@@ -2741,7 +2745,7 @@ it('hides the PSF panel and keeps one image descriptions accordion for point sou
   setMatchesSm(true);
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
   fireEvent.change(screen.getByLabelText('Target'), {
@@ -2776,7 +2780,7 @@ it('keeps advanced result panels in separate cards on extra-small screens', asyn
   setMatchesSm(false);
   render(<App workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
   await user.keyboard('{Escape}');
 
