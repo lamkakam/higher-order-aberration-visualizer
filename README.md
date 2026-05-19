@@ -1,1 +1,1 @@
-# hoa-visualizer
+# higher-order-aberration-visualizer
