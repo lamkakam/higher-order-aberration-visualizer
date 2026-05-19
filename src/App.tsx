@@ -165,7 +165,9 @@ function AdvancedResultCard({ panels, sharedAboveAccordionContent }: AdvancedRes
                     }
                   }}
                 >
-                  <Typography variant="subtitle2">{title}</Typography>
+                  <Typography variant="subtitle2" sx={{ fontSize: '1rem' }}>
+                    {title}
+                  </Typography>
                   <ImageResultDetailsContent
                     description={
                       panel.description ??

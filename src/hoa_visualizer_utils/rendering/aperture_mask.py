@@ -31,10 +31,11 @@ def render_aperture_mask(
     mask = spec.amplitude(1, x, y, radius)
 
     plt = _load_pyplot()
-    fig, ax = plt.subplots(
-        figsize=DEFAULT_FIGURE_SIZE_INCHES,
-        constrained_layout=True,
-    )
+    figure_width_inches = DEFAULT_FIGURE_SIZE_INCHES[0]
+    fig = plt.figure(figsize=(figure_width_inches, figure_width_inches), frameon=False)
+    fig.patch.set_facecolor("black")
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set_facecolor("black")
     ax.imshow(mask, cmap="gray", vmin=0, vmax=1)
     ax.set_axis_off()
     return _figure_to_bytes(fig, image_format)

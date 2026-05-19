@@ -94,6 +94,7 @@ export function OpticalSystemConfigCard({
           <ControlRow label={t('opticalSystem.apertureDiameter')} htmlFor={apertureInputId}>
             <NumberField
               id={apertureInputId}
+              autoComplete="off"
               label={t('opticalSystem.apertureDiameter')}
               labelMode="external"
               min={0.5}

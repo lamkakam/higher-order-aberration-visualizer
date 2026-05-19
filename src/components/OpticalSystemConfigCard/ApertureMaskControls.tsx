@@ -1,6 +1,6 @@
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import InputLabel from '@mui/material/InputLabel';
+import FormLabel from '@mui/material/FormLabel';
 import NativeSelect from '@mui/material/NativeSelect';
 import Switch from '@mui/material/Switch';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +49,9 @@ export function ApertureShapeControls({
   return (
     <>
       <FormControl fullWidth size="small">
-        <InputLabel htmlFor={shapeId}>{t('apertureMask.shape')}</InputLabel>
+        <FormLabel htmlFor={shapeId} sx={{ mb: 0.5 }}>
+          {t('apertureMask.shape')}
+        </FormLabel>
         <NativeSelect
           value={state.shape}
           onChange={(event) => {
@@ -119,7 +121,9 @@ export function CentralObstructionControls({
       {visibility.showObstructionControls ? (
         <>
           <FormControl fullWidth size="small">
-            <InputLabel htmlFor={obstructionShapeId}>{t('apertureMask.obstructionShape')}</InputLabel>
+            <FormLabel htmlFor={obstructionShapeId} sx={{ mb: 0.5 }}>
+              {t('apertureMask.obstructionShape')}
+            </FormLabel>
             <NativeSelect
               value={state.centralObstructionShape}
               onChange={(event) => {

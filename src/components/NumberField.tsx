@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 interface NumberFieldProps {
   readonly id?: string;
+  readonly autoComplete?: string;
   readonly label: string;
   readonly labelMode?: 'embedded' | 'external';
   readonly value: number;
@@ -18,6 +19,7 @@ interface NumberFieldProps {
 
 export function NumberField({
   id: providedId,
+  autoComplete,
   label,
   labelMode = 'embedded',
   value,
@@ -31,6 +33,7 @@ export function NumberField({
   return (
     <NumberFieldInput
       id={id}
+      autoComplete={autoComplete}
       label={label}
       labelMode={labelMode}
       value={value}
@@ -47,6 +50,7 @@ interface NumberFieldInputProps extends NumberFieldProps {
 
 function NumberFieldInput({
   id,
+  autoComplete,
   label,
   labelMode = 'embedded',
   value,
@@ -114,6 +118,7 @@ function NumberFieldInput({
         {labelMode === 'embedded' ? <InputLabel htmlFor={id}>{label}</InputLabel> : undefined}
         <OutlinedInput
           id={id}
+          autoComplete={autoComplete}
           label={labelMode === 'embedded' ? label : undefined}
           type="text"
           value={currentDraftState.draftValue}
