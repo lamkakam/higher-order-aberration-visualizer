@@ -115,20 +115,29 @@ function renderAtPath(path: string) {
   return render(<App workerClient={createMockWorkerClient()} />);
 }
 
-function getHeaderLanguageSelect() {
-  return within(screen.getByRole('banner')).getByRole('combobox');
+async function openSettingsDrawer() {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: /^(Setting|設定|设置)$/ }));
+}
+
+function getSettingsLanguageSelect(label?: string) {
+  if (label !== undefined) {
+    return screen.getByRole('combobox', { name: label });
+  }
+
+  return within(screen.getByRole('dialog')).getByRole('combobox');
 }
 
 it('renders the header and settings drawer theme controls', async () => {
-  const user = userEvent.setup();
   renderAtPath('/');
 
   expect(screen.getByText('HOA Visualizer')).toBeInTheDocument();
   expect(screen.getByText('Optical Aberration Simulator')).toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+  expect(within(screen.getByRole('banner')).queryByRole('combobox')).not.toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: 'Setting' }));
+  await openSettingsDrawer();
 
+  expect(getSettingsLanguageSelect('Language')).toHaveValue('en');
   expect(screen.getByText('Mode')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Light' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'System' })).toBeInTheDocument();
@@ -141,20 +150,28 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
-it('renders the language selector before the settings button and supports explicit languages', () => {
+it('renders language as the first settings control and supports explicit languages', async () => {
   const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
   renderAtPath('/');
 
-  const languageSelect = screen.getByRole('combobox', { name: 'Language' });
-  const settingsButton = screen.getByRole('button', { name: 'Setting' });
+  await openSettingsDrawer();
 
+  const languageLabel = screen.getByText('Language', { selector: 'label' });
+  const languageSelect = getSettingsLanguageSelect('Language');
+  const modeLabel = screen.getByText('Mode');
+
+  expect(languageSelect).toHaveAttribute('id');
+  expect(languageLabel).toHaveAttribute('for', languageSelect.id);
+  expect(
+    languageLabel.compareDocumentPosition(languageSelect) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
   expect(languageSelect).toHaveValue('en');
   expect(screen.queryByRole('option', { name: 'Browser default' })).not.toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: '繁體中文' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: '简体中文' })).toBeInTheDocument();
   expect(
-    languageSelect.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING
+    languageSelect.compareDocumentPosition(modeLabel) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
 
   fireEvent.change(languageSelect, { target: { value: 'zh-Hans' } });
@@ -172,16 +189,18 @@ it.each([
 ])('renders route %s with language %s and advanced mode %s', async (path, language, isAdvanced) => {
   renderAtPath(path);
 
-  await waitFor(() => {
-    expect(getHeaderLanguageSelect()).toHaveValue(language);
-  });
-
   if (isAdvanced) {
     const psfHeading = language === 'zh-Hans' ? '点扩散函数' : 'PSF';
     expect(await screen.findByRole('heading', { name: psfHeading })).toBeInTheDocument();
   } else {
     expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
   }
+
+  await openSettingsDrawer();
+
+  await waitFor(() => {
+    expect(getSettingsLanguageSelect()).toHaveValue(language);
+  });
 });
 
 it('normalizes the root route to the detected language and basic mode', async () => {
@@ -192,7 +211,8 @@ it('normalizes the root route to the detected language and basic mode', async ()
   await waitFor(() => {
     expect(window.location.pathname).toBe('/zh-Hant/basic');
   });
-  expect(screen.getByRole('combobox', { name: '語言' })).toHaveValue('zh-Hant');
+  await openSettingsDrawer();
+  expect(getSettingsLanguageSelect('語言')).toHaveValue('zh-Hant');
   expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
 });
 
@@ -204,7 +224,8 @@ it('normalizes invalid route state to the detected language and basic mode', asy
   await waitFor(() => {
     expect(window.location.pathname).toBe('/zh-Hans/basic');
   });
-  expect(screen.getByRole('combobox', { name: '语言' })).toHaveValue('zh-Hans');
+  await openSettingsDrawer();
+  expect(getSettingsLanguageSelect('语言')).toHaveValue('zh-Hans');
   expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
 });
 
@@ -213,9 +234,10 @@ it('uses cached supported language before checking browser languages', async () 
   setNavigatorLanguages('en-US', ['en-US']);
 
   renderAtPath('/');
+  await openSettingsDrawer();
 
   await waitFor(() => {
-    expect(getHeaderLanguageSelect()).toHaveValue('zh-Hans');
+    expect(getSettingsLanguageSelect()).toHaveValue('zh-Hans');
   });
 });
 
@@ -229,9 +251,10 @@ it.each([
   setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
   renderAtPath('/');
+  await openSettingsDrawer();
 
   await waitFor(() => {
-    expect(getHeaderLanguageSelect()).toHaveValue(expected);
+    expect(getSettingsLanguageSelect()).toHaveValue(expected);
   });
 });
 
@@ -244,9 +267,10 @@ it.each([
   setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
   renderAtPath('/');
+  await openSettingsDrawer();
 
   await waitFor(() => {
-    expect(getHeaderLanguageSelect()).toHaveValue(expected);
+    expect(getSettingsLanguageSelect()).toHaveValue(expected);
   });
 });
 
@@ -256,8 +280,9 @@ it.each(['fr-FR'])(
     setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
     renderAtPath('/');
+    await openSettingsDrawer();
 
-    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+    expect(getSettingsLanguageSelect('Language')).toHaveValue('en');
   }
 );
 

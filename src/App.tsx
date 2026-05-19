@@ -559,20 +559,20 @@ export function App({ workerClient }: AppProps) {
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         <AppHeader
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={updateSelectedLanguage}
           onOpenSettings={() => {
             setSettingsOpen(true);
           }}
         />
         <SettingsDrawer
           open={settingsOpen}
+          selectedLanguage={selectedLanguage}
           mode={themeMode}
           displayMode={displayMode}
           showScaleBar={showScaleBar}
           onClose={() => {
             setSettingsOpen(false);
           }}
+          onLanguageChange={updateSelectedLanguage}
           onModeChange={setThemeMode}
           onDisplayModeChange={updateDisplayMode}
           onShowScaleBarChange={setShowScaleBar}

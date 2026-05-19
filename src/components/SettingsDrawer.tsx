@@ -3,19 +3,25 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Drawer from '@mui/material/Drawer';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import NativeSelect from '@mui/material/NativeSelect';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { supportedLanguageCodes } from '../i18n';
+import type { SupportedLanguageCode } from '../i18n';
 
 export type ThemeMode = 'light' | 'system' | 'dark';
 export type DisplayMode = 'basic' | 'advanced';
 
 interface SettingsDrawerProps {
   readonly open: boolean;
+  readonly selectedLanguage: SupportedLanguageCode;
   readonly mode: ThemeMode;
   readonly displayMode: DisplayMode;
   readonly showScaleBar: boolean;
   readonly onClose: () => void;
+  readonly onLanguageChange: (language: SupportedLanguageCode) => void;
   readonly onModeChange: (mode: ThemeMode) => void;
   readonly onDisplayModeChange: (mode: DisplayMode) => void;
   readonly onShowScaleBarChange: (showScaleBar: boolean) => void;
@@ -34,20 +40,48 @@ const displayModeOptions = [
 
 export function SettingsDrawer({
   open,
+  selectedLanguage,
   mode,
   displayMode,
   showScaleBar,
   onClose,
+  onLanguageChange,
   onModeChange,
   onDisplayModeChange,
   onShowScaleBarChange
 }: SettingsDrawerProps) {
   const { t } = useTranslation();
+  const languageSelectId = useId();
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Box sx={{ width: 280, p: 3 }}>
-        <Typography id="mode-button-group-label" variant="subtitle2" sx={{ mb: 1 }}>
+        <Typography
+          component="label"
+          htmlFor={languageSelectId}
+          variant="subtitle2"
+          sx={{ display: 'block', mb: 1 }}
+        >
+          {t('language.label')}
+        </Typography>
+        <NativeSelect
+          fullWidth
+          value={selectedLanguage}
+          onChange={(event) => {
+            const nextLanguage = event.target.value as SupportedLanguageCode;
+            onLanguageChange(nextLanguage);
+          }}
+          inputProps={{
+            id: languageSelectId
+          }}
+        >
+          {supportedLanguageCodes.map((languageCode) => (
+            <option key={languageCode} value={languageCode}>
+              {t(`language.options.${languageCode}`)}
+            </option>
+          ))}
+        </NativeSelect>
+        <Typography id="mode-button-group-label" variant="subtitle2" sx={{ mb: 1, mt: 3 }}>
           {t('settings.mode')}
         </Typography>
         <ButtonGroup aria-labelledby="mode-button-group-label" fullWidth>
