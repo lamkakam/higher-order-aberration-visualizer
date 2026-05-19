@@ -2450,6 +2450,15 @@ it('shows PSF and wavefront panels in one image descriptions accordion on large 
   expect(
     within(imageDescriptionsDetails as HTMLElement).getByText('Wavefront Map')
   ).toBeInTheDocument();
+  expect(within(imageDescriptionsDetails as HTMLElement).getByText('Simulated Image')).toHaveStyle({
+    fontSize: '1rem'
+  });
+  expect(within(imageDescriptionsDetails as HTMLElement).getByText('PSF')).toHaveStyle({
+    fontSize: '1rem'
+  });
+  expect(within(imageDescriptionsDetails as HTMLElement).getByText('Wavefront Map')).toHaveStyle({
+    fontSize: '1rem'
+  });
 
   const psfDescription = screen.getByRole('group', { name: 'PSF description' });
   expect(within(psfDescription).getByText(psfCutoffNote)).toBeInTheDocument();
