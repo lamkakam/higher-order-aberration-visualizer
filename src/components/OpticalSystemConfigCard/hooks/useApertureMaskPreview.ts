@@ -21,7 +21,8 @@ type SettledApertureMaskPreview =
 
 export function useApertureMaskPreview(
   draftSettings: ApertureSettings | undefined,
-  onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>
+  onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>,
+  fallbackErrorMessage = 'Aperture preview failed'
 ): ApertureMaskPreview {
   const [settledPreview, setSettledPreview] = useState<SettledApertureMaskPreview | undefined>(
     undefined
@@ -46,7 +47,7 @@ export function useApertureMaskPreview(
         if (!ignore) {
           setSettledPreview({
             settings: draftSettings,
-            previewError: error instanceof Error ? error.message : 'Aperture preview failed'
+            previewError: error instanceof Error ? error.message : fallbackErrorMessage
           });
         }
       });
@@ -54,7 +55,7 @@ export function useApertureMaskPreview(
     return () => {
       ignore = true;
     };
-  }, [draftSettings, onRenderApertureMask]);
+  }, [draftSettings, fallbackErrorMessage, onRenderApertureMask]);
 
   const currentSettledPreview =
     settledPreview?.settings === draftSettings ? settledPreview : undefined;

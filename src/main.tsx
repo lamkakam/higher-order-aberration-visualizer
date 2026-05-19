@@ -1,10 +1,13 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import './i18n';
 import './styles.css';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    <App />
+    <Suspense fallback={undefined}>
+      <App />
+    </Suspense>
   </StrictMode>
 );

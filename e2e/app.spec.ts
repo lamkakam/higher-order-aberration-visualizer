@@ -27,6 +27,13 @@ async function getCardHeightByHeading(page: Page, heading: string) {
   return card.evaluate((element) => element.getBoundingClientRect().height);
 }
 
+async function waitForPrimaryImageReady(page: Page) {
+  await waitForWorkerInitialization(page);
+  await expect(
+    page.getByRole('button', { name: 'Open enlarged Simulated Image image' })
+  ).toBeVisible({ timeout: 60_000 });
+}
+
 async function expectCardIsTopmost(page: Page, heading: string) {
   await waitForWorkerInitialization(page);
   const card = page
@@ -53,7 +60,8 @@ async function expectCardIsTopmost(page: Page, heading: string) {
 }
 
 async function expectPrimaryStickyGapIsMasked(page: Page) {
-  await waitForWorkerInitialization(page);
+  await waitForPrimaryImageReady(page);
+  await page.evaluate(() => window.scrollTo(0, 900));
   const card = page
     .getByRole('heading', { name: 'Simulated Image' })
     .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
@@ -88,10 +96,11 @@ async function expectAdvancedStickyGapsAreMasked(page: Page) {
 }
 
 async function expectPrimaryCardSticks(page: Page) {
-  await page.evaluate(() => window.scrollTo(0, 260));
+  await waitForPrimaryImageReady(page);
+  await page.evaluate(() => window.scrollTo(0, 620));
   const stuckTop = await getCardTopByHeading(page, 'Simulated Image');
 
-  await page.evaluate(() => window.scrollTo(0, 620));
+  await page.evaluate(() => window.scrollTo(0, 900));
   await expect(page.getByRole('heading', { name: 'Simulated Image' })).toBeVisible();
   const laterTop = await getCardTopByHeading(page, 'Simulated Image');
 
@@ -118,6 +127,7 @@ test('app loads the simulator controls', async ({ page }) => {
 
   await expect(page.getByText('HOA Visualizer')).toBeVisible();
   await expect(page.getByText('Optical Aberration Simulator')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
 
   await page.getByRole('button', { name: 'Setting' }).click();
   await expect(page.getByText('Mode')).toBeVisible();
@@ -198,15 +208,16 @@ async function expectTextIsBelowText(page: Page, lowerText: string, upperText: s
 }
 
 test('keeps the simulated image card sticky in basic mode on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 500 });
   await page.goto('/');
 
   await expectPrimaryCardSticks(page);
 });
 
 test('masks the gap above the sticky simulated image card on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 500 });
   await page.goto('/');
 
-  await page.evaluate(() => window.scrollTo(0, 620));
   await expectPrimaryStickyGapIsMasked(page);
 });
 
@@ -268,7 +279,7 @@ test('masks the advanced sticky card gutters and top gaps on desktop', async ({ 
 });
 
 test('keeps the simulated image card sticky in basic mode on small screens', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 700 });
+  await page.setViewportSize({ width: 390, height: 500 });
   await page.goto('/');
 
   await expectPrimaryCardSticks(page);

@@ -1,47 +1,38 @@
 import type { SupportedTargetId, ZernikeCoefficientKey } from '../workers/types';
+import type { TFunction } from 'i18next';
 
 export const targetOptions = [
   {
     id: 'logmar_chart',
-    label: 'Eye Chart (logMAR)',
-    description: 'The first six lines of an eye chart, with letters arranged in rows.'
+    label: 'Eye Chart (logMAR)'
   },
   {
     id: 'snellen_e_20_20',
-    label: 'Snellen Chart Letter E on 20/20',
-    description:
-      'An eye-chart letter E from the 20/20 (6/6) line, used as a familiar vision-test target.'
+    label: 'Snellen Chart Letter E on 20/20'
   },
   {
-    id: 'jupiter_502nm',
-    label: 'Jupiter (HST 502 nm, 50 arcsec)',
-    description: 'A telescope-style picture of Jupiter used to see how fine details are softened.'
+    id: 'jupiter',
+    label: 'Jupiter (angular diameter 50 arcsecond)'
   },
   {
     id: 'point_source',
-    label: 'Point Source (Airy Disc)',
-    description: 'A single tiny bright point, useful for showing how a perfect dot spreads out.'
+    label: 'Point Source (Airy Disc)'
   },
   {
     id: 'siemensstar',
-    label: 'Siemens Star',
-    description:
-      'A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
+    label: 'Siemens Star'
   },
   {
     id: 'slantededge',
-    label: 'Slanted Edge',
-    description: 'A tilted black-and-white edge used to show how crisp an edge looks.'
+    label: 'Slanted Edge'
   },
   {
     id: 'tiltedsquare',
-    label: 'Tilted Square',
-    description: 'A rotated square used to show how corners and edges change.'
+    label: 'Tilted Square'
   }
 ] as const satisfies readonly {
   readonly id: SupportedTargetId;
   readonly label: string;
-  readonly description: string;
 }[];
 
 export const supplementalDescriptions: Partial<Record<SupportedTargetId, string>> = {
@@ -118,9 +109,12 @@ export function approximateStrehlRatio(
 }
 
 export function formatApproximateStrehlRatio(
-  coefficients: Record<ZernikeCoefficientKey, number>
+  coefficients: Record<ZernikeCoefficientKey, number>,
+  t?: TFunction
 ): string {
-  return `Approx. Strehl Ratio: ${(approximateStrehlRatio(coefficients) * 100).toFixed(1)}%`;
+  const value = (approximateStrehlRatio(coefficients) * 100).toFixed(1);
+
+  return t ? t('aberrations.approxStrehlValue', { value }) : `Approx. Strehl Ratio: ${value}%`;
 }
 
 export function createDefaultZernikeCoefficients(): Record<ZernikeCoefficientKey, number> {

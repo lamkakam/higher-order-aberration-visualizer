@@ -421,7 +421,7 @@ def test_jupiter_polychromatic_target_uses_rgb_wavelength_assets() -> None:
     simulation = compute_simulation(
         10,
         {},
-        "jupiter_502nm",
+        "jupiter",
         pupil_samples=32,
         image_samples=128,
         image_dx_arcmin=JUPITER_502NM_DIAMETER_ARCMIN / 64,
@@ -1025,28 +1025,29 @@ def test_logmar_chart_default_sampling_records_angular_spacing() -> None:
     )
 
 
-def test_jupiter_502nm_uses_supported_target_id() -> None:
+def test_jupiter_uses_supported_target_id() -> None:
     simulation = compute_simulation(
         10,
         {},
-        "jupiter_502nm",
+        "jupiter",
         pupil_samples=32,
         image_samples=512,
     )
 
-    assert "jupiter_502nm" in SUPPORTED_TARGET_IDS
-    assert simulation.target_id == "jupiter_502nm"
+    assert "jupiter" in SUPPORTED_TARGET_IDS
+    assert "jupiter_502nm" not in SUPPORTED_TARGET_IDS
+    assert simulation.target_id == "jupiter"
     assert simulation.target.shape == (512, 512)
     assert simulation.psf.shape == (512, 512)
     assert simulation.convolved_image.shape == (512, 512)
 
 
-def test_jupiter_502nm_uses_fifty_arcsecond_diameter() -> None:
+def test_jupiter_uses_fifty_arcsecond_diameter() -> None:
     image_dx_arcmin = 0.005
     simulation = compute_simulation(
         10,
         {},
-        "jupiter_502nm",
+        "jupiter",
         pupil_samples=32,
         image_samples=256,
         image_dx_arcmin=image_dx_arcmin,
@@ -1064,11 +1065,11 @@ def test_jupiter_502nm_uses_fifty_arcsecond_diameter() -> None:
     )
 
 
-def test_jupiter_502nm_default_diameter_tracks_image_samples() -> None:
+def test_jupiter_default_diameter_tracks_image_samples() -> None:
     simulation = compute_simulation(
         10,
         {},
-        "jupiter_502nm",
+        "jupiter",
         pupil_samples=32,
         image_samples=512,
     )
@@ -1083,11 +1084,11 @@ def test_jupiter_502nm_default_diameter_tracks_image_samples() -> None:
     )
 
 
-def test_jupiter_502nm_contains_smooth_grayscale_detail() -> None:
+def test_jupiter_contains_smooth_grayscale_detail() -> None:
     simulation = compute_simulation(
         10,
         {},
-        "jupiter_502nm",
+        "jupiter",
         pupil_samples=32,
         image_samples=256,
     )
@@ -1100,11 +1101,11 @@ def test_jupiter_502nm_contains_smooth_grayscale_detail() -> None:
     assert np.unique(np.round(intermediate_values, 3)).size > 100
 
 
-def test_jupiter_502nm_is_centered_and_fits_grid() -> None:
+def test_jupiter_is_centered_and_fits_grid() -> None:
     simulation = compute_simulation(
         10,
         {},
-        "jupiter_502nm",
+        "jupiter",
         pupil_samples=32,
         image_samples=512,
     )
@@ -1361,7 +1362,7 @@ def test_supported_targets_keep_same_convolved_grid_with_current_visible_sizes()
         visible_sizes[target_id] = _visible_content_bbox(simulation.target)
 
     assert visible_sizes == {
-        "jupiter_502nm": (90, 90),
+        "jupiter": (90, 90),
         "logmar_chart": (76, 104),
         "point_source": (1, 1),
         "siemensstar": (101, 101),

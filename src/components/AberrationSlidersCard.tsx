@@ -11,7 +11,9 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
+import type { TFunction } from 'i18next';
 import { memo, useCallback, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ZernikeCoefficientKey } from '../workers/types';
 import { CommitSlider } from './CommitSlider';
 import {
@@ -27,11 +29,11 @@ import {
 type CoefficientDisplayUnit = 'wave' | 'micron';
 
 const coefficientDisplayUnits = [
-  { value: 'wave', label: 'Wave' },
-  { value: 'micron', label: 'Micron' }
+  { value: 'wave', labelKey: 'opticalSystem.wave' },
+  { value: 'micron', labelKey: 'opticalSystem.micron' }
 ] as const satisfies readonly {
   readonly value: CoefficientDisplayUnit;
-  readonly label: string;
+  readonly labelKey: string;
 }[];
 
 type ZernikeTerm = (typeof zernikeTerms)[number];
@@ -65,6 +67,7 @@ export function AberrationSlidersCard({
   onSyncWavelengthCoefficientsChange,
   onResetAllWavelengths
 }: AberrationSlidersCardProps) {
+  const { t } = useTranslation();
   const [displayUnit, setDisplayUnit] = useState<CoefficientDisplayUnit>('wave');
   const [resetVersion, setResetVersion] = useState(0);
 
@@ -83,25 +86,25 @@ export function AberrationSlidersCard({
       <CardContent>
         <Stack spacing={2.5}>
           <Typography variant="h6" component="h2">
-            Optical Aberrations (Zernike)
+            {t('aberrations.title')}
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <Button aria-label="Reset aberrations" variant="outlined" onClick={handleReset}>
-              Reset
+            <Button aria-label={t('aberrations.resetAria')} variant="outlined" onClick={handleReset}>
+              {t('aberrations.reset')}
             </Button>
             {showWavelengthSyncControls ? (
               <Button
-                aria-label="Reset all wavelengths"
+                aria-label={t('aberrations.resetAllWavelengths')}
                 variant="outlined"
                 onClick={handleResetAllWavelengths}
               >
-                Reset all wavelengths
+                {t('aberrations.resetAllWavelengths')}
               </Button>
             ) : undefined}
           </Box>
           <Stack spacing={1}>
-            <Typography variant="body2">Coefficient Unit (RMS)</Typography>
-            <ButtonGroup aria-label="Coefficient Unit (RMS)" size="small" variant="outlined">
+            <Typography variant="body2">{t('aberrations.coefficientUnit')}</Typography>
+            <ButtonGroup aria-label={t('aberrations.coefficientUnit')} size="small" variant="outlined">
               {coefficientDisplayUnits.map((unit) => (
                 <Button
                   key={unit.value}
@@ -111,7 +114,7 @@ export function AberrationSlidersCard({
                     setDisplayUnit(unit.value);
                   }}
                 >
-                  {unit.label}
+                  {t(unit.labelKey)}
                 </Button>
               ))}
             </ButtonGroup>
@@ -125,13 +128,13 @@ export function AberrationSlidersCard({
                     }}
                   />
                 }
-                label="Sync wavelengths"
+                label={t('aberrations.syncWavelengths')}
               />
             ) : undefined}
           </Stack>
           <Stack spacing={1.5}>
             <ZernikeControlsAccordion
-              title="Lower Order Aberrations (Generally Correctable with Ordinary Eyeglasses)"
+              title={t('aberrations.lowerOrder')}
               terms={lowerOrderZernikeTerms}
               values={values}
               wavelengthNm={wavelengthNm}
@@ -140,7 +143,7 @@ export function AberrationSlidersCard({
               onValueChange={onValueChange}
             />
             <ZernikeControlsAccordion
-              title="Higher Order Aberrations"
+              title={t('aberrations.higherOrder')}
               terms={higherOrderZernikeTerms}
               values={values}
               wavelengthNm={wavelengthNm}
@@ -236,8 +239,18 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   resetVersion,
   onValueChange
 }: AberrationCoefficientRowProps) {
-  const label = `${term.label} Z(${term.n},${term.m})`;
-  const coefficientLabel = `${label} coefficient`;
+  const { t } = useTranslation();
+  const translatedLabel = t(`aberrations.terms.${term.key.replace(',', '_')}`);
+  const label = t('aberrations.termLabel', {
+    label: translatedLabel,
+    m: term.m,
+    n: term.n
+  });
+  const coefficientLabel = t('aberrations.coefficientLabel', {
+    label: translatedLabel,
+    m: term.m,
+    n: term.n
+  });
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
@@ -266,7 +279,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
           isValidDraft: isValidCommittedDraft,
           getErrorText: (draft) =>
             isOutOfRangeDraft(draft, displayUnit, wavelengthNm)
-              ? getRangeErrorText(displayUnit, wavelengthNm)
+              ? getRangeErrorText(displayUnit, wavelengthNm, t)
               : undefined,
           inputMode: 'decimal',
           inputMin: getDisplayValueFromWaves(
@@ -333,13 +346,17 @@ function getWaveValueFromDraft(
 
 function getRangeErrorText(
   displayUnit: CoefficientDisplayUnit,
-  wavelengthNm: number
+  wavelengthNm: number,
+  t?: TFunction
 ): string {
-  return `Value must be between ${getDisplayValueFromWaves(
+  const min = getDisplayValueFromWaves(
     zernikeCoefficientMin,
     displayUnit,
     wavelengthNm
-  )} and ${getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit, wavelengthNm)}.`;
+  );
+  const max = getDisplayValueFromWaves(zernikeCoefficientMax, displayUnit, wavelengthNm);
+
+  return t ? t('aberrations.rangeError', { min, max }) : `Value must be between ${min} and ${max}.`;
 }
 
 function isValidCommittedDraft(draft: string, value: number): boolean {

@@ -152,7 +152,7 @@ def compute_simulation(
         focused_dx_um = channel_results[representative_index][2]
         representative_coefficients = channels[representative_index][2]
         x, y = coordinates.make_xy_grid(psf.shape, dx=focused_dx_um)
-        if target_id == "jupiter_502nm":
+        if target_id == "jupiter":
             target = _make_jupiter_rgb_target(
                 psf.shape,
                 image_dx_arcmin=resolved_image_dx_arcmin,
@@ -386,7 +386,7 @@ def _resolve_image_dx_arcmin(
         return LOGMAR_CHART_WIDEST_ROW_ARCMIN / (
             image_samples * LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION
         )
-    if target_id == "jupiter_502nm":
+    if target_id == "jupiter":
         target_diameter_px = round(
             image_samples * JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION
         )

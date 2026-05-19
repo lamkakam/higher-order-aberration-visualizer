@@ -3,6 +3,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
 import NativeSelect from '@mui/material/NativeSelect';
 import Switch from '@mui/material/Switch';
+import { useTranslation } from 'react-i18next';
 import type { ApertureShape } from '../../workers/types';
 import { CommitSlider } from '../CommitSlider';
 import {
@@ -43,10 +44,12 @@ export function ApertureShapeControls({
   actions,
   showApertureRotation
 }: ApertureShapeControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <FormControl fullWidth size="small">
-        <InputLabel htmlFor={shapeId}>Aperture Shape</InputLabel>
+        <InputLabel htmlFor={shapeId}>{t('apertureMask.shape')}</InputLabel>
         <NativeSelect
           value={state.shape}
           onChange={(event) => {
@@ -54,20 +57,20 @@ export function ApertureShapeControls({
           }}
           inputProps={{
             id: shapeId,
-            'aria-label': 'Aperture Shape'
+            'aria-label': t('apertureMask.shape')
           }}
         >
           {apertureShapeOptions.map((shape) => (
             <option key={shape.value} value={shape.value}>
-              {shape.label}
+              {t(shape.labelKey)}
             </option>
           ))}
         </NativeSelect>
       </FormControl>
       {showApertureRotation ? (
         <CommitSlider
-          ariaLabel="Aperture Rotation"
-          label="Aperture Rotation"
+          ariaLabel={t('apertureMask.rotation')}
+          label={t('apertureMask.rotation')}
           min={0}
           max={360}
           step={1}
@@ -96,11 +99,13 @@ export function CentralObstructionControls({
   actions,
   visibility
 }: CentralObstructionControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <CommitSlider
-        ariaLabel="Central Obstruction Ratio"
-        label="Central Obstruction Ratio"
+        ariaLabel={t('apertureMask.centralObstructionRatio')}
+        label={t('apertureMask.centralObstructionRatio')}
         min={0}
         max={0.99}
         step={0.01}
@@ -114,7 +119,7 @@ export function CentralObstructionControls({
       {visibility.showObstructionControls ? (
         <>
           <FormControl fullWidth size="small">
-            <InputLabel htmlFor={obstructionShapeId}>Obstruction Shape</InputLabel>
+            <InputLabel htmlFor={obstructionShapeId}>{t('apertureMask.obstructionShape')}</InputLabel>
             <NativeSelect
               value={state.centralObstructionShape}
               onChange={(event) => {
@@ -122,20 +127,20 @@ export function CentralObstructionControls({
               }}
               inputProps={{
                 id: obstructionShapeId,
-                'aria-label': 'Obstruction Shape'
+                'aria-label': t('apertureMask.obstructionShape')
               }}
             >
               {apertureShapeOptions.map((shape) => (
                 <option key={shape.value} value={shape.value}>
-                  {shape.label}
+                  {t(shape.labelKey)}
                 </option>
               ))}
             </NativeSelect>
           </FormControl>
           {visibility.showObstructionRotation ? (
             <CommitSlider
-              ariaLabel="Obstruction Rotation"
-              label="Obstruction Rotation"
+              ariaLabel={t('apertureMask.obstructionRotation')}
+              label={t('apertureMask.obstructionRotation')}
               min={0}
               max={360}
               step={1}
@@ -159,11 +164,13 @@ interface SpiderVaneControlsProps {
 }
 
 export function SpiderVaneControls({ state, actions }: SpiderVaneControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <CommitSlider
-        ariaLabel="Spider Vanes"
-        label="Spider Vanes"
+        ariaLabel={t('apertureMask.spiderVanes')}
+        label={t('apertureMask.spiderVanes')}
         min={0}
         max={12}
         step={1}
@@ -175,8 +182,8 @@ export function SpiderVaneControls({ state, actions }: SpiderVaneControlsProps) 
         onCommit={actions.setSpiderVaneCount}
       />
       <CommitSlider
-        ariaLabel="Vane Width (x Aperture Diameter)"
-        label="Vane Width (x Aperture Diameter)"
+        ariaLabel={t('apertureMask.vaneWidth')}
+        label={t('apertureMask.vaneWidth')}
         min={0}
         max={0.25}
         step={0.01}
@@ -188,8 +195,8 @@ export function SpiderVaneControls({ state, actions }: SpiderVaneControlsProps) 
         onCommit={actions.setSpiderVaneWidthRatio}
       />
       <CommitSlider
-        ariaLabel="Vane Rotation"
-        label="Vane Rotation"
+        ariaLabel={t('apertureMask.vaneRotation')}
+        label={t('apertureMask.vaneRotation')}
         min={0}
         max={360}
         step={1}
@@ -215,6 +222,8 @@ export function GaussianApodizationControls({
   actions,
   showGaussianSigma
 }: GaussianApodizationControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <FormControlLabel
@@ -226,12 +235,12 @@ export function GaussianApodizationControls({
             }}
           />
         }
-        label="Gaussian Apodization"
+        label={t('apertureMask.gaussianApodization')}
       />
       {showGaussianSigma ? (
         <CommitSlider
-          ariaLabel="Standard Deviation (x Aperture Diameter)"
-          label="Standard Deviation (x Aperture Diameter)"
+          ariaLabel={t('apertureMask.standardDeviation')}
+          label={t('apertureMask.standardDeviation')}
           min={0.05}
           max={1}
           step={0.01}

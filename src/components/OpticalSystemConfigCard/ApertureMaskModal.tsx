@@ -3,6 +3,7 @@ import Button from '@mui/material/Button';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import { useId, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ApertureMaskResult, ApertureSettings } from '../../workers/types';
 import {
   ApertureShapeControls,
@@ -34,6 +35,7 @@ export function ApertureMaskModal({
   onConfirm,
   onRenderApertureMask
 }: ApertureMaskModalProps) {
+  const { t } = useTranslation();
   const titleId = useId();
 
   return (
@@ -65,7 +67,7 @@ export function ApertureMaskModal({
         }}
       >
         <Typography id={titleId} variant="h5" component="h2" sx={{ flexShrink: 0 }}>
-          Aperture Mask
+          {t('apertureMask.title')}
         </Typography>
         {open ? (
           <ApertureMaskModalDraft
@@ -190,15 +192,17 @@ function ApertureMaskPreviewPanel({
   draftSettings,
   onRenderApertureMask
 }: ApertureMaskPreviewPanelProps) {
+  const { t } = useTranslation();
   const { preview, previewError, isPreviewLoading } = useApertureMaskPreview(
     draftSettings,
-    onRenderApertureMask
+    onRenderApertureMask,
+    t('apertureMask.previewFailed')
   );
 
   return (
     <>
       <Typography variant="subtitle2" component="p">
-        Preview
+        {t('apertureMask.preview')}
       </Typography>
       <Box
         data-testid="aperture-mask-preview-panel"
@@ -217,7 +221,7 @@ function ApertureMaskPreviewPanel({
         }}
       >
         {isPreviewLoading ? (
-          <Typography variant="body2">Preparing aperture mask...</Typography>
+          <Typography variant="body2">{t('apertureMask.preparing')}</Typography>
         ) : previewError ? (
           <Typography variant="body2" color="error">
             {previewError}
@@ -226,7 +230,7 @@ function ApertureMaskPreviewPanel({
           <Box
             component="img"
             src={preview.imageUrl}
-            alt="Aperture mask preview"
+            alt={t('apertureMask.previewAlt')}
             sx={{
               display: 'block',
               height: 'auto',
@@ -236,7 +240,7 @@ function ApertureMaskPreviewPanel({
             }}
           />
         ) : (
-          <Typography variant="body2">Preparing aperture mask...</Typography>
+          <Typography variant="body2">{t('apertureMask.preparing')}</Typography>
         )}
       </Box>
     </>
@@ -254,6 +258,8 @@ function ApertureMaskModalFooter({
   onCancel,
   onConfirm
 }: ApertureMaskModalFooterProps) {
+  const { t } = useTranslation();
+
   return (
     <Box
       data-testid="aperture-mask-modal-footer"
@@ -266,11 +272,11 @@ function ApertureMaskModalFooter({
         pt: 2
       }}
     >
-      <Button aria-label="Cancel aperture mask" variant="outlined" onClick={onCancel}>
-        Cancel
+      <Button aria-label={t('apertureMask.cancelAria')} variant="outlined" onClick={onCancel}>
+        {t('apertureMask.cancel')}
       </Button>
       <Button
-        aria-label="Confirm aperture mask"
+        aria-label={t('apertureMask.confirmAria')}
         variant="contained"
         disabled={!draftSettings}
         onClick={() => {
@@ -279,7 +285,7 @@ function ApertureMaskModalFooter({
           }
         }}
       >
-        Confirm
+        {t('apertureMask.confirm')}
       </Button>
     </Box>
   );

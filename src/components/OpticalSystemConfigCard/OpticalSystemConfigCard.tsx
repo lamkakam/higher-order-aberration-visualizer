@@ -12,6 +12,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   ApertureMaskResult,
   ApertureSettings,
@@ -49,6 +50,7 @@ export function OpticalSystemConfigCard({
   onSpectralModeChange,
   onTargetChange
 }: OpticalSystemConfigCardProps) {
+  const { t } = useTranslation();
   const apertureHasError = !Number.isFinite(apertureDiameterMm) || apertureDiameterMm < 0.5;
   const accordionId = useId();
   const [isApertureModalOpen, setIsApertureModalOpen] = useState(false);
@@ -84,15 +86,15 @@ export function OpticalSystemConfigCard({
         id={`${accordionId}-header`}
       >
         <Typography variant="h6" component="span">
-          Optical System Config
+          {t('opticalSystem.title')}
         </Typography>
       </AccordionSummary>
       <AccordionDetails id={`${accordionId}-content`} sx={{ pt: 0 }}>
         <Stack spacing={2}>
-          <ControlRow label="Aperture Diameter (mm)" htmlFor={apertureInputId}>
+          <ControlRow label={t('opticalSystem.apertureDiameter')} htmlFor={apertureInputId}>
             <NumberField
               id={apertureInputId}
-              label="Aperture Diameter (mm)"
+              label={t('opticalSystem.apertureDiameter')}
               labelMode="external"
               min={0.5}
               error={apertureHasError}
@@ -100,19 +102,19 @@ export function OpticalSystemConfigCard({
               onChange={onApertureChange}
             />
           </ControlRow>
-          <ControlRow label="Target" htmlFor="target-select">
+          <ControlRow label={t('opticalSystem.target')} htmlFor="target-select">
             <FormControl fullWidth size="small">
               <NativeSelect
                 value={targetId}
                 onChange={handleTargetChange}
                 inputProps={{
                   id: 'target-select',
-                  'aria-label': 'Target'
+                  'aria-label': t('opticalSystem.target')
                 }}
               >
                 {targetOptions.map((target) => (
                   <option key={target.id} value={target.id}>
-                    {target.label}
+                    {t(`targets.${target.id}.label`)}
                   </option>
                 ))}
               </NativeSelect>
@@ -124,29 +126,29 @@ export function OpticalSystemConfigCard({
                 labelContent={
                   <Stack spacing={0.5}>
                     <Typography variant="subtitle2" component="p">
-                      Aperture Mask
+                      {t('opticalSystem.apertureMask')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {formatApertureSummary(apertureSettings)}
+                      {formatApertureSummary(apertureSettings, t)}
                     </Typography>
                   </Stack>
                 }
               >
                 <Button
-                  aria-label="Edit aperture mask"
+                  aria-label={t('opticalSystem.editApertureMask')}
                   fullWidth
                   variant="outlined"
                   onClick={() => {
                     setIsApertureModalOpen(true);
                   }}
                 >
-                  Edit
+                  {t('opticalSystem.edit')}
                 </Button>
               </ControlRow>
               <ControlRow
                 labelContent={
                   <Typography id="spectral-mode-toggle-label" variant="subtitle2" component="p">
-                    Spectral Mode
+                    {t('opticalSystem.spectralMode')}
                   </Typography>
                 }
               >
@@ -163,11 +165,11 @@ export function OpticalSystemConfigCard({
                     }
                   }}
                 >
-                  <ToggleButton aria-label="Monochromatic" value="monochromatic">
-                    Monochromatic
+                  <ToggleButton aria-label={t('opticalSystem.monochromatic')} value="monochromatic">
+                    {t('opticalSystem.monochromatic')}
                   </ToggleButton>
-                  <ToggleButton aria-label="Polychromatic" value="polychromatic">
-                    Polychromatic
+                  <ToggleButton aria-label={t('opticalSystem.polychromatic')} value="polychromatic">
+                    {t('opticalSystem.polychromatic')}
                   </ToggleButton>
                 </ToggleButtonGroup>
               </ControlRow>

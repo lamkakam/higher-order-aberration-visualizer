@@ -60,6 +60,14 @@ npm run e2e
 
 Playwright configuration is in [`playwright.config.ts`](../playwright.config.ts), and end-to-end tests live in [`e2e/`](../e2e).
 
+## Translations
+
+The app uses [`src/i18n.ts`](../src/i18n.ts) for client-side i18next setup. Locale files live under `public/locales/<language>/translation.json`, including [`public/locales/en/translation.json`](../public/locales/en/translation.json), [`public/locales/zh-Hant/translation.json`](../public/locales/zh-Hant/translation.json), and [`public/locales/zh-Hans/translation.json`](../public/locales/zh-Hans/translation.json), and are loaded lazily in the browser from `/locales/{{lng}}/{{ns}}.json`. The header language selector shows concrete supported languages only; first-load browser locale matching is handled in code rather than by a visible browser-default option.
+
+Supported languages are English (`en`), Traditional Chinese (`zh-Hant`, labelled `繁體中文`), and Simplified Chinese (`zh-Hans`, labelled `简体中文`). The resolver maps `en-*` locales to English; maps `zh-Hant`, `zh-TW`, `zh-HK`, and `zh-MO` to Traditional Chinese; and maps `zh-Hans`, `zh-CN`, `zh-SG`, and generic `zh` to Simplified Chinese.
+
+To add a future language, add a matching `public/locales/<language>/translation.json`, add the language code to `supportedLngs` in `src/i18n.ts`, and expose it through `language.options.<language>` in each locale file. Keep translation keys stable and update React/Vitest and Playwright coverage when user-visible labels or accessible names change.
+
 ## Python Commands
 
 Run the Python test suite:

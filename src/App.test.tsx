@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from './App';
+import i18n, { cachedLanguageKey } from './i18n';
 import { createMockWorkerClient } from './test/workerMock';
 import type {
   ApertureMaskResult,
@@ -47,13 +48,13 @@ function getSpiderVanesSlider(container: HTMLElement = document.body) {
 
 function getSpiderVaneWidthTextbox(container: HTMLElement = document.body) {
   return within(container).getByRole('textbox', {
-    name: 'Vane Width (x Aperture Diameter)'
+    name: 'Vane Width (times Aperture Diameter)'
   });
 }
 
 function getSpiderVaneWidthSlider(container: HTMLElement = document.body) {
   return within(container).getByRole('slider', {
-    name: 'Vane Width (x Aperture Diameter)'
+    name: 'Vane Width (times Aperture Diameter)'
   });
 }
 
@@ -67,7 +68,7 @@ function getSpiderVaneRotationSlider(container: HTMLElement = document.body) {
 
 function getGaussianSigmaRatioTextbox(container: HTMLElement = document.body) {
   return within(container).getByRole('textbox', {
-    name: 'Standard Deviation (x Aperture Diameter)'
+    name: 'Standard Deviation (times Aperture Diameter)'
   });
 }
 
@@ -88,10 +89,20 @@ function setMatchesSm(matches: boolean) {
   });
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await i18n.changeLanguage('en');
+  window.localStorage.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
+function setNavigatorLanguages(language: string, languages: readonly string[]) {
+  vi.stubGlobal('navigator', {
+    ...window.navigator,
+    language,
+    languages
+  });
+}
 
 it('renders the header and settings drawer theme controls', async () => {
   const user = userEvent.setup();
@@ -99,6 +110,7 @@ it('renders the header and settings drawer theme controls', async () => {
 
   expect(screen.getByText('HOA Visualizer')).toBeInTheDocument();
   expect(screen.getByText('Optical Aberration Simulator')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
 
   await user.click(screen.getByRole('button', { name: 'Setting' }));
 
@@ -112,6 +124,110 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.queryByText('Wavefront legend unit')).not.toBeInTheDocument();
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
+});
+
+it('renders the language selector before the settings button and supports explicit languages', () => {
+  const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  const languageSelect = screen.getByRole('combobox', { name: 'Language' });
+  const settingsButton = screen.getByRole('button', { name: 'Setting' });
+
+  expect(languageSelect).toHaveValue('en');
+  expect(screen.queryByRole('option', { name: 'Browser default' })).not.toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '繁體中文' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '简体中文' })).toBeInTheDocument();
+  expect(
+    languageSelect.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+
+  fireEvent.change(languageSelect, { target: { value: 'zh-Hans' } });
+
+  expect(changeLanguage).toHaveBeenCalledWith('zh-Hans');
+  changeLanguage.mockRestore();
+  expect(languageSelect).toHaveValue('zh-Hans');
+});
+
+it('uses cached supported language before checking browser languages', async () => {
+  window.localStorage.setItem(cachedLanguageKey, 'zh-Hans');
+  setNavigatorLanguages('en-US', ['en-US']);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('zh-Hans');
+});
+
+it.each([
+  ['en-US', 'en'],
+  ['zh-Hant', 'zh-Hant'],
+  ['zh-TW', 'zh-Hant'],
+  ['zh-HK', 'zh-Hant'],
+  ['zh-MO', 'zh-Hant']
+])('matches browser language variant %s to supported language %s', async (browserLanguage, expected) => {
+  setNavigatorLanguages(browserLanguage, [browserLanguage]);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
+});
+
+it.each([
+  ['zh-Hans', 'zh-Hans'],
+  ['zh-CN', 'zh-Hans'],
+  ['zh-SG', 'zh-Hans'],
+  ['zh', 'zh-Hans']
+])('matches browser language variant %s to supported language %s', async (browserLanguage, expected) => {
+  setNavigatorLanguages(browserLanguage, [browserLanguage]);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
+});
+
+it.each(['fr-FR'])(
+  'falls back to English for unsupported browser language %s',
+  async (browserLanguage) => {
+    setNavigatorLanguages(browserLanguage, [browserLanguage]);
+
+    render(<App workerClient={createMockWorkerClient()} />);
+
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+  }
+);
+
+it('renders core UI text through the English translation file', async () => {
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
+  expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reset aberrations' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
+});
+
+it('renders representative core UI text through the Traditional Chinese translation file', async () => {
+  await i18n.changeLanguage('zh-Hant');
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: '光學系統設定' })).toBeInTheDocument();
+  expect(screen.getByLabelText('口徑 (mm)')).toHaveValue('6');
+  expect(screen.getByRole('heading', { name: '光學像差 (Zernike)' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '重設像差' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '模擬影像' })).toBeInTheDocument();
+});
+
+it('renders representative core UI text through the Simplified Chinese translation file', async () => {
+  await i18n.changeLanguage('zh-Hans');
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: '光学系统配置' })).toBeInTheDocument();
+  expect(screen.getByLabelText('孔径直径 (mm)')).toHaveValue('6');
+  expect(screen.getByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '重置像差' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '模拟图像' })).toBeInTheDocument();
 });
 
 it('shows an app-level initialization mask while the worker initializes', async () => {
@@ -166,12 +282,14 @@ it('renders default aperture and supported target options', async () => {
   expect(screen.getByText('Target', { selector: 'label' })).toHaveAttribute('for', 'target-select');
   expect(screen.getByLabelText('Target')).toHaveAttribute('id', 'target-select');
 
-  const targetOptions = screen.getAllByRole('option');
+  const targetOptions = within(screen.getByLabelText('Target')).getAllByRole('option');
   expect(targetOptions[0]).toHaveTextContent('Eye Chart (logMAR)');
   expect(targetOptions[0]).toHaveValue('logmar_chart');
   expect(screen.getByRole('option', { name: 'Eye Chart (logMAR)' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Snellen Chart Letter E on 20/20' })).toBeInTheDocument();
-  expect(screen.getByRole('option', { name: 'Jupiter (HST 502 nm, 50 arcsec)' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('option', { name: 'Jupiter (angular diameter 50 arcsecond)' })
+  ).toHaveValue('jupiter');
   expect(screen.getByRole('option', { name: 'Point Source (Airy Disc)' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
@@ -234,13 +352,13 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
   expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
   expect(
     within(modal).queryByRole('slider', {
-      name: 'Standard Deviation (x Aperture Diameter)'
+      name: 'Standard Deviation (times Aperture Diameter)'
     })
   ).not.toBeInTheDocument();
   expect(within(modal).queryByRole('slider', { name: 'Aperture Rotation' })).not.toBeInTheDocument();
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
   expect(within(modal).getByText('Preview')).toBeInTheDocument();
-  expect(within(modal).getByText('Preparing aperture mask...')).toBeInTheDocument();
+  expect(within(modal).getByText('Preparing aperture mask preview...')).toBeInTheDocument();
   expect(within(modal).getByRole('button', { name: 'Confirm aperture mask' })).toBeInTheDocument();
   expect(within(modal).getByRole('button', { name: 'Cancel aperture mask' })).toBeInTheDocument();
 
@@ -304,7 +422,7 @@ it('shows Gaussian apodization SD controls only when enabled', async () => {
   expect(getGaussianApodizationSwitch(modal)).not.toBeChecked();
   expect(
     within(modal).queryByRole('textbox', {
-      name: 'Standard Deviation (x Aperture Diameter)'
+      name: 'Standard Deviation (times Aperture Diameter)'
     })
   ).not.toBeInTheDocument();
 
@@ -313,7 +431,7 @@ it('shows Gaussian apodization SD controls only when enabled', async () => {
   expect(getGaussianApodizationSwitch(modal)).toBeChecked();
   expect(
     within(modal).getByRole('slider', {
-      name: 'Standard Deviation (x Aperture Diameter)'
+      name: 'Standard Deviation (times Aperture Diameter)'
     })
   ).toBeInTheDocument();
   expect(getGaussianSigmaRatioTextbox(modal)).toHaveValue('0.5');
@@ -476,7 +594,7 @@ it('keeps the aperture preview panel height stable while loading and loaded', as
 
   const panel = screen.getByTestId('aperture-mask-preview-panel');
   expect(panel).toHaveStyle({ height: '280px', minHeight: '280px' });
-  expect(within(panel).getByText('Preparing aperture mask...')).toBeInTheDocument();
+  expect(within(panel).getByText('Preparing aperture mask preview...')).toBeInTheDocument();
 
   await act(async () => {
     resolvePreview({
@@ -805,6 +923,91 @@ it('confirms aperture mask changes and sends them in the next simulation payload
   });
 });
 
+it('renders the Traditional Chinese aperture mask summary without hardcoded English terms', async () => {
+  const user = userEvent.setup();
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {
+    target: { value: 'zh-Hant' }
+  });
+  await user.click(screen.getByRole('button', { name: '設定' }));
+  await user.click(screen.getByRole('button', { name: '進階' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: '設定光圈遮罩' }));
+
+  fireEvent.change(screen.getByLabelText('光圈形狀'), {
+    target: { value: 'square' }
+  });
+  const modal = within(screen.getByRole('dialog'));
+  fireEvent.change(modal.getByRole('textbox', { name: '中央遮蔽比例' }), {
+    target: { value: '0.25' }
+  });
+  fireEvent.blur(modal.getByRole('textbox', { name: '中央遮蔽比例' }));
+  fireEvent.change(screen.getByLabelText('遮蔽物截面形狀'), {
+    target: { value: 'regular_hexagon' }
+  });
+  fireEvent.change(modal.getByRole('textbox', { name: '支架數量' }), {
+    target: { value: '4' }
+  });
+  fireEvent.blur(modal.getByRole('textbox', { name: '支架數量' }));
+  fireEvent.change(
+    modal.getByRole('textbox', { name: '支架寬度 (單位為口徑倍數)' }),
+    {
+      target: { value: '0.03' }
+    }
+  );
+  fireEvent.blur(modal.getByRole('textbox', { name: '支架寬度 (單位為口徑倍數)' }));
+  fireEvent.change(modal.getByRole('textbox', { name: '支架旋轉角度' }), {
+    target: { value: '12' }
+  });
+  fireEvent.blur(modal.getByRole('textbox', { name: '支架旋轉角度' }));
+  fireEvent.click(modal.getByRole('switch', { name: '高斯變跡' }));
+  fireEvent.change(
+    modal.getByRole('textbox', {
+      name: '標準差 (單位為口徑倍數)'
+    }),
+    {
+      target: { value: '0.5' }
+    }
+  );
+  fireEvent.blur(
+    modal.getByRole('textbox', {
+      name: '標準差 (單位為口徑倍數)'
+    })
+  );
+  fireEvent.click(screen.getByRole('button', { name: '確認光圈遮罩設定' }));
+
+  const summary = screen.getByText(/25%/u);
+  expect(summary).toHaveTextContent('正方形');
+  expect(summary).toHaveTextContent('正六邊形');
+  expect(summary).not.toHaveTextContent(
+    /obstruction|spider|rotated|Gaussian apodization|sigma/iu
+  );
+});
+
+it('uses Mainland Simplified Chinese terminology for aperture and optics text', async () => {
+  const user = userEvent.setup();
+  await i18n.changeLanguage('zh-Hans');
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '设置' }));
+  await user.click(screen.getByRole('button', { name: '高级' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.getByText('点扩散函数')).toBeInTheDocument();
+  expect(screen.getByText('波前图')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '编辑孔径遮罩' }));
+
+  expect(screen.getByRole('textbox', { name: '中央遮挡比例' })).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: '蜘蛛支架' })).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: '高斯切趾' })).toBeInTheDocument();
+
+  expect(document.body).not.toHaveTextContent(/點擴散函數|波前誤差圖|Zernike|光圈|中央遮蔽|高斯變跡/u);
+});
+
 it('describes the default simulated image target in plain language', async () => {
   vi.useFakeTimers();
   await act(async () => {
@@ -845,7 +1048,7 @@ it('updates the simulated image description when the target changes', async () =
 
   expect(
     screen.getByText(
-      'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing where fine details become blurred.'
+      'This shows how the selected picture would look through the current optical settings. Current target: A circular pattern of black-and-white spokes, useful for showing defocus and astigmatism.'
     )
   ).toBeInTheDocument();
   expect(screen.queryByText(psfCutoffNote)).not.toBeInTheDocument();
