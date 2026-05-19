@@ -8,7 +8,9 @@ export interface WorkerDiagnostics {
 
 export const supportedTargetIds = [
   'snellen_e_20_20',
+  'snellen_e_20_20_inverted',
   'logmar_chart',
+  'logmar_chart_inverted',
   'jupiter',
   'point_source',
   'siemensstar',

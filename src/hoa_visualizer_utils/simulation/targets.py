@@ -16,7 +16,9 @@ SUPPORTED_TARGET_IDS = frozenset(
         "slantededge",
         "tiltedsquare",
         "snellen_e_20_20",
+        "snellen_e_20_20_inverted",
         "logmar_chart",
+        "logmar_chart_inverted",
         "jupiter",
         "point_source",
     }
@@ -126,8 +128,18 @@ def _make_target(
             x.shape,
             image_dx_arcmin=image_dx_arcmin,
         )
+    if target_id == "snellen_e_20_20_inverted":
+        return 1 - _make_snellen_e(
+            x.shape,
+            image_dx_arcmin=image_dx_arcmin,
+        )
     if target_id == "logmar_chart":
         return _make_logmar_chart(
+            x.shape,
+            image_dx_arcmin=image_dx_arcmin,
+        )
+    if target_id == "logmar_chart_inverted":
+        return 1 - _make_logmar_chart(
             x.shape,
             image_dx_arcmin=image_dx_arcmin,
         )

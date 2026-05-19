@@ -62,6 +62,11 @@ describe('optics worker', () => {
     expect(supportedTargetIds).toContain('point_source');
   });
 
+  it('exposes inverted eye-chart target ids', () => {
+    expect(supportedTargetIds).toContain('logmar_chart_inverted');
+    expect(supportedTargetIds).toContain('snellen_e_20_20_inverted');
+  });
+
   it('initializes Pyodide without installing local wheel URLs', async () => {
     const { expose } = await import('comlink');
     await import('./optics.worker');
