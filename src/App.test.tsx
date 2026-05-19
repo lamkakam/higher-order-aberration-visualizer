@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import i18n, { cachedLanguageKey } from './i18n';
 import { createMockWorkerClient } from './test/workerMock';
@@ -13,6 +13,9 @@ import type {
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
 const enlargementHint = 'Click the image to view it enlarged.';
+const termsAcceptedStorageKey = 'hoaTermsOfUseAccepted';
+const termsLinkHref =
+  'https://redirect.github.com/lamkakam/higher-order-aberration-visualizer/blob/main/LICENSE';
 const defaultApertureSettings = {
   shape: 'circle',
   rotationDegrees: 0,
@@ -89,6 +92,10 @@ function setMatchesSm(matches: boolean) {
   });
 }
 
+beforeEach(() => {
+  window.localStorage.setItem(termsAcceptedStorageKey, 'true');
+});
+
 afterEach(async () => {
   await i18n.changeLanguage('en');
   setPath('/');
@@ -127,6 +134,56 @@ function getSettingsLanguageSelect(label?: string) {
 
   return within(screen.getByRole('dialog')).getByRole('combobox');
 }
+
+it('shows the terms of use modal on first render until the user agrees', async () => {
+  const user = userEvent.setup();
+  window.localStorage.removeItem(termsAcceptedStorageKey);
+  renderAtPath('/');
+
+  const modal = await screen.findByRole('dialog', { name: 'Terms of Use' });
+  expect(within(modal).getByText('Terms of Use')).toBeInTheDocument();
+  expect(within(modal).getByRole('button', { name: 'Agree' })).toBeInTheDocument();
+
+  fireEvent.keyDown(modal, { key: 'Escape' });
+  expect(screen.getByRole('dialog', { name: 'Terms of Use' })).toBeInTheDocument();
+
+  const backdrop = document.querySelector('.MuiBackdrop-root') as HTMLElement;
+  fireEvent.click(backdrop);
+  expect(screen.getByRole('dialog', { name: 'Terms of Use' })).toBeInTheDocument();
+  expect(within(modal).queryByRole('button', { name: /cancel|close/i })).not.toBeInTheDocument();
+
+  await user.click(within(modal).getByRole('button', { name: 'Agree' }));
+
+  expect(screen.queryByRole('dialog', { name: 'Terms of Use' })).not.toBeInTheDocument();
+});
+
+it('stores terms of use agreement in localStorage when the user agrees', async () => {
+  const user = userEvent.setup();
+  window.localStorage.removeItem(termsAcceptedStorageKey);
+  renderAtPath('/');
+
+  await user.click(await screen.findByRole('button', { name: 'Agree' }));
+
+  expect(window.localStorage.getItem(termsAcceptedStorageKey)).toBe('true');
+});
+
+it('does not show the terms of use modal when agreement is already stored', () => {
+  renderAtPath('/');
+
+  expect(screen.queryByRole('dialog', { name: 'Terms of Use' })).not.toBeInTheDocument();
+});
+
+it('opens the full terms link in a new tab through the GitHub redirect domain', async () => {
+  window.localStorage.removeItem(termsAcceptedStorageKey);
+  renderAtPath('/');
+
+  const modal = await screen.findByRole('dialog', { name: 'Terms of Use' });
+  const link = within(modal).getByRole('link', { name: 'full terms' });
+
+  expect(link).toHaveAttribute('href', termsLinkHref);
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noreferrer');
+});
 
 it('renders the header and settings drawer theme controls', async () => {
   renderAtPath('/');

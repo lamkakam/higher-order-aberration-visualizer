@@ -21,6 +21,14 @@
     "advanced": "Advanced",
     "showScaleBar": "Show scale bar"
   },
+  "termsOfUse": {
+    "title": "Terms of Use",
+    "body": "This simulator is provided for educational and informational use only. It is not medical advice, diagnosis, treatment, or a substitute for a qualified eye-care professional. Use the results at your own risk.",
+    "fullTermsPrefix": "Read the",
+    "fullTermsLink": "full terms",
+    "fullTermsSuffix": " before continuing.",
+    "agree": "Agree"
+  },
   "status": {
     "workerInitialization": "Worker initialization",
     "initializing": "Initializing...",
