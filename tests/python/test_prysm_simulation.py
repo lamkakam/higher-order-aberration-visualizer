@@ -903,6 +903,53 @@ def test_snellen_e_20_20_default_sampling_records_angular_spacing() -> None:
     assert simulation.sampling.image_dx_arcmin == pytest.approx(1 / expected_block_px)
 
 
+def test_snellen_e_20_20_inverted_matches_original_footprint() -> None:
+    original = compute_simulation(
+        10,
+        {},
+        "snellen_e_20_20",
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=0.25,
+    )
+    inverted = compute_simulation(
+        10,
+        {},
+        "snellen_e_20_20_inverted",
+        pupil_samples=32,
+        image_samples=64,
+        image_dx_arcmin=0.25,
+    )
+
+    assert "snellen_e_20_20_inverted" in SUPPORTED_TARGET_IDS
+    assert inverted.target_id == "snellen_e_20_20_inverted"
+    assert _target_size_px(inverted.target) == _target_size_px(original.target)
+    np.testing.assert_allclose(inverted.target, 1 - original.target)
+
+
+def test_snellen_e_20_20_inverted_preserves_default_angular_sampling() -> None:
+    original = compute_simulation(
+        300,
+        {},
+        "snellen_e_20_20",
+        pupil_samples=64,
+        image_samples=128,
+    )
+    inverted = compute_simulation(
+        300,
+        {},
+        "snellen_e_20_20_inverted",
+        pupil_samples=64,
+        image_samples=128,
+    )
+
+    assert inverted.sampling.image_dx_arcmin == pytest.approx(
+        original.sampling.image_dx_arcmin
+    )
+    assert _target_size_px(inverted.target) == _target_size_px(original.target)
+    np.testing.assert_allclose(inverted.target, 1 - original.target)
+
+
 def test_logmar_chart_uses_supported_target_id() -> None:
     simulation = compute_simulation(
         10,
@@ -1033,6 +1080,28 @@ def test_logmar_chart_default_sampling_records_angular_spacing() -> None:
         LOGMAR_CHART_WIDEST_ROW_ARCMIN
         / (512 * LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION)
     )
+
+
+def test_logmar_chart_inverted_matches_original_footprint() -> None:
+    original = compute_simulation(
+        10,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+    )
+    inverted = compute_simulation(
+        10,
+        {},
+        "logmar_chart_inverted",
+        pupil_samples=32,
+        image_samples=512,
+    )
+
+    assert "logmar_chart_inverted" in SUPPORTED_TARGET_IDS
+    assert inverted.target_id == "logmar_chart_inverted"
+    assert _target_size_px(inverted.target) == _target_size_px(original.target)
+    np.testing.assert_allclose(inverted.target, 1 - original.target)
 
 
 def test_jupiter_uses_supported_target_id() -> None:
@@ -1374,10 +1443,12 @@ def test_supported_targets_keep_same_convolved_grid_with_current_visible_sizes()
     assert visible_sizes == {
         "jupiter": (90, 90),
         "logmar_chart": (76, 104),
+        "logmar_chart_inverted": (76, 104),
         "point_source": (1, 1),
         "siemensstar": (101, 101),
         "slantededge": (128, 68),
         "snellen_e_20_20": (15, 15),
+        "snellen_e_20_20_inverted": (15, 15),
         "tiltedsquare": (47, 47),
     }
 

@@ -40,14 +40,16 @@ For three-channel results, the simulated RGB image still uses all three waveleng
 Supported target ids are defined in both [`src/workers/types.ts`](../src/workers/types.ts) and [`src/hoa_visualizer_utils/simulation/targets.py`](../src/hoa_visualizer_utils/simulation/targets.py):
 
 - `snellen_e_20_20`
+- `snellen_e_20_20_inverted`
 - `logmar_chart`
+- `logmar_chart_inverted`
 - `jupiter`
 - `point_source`
 - `siemensstar`
 - `slantededge`
 - `tiltedsquare`
 
-`targets.py` builds synthetic Siemens star, slanted edge, tilted square, Snellen E, LogMAR, Jupiter, and point-source targets. The public Jupiter target id is `jupiter`, while the monochrome Jupiter target continues to use the packaged [`jupiter_502nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz) asset. In polychromatic runs, Jupiter uses [`jupiter_658nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz) for red, `jupiter_502nm.npz` for green, and [`jupiter_395nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz) for blue. The simulation reads the committed packaged Jupiter assets directly. Each Jupiter asset is normalized to a dark-background, bright-disk representation, cropped to the detected disk frame, resized to the requested angular diameter, and centered on the output grid so RGB wavelength channels share the same spatial registration.
+`targets.py` builds synthetic Siemens star, slanted edge, tilted square, Snellen E, LogMAR, inverted Snellen E, inverted LogMAR, Jupiter, and point-source targets. The inverted eye-chart targets reuse the same sizing, spacing, antialiasing, and angular sampling as their originals, then return `1 - target` so the letters are light on a dark background. The public Jupiter target id is `jupiter`, while the monochrome Jupiter target continues to use the packaged [`jupiter_502nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_502nm.npz) asset. In polychromatic runs, Jupiter uses [`jupiter_658nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_658nm.npz) for red, `jupiter_502nm.npz` for green, and [`jupiter_395nm.npz`](../src/hoa_visualizer_utils/simulation/assets/jupiter_395nm.npz) for blue. The simulation reads the committed packaged Jupiter assets directly. Each Jupiter asset is normalized to a dark-background, bright-disk representation, cropped to the detected disk frame, resized to the requested angular diameter, and centered on the output grid so RGB wavelength channels share the same spatial registration.
 
 ## Computation Path
 
@@ -74,7 +76,7 @@ Spider vanes are disabled by default. `spiderVaneCount` must be an integer from 
 
 Gaussian apodization is disabled by default. When enabled, `gaussianApodizationSigmaRatio` must satisfy `0.05 <= ratio <= 1.0` and is interpreted as a true Gaussian standard deviation divided by the outer aperture diameter. The Python aperture helper first builds the geometric aperture, central obstruction, and active spider vanes, then multiplies that amplitude by `exp(-r^2 / (2 * sigma_mm^2))`, where `sigma_mm = gaussianApodizationSigmaRatio * apertureDiameterMm`. The pupil mask remains `amp > 0`, so wavefront support still follows the geometric aperture, obstruction, and spider vanes while the PSF uses the softened amplitude.
 
-When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` target defaults to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
+When `image_dx_arcmin` is omitted, some targets use target-specific angular sampling. The `snellen_e_20_20` and `snellen_e_20_20_inverted` targets default to a sampling that makes the E occupy about one eighth of the square chart height, while explicit `image_dx_arcmin` values keep the physical 20/20 sizing semantics requested by Python callers.
 
 ## Rendered Outputs
 

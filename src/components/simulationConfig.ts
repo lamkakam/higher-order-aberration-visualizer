@@ -7,8 +7,16 @@ export const targetOptions = [
     label: 'Eye Chart (logMAR)'
   },
   {
+    id: 'logmar_chart_inverted',
+    label: 'Eye Chart (logMAR, Inverted Contrast)'
+  },
+  {
     id: 'snellen_e_20_20',
     label: 'Snellen Chart Letter E on 20/20'
+  },
+  {
+    id: 'snellen_e_20_20_inverted',
+    label: 'Snellen Chart Letter E on 20/20 (Inverted Contrast)'
   },
   {
     id: 'jupiter',

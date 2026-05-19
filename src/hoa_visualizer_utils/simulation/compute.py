@@ -378,11 +378,11 @@ def _resolve_image_dx_arcmin(
 
     if image_dx_arcmin is not _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL and image_dx_arcmin is not None:
         return image_dx_arcmin
-    if target_id == "snellen_e_20_20":
+    if target_id in {"snellen_e_20_20", "snellen_e_20_20_inverted"}:
         target_height_px = round(image_samples * SNELLEN_E_DEFAULT_IMAGE_HEIGHT_FRACTION)
         block_px = max(1, round(target_height_px / 5))
         return 1 / block_px
-    if target_id == "logmar_chart":
+    if target_id in {"logmar_chart", "logmar_chart_inverted"}:
         return LOGMAR_CHART_WIDEST_ROW_ARCMIN / (
             image_samples * LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION
         )
