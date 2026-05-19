@@ -6,21 +6,24 @@ import InputLabel from '@mui/material/InputLabel';
 import NativeSelect from '@mui/material/NativeSelect';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n, { resolveSupportedLanguage, supportedLanguageCodes } from '../i18n';
+import { supportedLanguageCodes } from '../i18n';
 import type { SupportedLanguageCode } from '../i18n';
 
 interface AppHeaderProps {
+  readonly selectedLanguage: SupportedLanguageCode;
+  readonly onLanguageChange: (language: SupportedLanguageCode) => void;
   readonly onOpenSettings: () => void;
 }
 
-export function AppHeader({ onOpenSettings }: AppHeaderProps) {
+export function AppHeader({
+  selectedLanguage,
+  onLanguageChange,
+  onOpenSettings
+}: AppHeaderProps) {
   const { t } = useTranslation();
   const languageSelectId = useId();
-  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguageCode>(
-    resolveSupportedLanguage
-  );
 
   return (
     <AppBar position="static" color="default" elevation={0}>
@@ -40,8 +43,7 @@ export function AppHeader({ onOpenSettings }: AppHeaderProps) {
               value={selectedLanguage}
               onChange={(event) => {
                 const nextLanguage = event.target.value as SupportedLanguageCode;
-                setSelectedLanguage(nextLanguage);
-                void i18n.changeLanguage(nextLanguage);
+                onLanguageChange(nextLanguage);
               }}
               inputProps={{
                 id: languageSelectId,
