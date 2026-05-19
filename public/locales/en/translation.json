@@ -71,16 +71,17 @@
       "supplementalDescription": "The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation."
     },
     "logmar_chart_inverted": {
-      "label": "Eye Chart (logMAR, Inverted Contrast)",
-      "description": "The first six lines of an eye chart, with light letters arranged in rows on a dark background."
+      "label": "Eye Chart (logMAR, Reverse Contrast)",
+      "description": "The first six lines of an eye chart, with letters arranged in rows.",
+      "supplementalDescription": "The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation."
     },
     "snellen_e_20_20": {
       "label": "Snellen Chart Letter E on 20/20",
       "description": "An eye-chart letter E from the 20/20 (6/6) line. An eye with standard vision should be able to resolve this target from 20 feet or 6 meters away."
     },
     "snellen_e_20_20_inverted": {
-      "label": "Snellen Chart Letter E on 20/20 (Inverted Contrast)",
-      "description": "A light eye-chart letter E from the 20/20 (6/6) line on a dark background."
+      "label": "Snellen Chart Letter E on 20/20 (Reverse Contrast)",
+      "description": "An eye-chart letter E from the 20/20 (6/6) line. An eye with standard vision should be able to resolve this target from 20 feet or 6 meters away."
     },
     "jupiter": {
       "label": "Jupiter (angular diameter 50 arcsecond)",
