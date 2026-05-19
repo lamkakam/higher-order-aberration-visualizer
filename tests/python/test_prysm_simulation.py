@@ -808,6 +808,16 @@ def test_render_aperture_mask_returns_png_bytes(aperture: ApertureSpec) -> None:
     assert len(image_bytes) > 1000
 
 
+def test_aperture_mask_png_has_no_white_figure_border() -> None:
+    png_bytes = render_aperture_mask(ApertureSpec(), image_format="png")
+    pixels = _png_pixels(png_bytes)
+
+    corner_pixels = pixels[[0, 0, -1, -1], [0, -1, 0, -1], :3]
+
+    assert png_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    assert not np.allclose(corner_pixels, 1.0, atol=1 / 255)
+
+
 def test_snellen_e_20_20_uses_five_arcminute_height() -> None:
     image_dx_arcmin = 0.25
     simulation = compute_simulation(
