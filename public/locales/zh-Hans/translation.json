@@ -21,6 +21,14 @@
     "advanced": "高级",
     "showScaleBar": "显示比例尺"
   },
+  "termsOfUse": {
+    "title": "使用条款",
+    "body": "本模拟器仅供教育和信息用途。它不是医疗建议、诊断、治疗，也不能替代合格眼科专业人员的意见。使用结果的风险由你自行承担。",
+    "fullTermsPrefix": "继续前请阅读",
+    "fullTermsLink": "完整条款",
+    "fullTermsSuffix": "。完整条款目前仅提供英文版本。",
+    "agree": "同意"
+  },
   "status": {
     "workerInitialization": "Web worker 初始化",
     "initializing": "正在初始化...",

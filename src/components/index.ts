@@ -9,6 +9,10 @@ export {
   type ThemeMode
 } from './SettingsDrawer';
 export {
+  TermsOfUseModal,
+  termsOfUseAcceptedStorageKey
+} from './TermsOfUseModal';
+export {
   ImageResultDetailsAccordion,
   ImageResultDetailsContent,
   ImageResultPreview,

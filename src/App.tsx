@@ -42,10 +42,12 @@ import {
   SimulatedImageCard,
   supplementalDescriptions,
   targetOptions,
+  TermsOfUseModal,
   type DisplayMode,
   type ImageResultPanelProps,
   type ThemeMode,
-  type WavefrontLegendUnit
+  type WavefrontLegendUnit,
+  termsOfUseAcceptedStorageKey
 } from './components';
 import { useAppTheme } from './hooks/useAppTheme';
 import { useWorkerClient } from './hooks/useWorkerClient';
@@ -232,6 +234,9 @@ export function App({ workerClient }: AppProps) {
   const selectedLanguage = hasValidRouteState ? routeLanguage : resolveSupportedLanguage();
   const displayMode = hasValidRouteState ? routeDisplayMode : 'basic';
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(
+    () => window.localStorage.getItem(termsOfUseAcceptedStorageKey) !== 'true'
+  );
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [showScaleBar, setShowScaleBar] = useState(false);
   const [spectralMode, setSpectralMode] = useState<SpectralMode>('monochromatic');
@@ -576,6 +581,13 @@ export function App({ workerClient }: AppProps) {
           onModeChange={setThemeMode}
           onDisplayModeChange={updateDisplayMode}
           onShowScaleBarChange={setShowScaleBar}
+        />
+        <TermsOfUseModal
+          open={termsOpen}
+          onAgree={() => {
+            window.localStorage.setItem(termsOfUseAcceptedStorageKey, 'true');
+            setTermsOpen(false);
+          }}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
           <Box

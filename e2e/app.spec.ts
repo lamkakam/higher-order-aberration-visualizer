@@ -9,6 +9,19 @@ async function waitForWorkerInitialization(page: Page) {
   });
 }
 
+async function openAppAndAcceptTerms(page: Page) {
+  await page.goto('/');
+  const termsModal = page.getByRole('dialog', { name: 'Terms of Use' });
+
+  await expect(termsModal).toBeVisible();
+  await expect(termsModal.getByRole('link', { name: 'full terms' })).toHaveAttribute(
+    'href',
+    'https://redirect.github.com/lamkakam/higher-order-aberration-visualizer/blob/main/LICENSE'
+  );
+  await termsModal.getByRole('button', { name: 'Agree' }).click();
+  await expect(termsModal).toBeHidden();
+}
+
 async function getCardTopByHeading(page: Page, heading: string) {
   const card = page
     .getByRole('heading', { name: heading })
@@ -123,13 +136,12 @@ async function enableAdvancedMode(page: Page) {
 }
 
 test('app loads the simulator controls', async ({ page }) => {
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
 
-  await expect(page.getByText('HOA Visualizer')).toBeVisible();
-  await expect(page.getByText('Optical Aberration Simulator')).toBeVisible();
-  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+  await expect(page.getByText('Higher-Order Aberration Simulator')).toBeVisible();
 
   await page.getByRole('button', { name: 'Setting' }).click();
+  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   await expect(page.getByText('Mode')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Light' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'System' })).toBeVisible();
@@ -209,20 +221,20 @@ async function expectTextIsBelowText(page: Page, lowerText: string, upperText: s
 
 test('keeps the simulated image card sticky in basic mode on desktop', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 500 });
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
 
   await expectPrimaryCardSticks(page);
 });
 
 test('masks the gap above the sticky simulated image card on desktop', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 500 });
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
 
   await expectPrimaryStickyGapIsMasked(page);
 });
 
 test('keeps all advanced image cards sticky on desktop', async ({ page }) => {
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
   await enableAdvancedMode(page);
   await expectAdvancedConfigTextIsLeftOfControl(
     page,
@@ -256,7 +268,7 @@ test('keeps all advanced image cards sticky on desktop', async ({ page }) => {
 });
 
 test('keeps advanced image cards equal height on desktop', async ({ page }) => {
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
   await enableAdvancedMode(page);
 
   const heights = await Promise.all(
@@ -271,7 +283,7 @@ test('keeps advanced image cards equal height on desktop', async ({ page }) => {
 });
 
 test('masks the advanced sticky card gutters and top gaps on desktop', async ({ page }) => {
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
   await enableAdvancedMode(page);
 
   await page.evaluate(() => window.scrollTo(0, 620));
@@ -280,14 +292,14 @@ test('masks the advanced sticky card gutters and top gaps on desktop', async ({ 
 
 test('keeps the simulated image card sticky in basic mode on small screens', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 500 });
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
 
   await expectPrimaryCardSticks(page);
 });
 
 test('keeps the simulated image card sticky in advanced mode on small screens', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
-  await page.goto('/');
+  await openAppAndAcceptTerms(page);
   await enableAdvancedMode(page);
 
   await page.evaluate(() => window.scrollTo(0, 260));

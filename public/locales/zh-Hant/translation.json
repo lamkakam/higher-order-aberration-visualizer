@@ -21,6 +21,14 @@
     "advanced": "進階",
     "showScaleBar": "顯示比例尺"
   },
+  "termsOfUse": {
+    "title": "使用條款",
+    "body": "本模擬器僅供教育及資訊用途。它不是醫療建議、診斷、治療，也不能取代合資格眼科專業人員的意見。使用結果的風險由你自行承擔。",
+    "fullTermsPrefix": "繼續前請閱讀",
+    "fullTermsLink": "完整條款",
+    "fullTermsSuffix": "。完整條款目前僅提供英文版本。",
+    "agree": "同意"
+  },
   "status": {
     "workerInitialization": "Web worker 初始化",
     "initializing": "初始化中...",
