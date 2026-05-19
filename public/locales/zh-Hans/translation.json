@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "HOA Visualizer",
-    "subtitle": "光学像差模拟器"
+    "name": "高阶像差模拟器"
   },
   "language": {
     "label": "语言",
