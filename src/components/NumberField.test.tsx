@@ -14,6 +14,14 @@ describe('NumberField', () => {
     expect(screen.getByLabelText('Aperture')).toHaveValue('3');
   });
 
+  it('forwards autocomplete when provided', () => {
+    render(
+      <NumberField label="Aperture" value={3} min={0.5} autoComplete="off" onChange={vi.fn()} />
+    );
+
+    expect(screen.getByLabelText('Aperture')).toHaveAttribute('autocomplete', 'off');
+  });
+
   it('can use an external label without rendering an embedded label', () => {
     render(
       <>

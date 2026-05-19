@@ -275,6 +275,7 @@ it('renders default aperture and supported target options', async () => {
     'for',
     screen.getByLabelText('Aperture Diameter (mm)').id
   );
+  expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveAttribute('autocomplete', 'off');
   expect(screen.queryByText('Minimum value is 0.5.')).not.toBeInTheDocument();
 
   await user.click(screen.getByLabelText('Target'));
@@ -329,6 +330,13 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
 
   const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
   expect(within(modal).getByLabelText('Aperture Shape')).toHaveValue('circle');
+  expect(within(modal).getByText('Aperture Shape', { selector: 'label' })).toHaveAttribute(
+    'for',
+    within(modal).getByLabelText('Aperture Shape').id
+  );
+  expect(within(modal).getByText('Aperture Shape', { selector: 'label' })).not.toHaveClass(
+    'MuiInputLabel-root'
+  );
   expect(within(modal).getByRole('option', { name: 'Circle' })).toBeInTheDocument();
   expect(within(modal).getByRole('option', { name: 'Square' })).toBeInTheDocument();
   expect(within(modal).getByRole('option', { name: 'Regular Hexagon' })).toBeInTheDocument();
@@ -464,6 +472,13 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
   });
   fireEvent.blur(getCentralObstructionRatioTextbox(modal));
   expect(within(modal).getByLabelText('Obstruction Shape')).toHaveValue('circle');
+  expect(within(modal).getByText('Obstruction Shape', { selector: 'label' })).toHaveAttribute(
+    'for',
+    within(modal).getByLabelText('Obstruction Shape').id
+  );
+  expect(within(modal).getByText('Obstruction Shape', { selector: 'label' })).not.toHaveClass(
+    'MuiInputLabel-root'
+  );
   expect(
     within(modal).getByLabelText('Obstruction Shape').compareDocumentPosition(
       getGaussianApodizationSwitch(modal)
