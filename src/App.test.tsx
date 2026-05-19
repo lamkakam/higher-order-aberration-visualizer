@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -91,6 +91,7 @@ function setMatchesSm(matches: boolean) {
 
 afterEach(async () => {
   await i18n.changeLanguage('en');
+  setPath('/');
   window.localStorage.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -104,9 +105,23 @@ function setNavigatorLanguages(language: string, languages: readonly string[]) {
   });
 }
 
+function setPath(path: string) {
+  window.history.pushState(undefined, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+function renderAtPath(path: string) {
+  setPath(path);
+  return render(<App workerClient={createMockWorkerClient()} />);
+}
+
+function getHeaderLanguageSelect() {
+  return within(screen.getByRole('banner')).getByRole('combobox');
+}
+
 it('renders the header and settings drawer theme controls', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/');
 
   expect(screen.getByText('HOA Visualizer')).toBeInTheDocument();
   expect(screen.getByText('Optical Aberration Simulator')).toBeInTheDocument();
@@ -128,7 +143,7 @@ it('renders the header and settings drawer theme controls', async () => {
 
 it('renders the language selector before the settings button and supports explicit languages', () => {
   const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/');
 
   const languageSelect = screen.getByRole('combobox', { name: 'Language' });
   const settingsButton = screen.getByRole('button', { name: 'Setting' });
@@ -149,13 +164,59 @@ it('renders the language selector before the settings button and supports explic
   expect(languageSelect).toHaveValue('zh-Hans');
 });
 
+it.each([
+  ['/en/basic', 'en', false],
+  ['/en/advanced', 'en', true],
+  ['/zh-Hant/basic', 'zh-Hant', false],
+  ['/zh-Hans/advanced', 'zh-Hans', true]
+])('renders route %s with language %s and advanced mode %s', async (path, language, isAdvanced) => {
+  renderAtPath(path);
+
+  await waitFor(() => {
+    expect(getHeaderLanguageSelect()).toHaveValue(language);
+  });
+
+  if (isAdvanced) {
+    const psfHeading = language === 'zh-Hans' ? '点扩散函数' : 'PSF';
+    expect(await screen.findByRole('heading', { name: psfHeading })).toBeInTheDocument();
+  } else {
+    expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
+  }
+});
+
+it('normalizes the root route to the detected language and basic mode', async () => {
+  setNavigatorLanguages('zh-TW', ['zh-TW']);
+
+  renderAtPath('/');
+
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/zh-Hant/basic');
+  });
+  expect(screen.getByRole('combobox', { name: '語言' })).toHaveValue('zh-Hant');
+  expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
+});
+
+it('normalizes invalid route state to the detected language and basic mode', async () => {
+  setNavigatorLanguages('zh-CN', ['zh-CN']);
+
+  renderAtPath('/fr/unknown');
+
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/zh-Hans/basic');
+  });
+  expect(screen.getByRole('combobox', { name: '语言' })).toHaveValue('zh-Hans');
+  expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
+});
+
 it('uses cached supported language before checking browser languages', async () => {
   window.localStorage.setItem(cachedLanguageKey, 'zh-Hans');
   setNavigatorLanguages('en-US', ['en-US']);
 
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/');
 
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('zh-Hans');
+  await waitFor(() => {
+    expect(getHeaderLanguageSelect()).toHaveValue('zh-Hans');
+  });
 });
 
 it.each([
@@ -167,9 +228,11 @@ it.each([
 ])('matches browser language variant %s to supported language %s', async (browserLanguage, expected) => {
   setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/');
 
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
+  await waitFor(() => {
+    expect(getHeaderLanguageSelect()).toHaveValue(expected);
+  });
 });
 
 it.each([
@@ -180,9 +243,11 @@ it.each([
 ])('matches browser language variant %s to supported language %s', async (browserLanguage, expected) => {
   setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/');
 
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
+  await waitFor(() => {
+    expect(getHeaderLanguageSelect()).toHaveValue(expected);
+  });
 });
 
 it.each(['fr-FR'])(
@@ -190,7 +255,7 @@ it.each(['fr-FR'])(
   async (browserLanguage) => {
     setNavigatorLanguages(browserLanguage, [browserLanguage]);
 
-    render(<App workerClient={createMockWorkerClient()} />);
+    renderAtPath('/');
 
     expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   }
@@ -207,11 +272,9 @@ it('renders core UI text through the English translation file', async () => {
 });
 
 it('renders representative core UI text through the Traditional Chinese translation file', async () => {
-  await i18n.changeLanguage('zh-Hant');
+  renderAtPath('/zh-Hant/basic');
 
-  render(<App workerClient={createMockWorkerClient()} />);
-
-  expect(screen.getByRole('heading', { name: '光學系統設定' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: '光學系統設定' })).toBeInTheDocument();
   expect(screen.getByLabelText('口徑 (mm)')).toHaveValue('6');
   expect(screen.getByRole('heading', { name: '光學像差 (Zernike)' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '重設像差' })).toBeInTheDocument();
@@ -219,12 +282,10 @@ it('renders representative core UI text through the Traditional Chinese translat
 });
 
 it('renders representative core UI text through the Simplified Chinese translation file', async () => {
-  await i18n.changeLanguage('zh-Hans');
+  renderAtPath('/zh-Hans/basic');
 
-  render(<App workerClient={createMockWorkerClient()} />);
-
-  expect(screen.getByRole('heading', { name: '光学系统配置' })).toBeInTheDocument();
-  expect(screen.getByLabelText('孔径直径 (mm)')).toHaveValue('6');
+  expect(await screen.findByRole('heading', { name: '光学系统配置' })).toBeInTheDocument();
+  expect(await screen.findByLabelText('口径 (mm)')).toHaveValue('6');
   expect(screen.getByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '重置像差' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '模拟图像' })).toBeInTheDocument();
@@ -940,15 +1001,9 @@ it('confirms aperture mask changes and sends them in the next simulation payload
 
 it('renders the Traditional Chinese aperture mask summary without hardcoded English terms', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/zh-Hant/advanced');
 
-  fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {
-    target: { value: 'zh-Hant' }
-  });
-  await user.click(screen.getByRole('button', { name: '設定' }));
-  await user.click(screen.getByRole('button', { name: '進階' }));
-  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
-  await user.click(screen.getByRole('button', { name: '設定光圈遮罩' }));
+  await user.click(await screen.findByRole('button', { name: '設定光圈遮罩' }));
 
   fireEvent.change(screen.getByLabelText('光圈形狀'), {
     target: { value: 'square' }
@@ -976,7 +1031,7 @@ it('renders the Traditional Chinese aperture mask summary without hardcoded Engl
     target: { value: '12' }
   });
   fireEvent.blur(modal.getByRole('textbox', { name: '支架旋轉角度' }));
-  fireEvent.click(modal.getByRole('switch', { name: '高斯變跡' }));
+  fireEvent.click(modal.getByRole('switch', { name: /高斯變跡/u }));
   fireEvent.change(
     modal.getByRole('textbox', {
       name: '標準差 (單位為口徑倍數)'
@@ -1002,23 +1057,18 @@ it('renders the Traditional Chinese aperture mask summary without hardcoded Engl
 
 it('uses Mainland Simplified Chinese terminology for aperture and optics text', async () => {
   const user = userEvent.setup();
-  await i18n.changeLanguage('zh-Hans');
-  render(<App workerClient={createMockWorkerClient()} />);
+  renderAtPath('/zh-Hans/advanced');
 
-  expect(screen.getByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
-
-  await user.click(screen.getByRole('button', { name: '设置' }));
-  await user.click(screen.getByRole('button', { name: '高级' }));
-  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  expect(await screen.findByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
 
   expect(screen.getByText('点扩散函数')).toBeInTheDocument();
-  expect(screen.getByText('波前图')).toBeInTheDocument();
+  expect(screen.getByText('波前误差图')).toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: '编辑孔径遮罩' }));
+  await user.click(screen.getByRole('button', { name: '编辑孔径遮挡' }));
 
   expect(screen.getByRole('textbox', { name: '中央遮挡比例' })).toBeInTheDocument();
-  expect(screen.getByRole('textbox', { name: '蜘蛛支架' })).toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: '高斯切趾' })).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: '支架数量' })).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: /高斯切趾/u })).toBeInTheDocument();
 
   expect(document.body).not.toHaveTextContent(/點擴散函數|波前誤差圖|Zernike|光圈|中央遮蔽|高斯變跡/u);
 });

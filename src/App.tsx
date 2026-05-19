@@ -28,6 +28,7 @@ import {
   useState
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useRoute } from 'wouter';
 import {
   AberrationSlidersCard,
   AppHeader,
@@ -48,6 +49,8 @@ import {
 } from './components';
 import { useAppTheme } from './hooks/useAppTheme';
 import { useWorkerClient } from './hooks/useWorkerClient';
+import i18n, { resolveSupportedLanguage, supportedLanguageCodes } from './i18n';
+import type { SupportedLanguageCode } from './i18n';
 import type { WorkerClient } from './workers/client';
 import type {
   ApertureSettings,
@@ -85,6 +88,7 @@ const wavefrontLegendUnitOptions = [
   { value: 'micron', labelKey: 'opticalSystem.micron' }
 ] as const;
 const spectralWavelengths = [550, 656, 486] as const;
+const displayModeRouteValues = ['basic', 'advanced'] as const;
 type SpectralWavelength = (typeof spectralWavelengths)[number];
 type ZernikeCoefficientMap = Record<ZernikeCoefficientKey, number>;
 type ZernikeCoefficientsByWavelength = Record<SpectralWavelength, ZernikeCoefficientMap>;
@@ -204,12 +208,31 @@ function createDefaultZernikeCoefficientsByWavelength(): ZernikeCoefficientsByWa
   };
 }
 
+function isSupportedLanguageCode(language: string | undefined): language is SupportedLanguageCode {
+  return supportedLanguageCodes.includes(language as SupportedLanguageCode);
+}
+
+function isDisplayMode(displayMode: string | undefined): displayMode is DisplayMode {
+  return displayModeRouteValues.includes(displayMode as DisplayMode);
+}
+
+function createAppPath(language: SupportedLanguageCode, displayMode: DisplayMode) {
+  return `/${language}/${displayMode}`;
+}
+
 export function App({ workerClient }: AppProps) {
   const { client, diagnostics, setDiagnostics } = useWorkerClient(workerClient);
   const { t } = useTranslation();
+  const [location, navigate] = useLocation();
+  const [matchedRoute, routeParams] = useRoute('/:lang/:mode');
+  const routeLanguage = matchedRoute ? routeParams.lang : undefined;
+  const routeDisplayMode = matchedRoute ? routeParams.mode : undefined;
+  const hasValidRouteState =
+    isSupportedLanguageCode(routeLanguage) && isDisplayMode(routeDisplayMode);
+  const selectedLanguage = hasValidRouteState ? routeLanguage : resolveSupportedLanguage();
+  const displayMode = hasValidRouteState ? routeDisplayMode : 'basic';
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('basic');
   const [showScaleBar, setShowScaleBar] = useState(false);
   const [spectralMode, setSpectralMode] = useState<SpectralMode>('monochromatic');
   const [selectedWavelength, setSelectedWavelength] = useState<SpectralWavelength>(550);
@@ -503,11 +526,41 @@ export function App({ workerClient }: AppProps) {
       ? ([simulatedImagePanel, wavefrontPanel] as const)
       : ([simulatedImagePanel, psfPanel, wavefrontPanel] as const);
 
+  useEffect(() => {
+    const normalizedPath = createAppPath(selectedLanguage, displayMode);
+
+    if (location !== normalizedPath) {
+      navigate(normalizedPath, { replace: true });
+    }
+  }, [displayMode, location, navigate, selectedLanguage]);
+
+  useEffect(() => {
+    if (i18n.resolvedLanguage !== selectedLanguage) {
+      void i18n.changeLanguage(selectedLanguage);
+    }
+  }, [selectedLanguage]);
+
+  const updateSelectedLanguage = useCallback(
+    (nextLanguage: SupportedLanguageCode) => {
+      navigate(createAppPath(nextLanguage, displayMode));
+    },
+    [displayMode, navigate]
+  );
+
+  const updateDisplayMode = useCallback(
+    (nextDisplayMode: DisplayMode) => {
+      navigate(createAppPath(selectedLanguage, nextDisplayMode));
+    },
+    [navigate, selectedLanguage]
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         <AppHeader
+          selectedLanguage={selectedLanguage}
+          onLanguageChange={updateSelectedLanguage}
           onOpenSettings={() => {
             setSettingsOpen(true);
           }}
@@ -521,7 +574,7 @@ export function App({ workerClient }: AppProps) {
             setSettingsOpen(false);
           }}
           onModeChange={setThemeMode}
-          onDisplayModeChange={setDisplayMode}
+          onDisplayModeChange={updateDisplayMode}
           onShowScaleBarChange={setShowScaleBar}
         />
         <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
