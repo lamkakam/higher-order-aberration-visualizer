@@ -1,0 +1,167 @@
+{
+  "app": {
+    "name": "HOA Visualizer",
+    "subtitle": "光学像差模拟器"
+  },
+  "language": {
+    "label": "语言",
+    "options": {
+      "en": "English",
+      "zh-Hant": "繁體中文",
+      "zh-Hans": "简体中文"
+    }
+  },
+  "settings": {
+    "open": "设置",
+    "mode": "模式",
+    "light": "浅色",
+    "system": "跟随系统",
+    "dark": "深色",
+    "display": "显示",
+    "basic": "基础",
+    "advanced": "高级",
+    "showScaleBar": "显示比例尺"
+  },
+  "status": {
+    "workerInitialization": "Web worker 初始化",
+    "initializing": "正在初始化...",
+    "initializationProgress": "初始化进度",
+    "simulationFailed": "模拟失败",
+    "computeTimedOut": "计算失败：web worker 仍在初始化",
+    "preparingImage": "正在准备图像..."
+  },
+  "results": {
+    "simulatedImage": "模拟图像",
+    "simulatedDescription": "这里显示所选图片在当前光学设置下的成像效果。",
+    "simulatedDescriptionWithTarget": "这里显示所选图片在当前光学设置下的成像效果。当前目标：{{description}}",
+    "convolvedAlt": "卷积后的模拟目标",
+    "imageDescriptions": "图像描述",
+    "descriptionGroup": "{{title}} 描述",
+    "enlargementHint": "点击图像可放大查看。",
+    "openEnlarged": "打开放大的 {{title}} 图像",
+    "enlargedDialog": "放大的 {{title}} 图像",
+    "closeEnlarged": "关闭放大图像",
+    "psf": "点扩散函数",
+    "psfDescription": "当前光学系统渲染出的点扩散函数。",
+    "psfAlt": "渲染出的点扩散函数",
+    "wavefrontMap": "波前图",
+    "wavefrontDescription": "当前泽尼克像差值渲染出的波前图。",
+    "wavefrontAlt": "渲染出的波前图"
+  },
+  "opticalSystem": {
+    "title": "光学系统配置",
+    "apertureDiameter": "孔径直径 (mm)",
+    "target": "目标",
+    "minimumValue": "最小值为 {{min}}。",
+    "apertureMask": "孔径遮罩",
+    "editApertureMask": "编辑孔径遮罩",
+    "edit": "编辑",
+    "spectralMode": "光谱模式",
+    "monochromatic": "单色",
+    "polychromatic": "多色",
+    "polychromaticWavelength": "波长",
+    "legendUnit": "图例单位",
+    "wave": "波",
+    "micron": "微米"
+  },
+  "targets": {
+    "logmar_chart": {
+      "label": "视力表 (logMAR)",
+      "description": "视力表的前六行，字母按行排列。",
+      "supplementalDescription": "点扩散函数图可能会在中心区域附近出现明显的强度截断。这个限制是有意设置的：它可以保持图表生成响应迅速，并降低内存占用和计算成本，同时不改变底层光学模拟。"
+    },
+    "snellen_e_20_20": {
+      "label": "Snellen 视力表 20/20 行字母 E",
+      "description": "20/20 (6/6) 行的视力表字母 E。标准视力的眼睛应能在 20 英尺或 6 米外分辨该目标。"
+    },
+    "jupiter": {
+      "label": "木星 (角直径 50 角秒)",
+      "description": "用于显示细节如何被像差柔化的木星图片。"
+    },
+    "point_source": {
+      "label": "点光源 (艾里斑)",
+      "description": "单个很小的亮点，适合展示理想点如何扩散。"
+    },
+    "siemensstar": {
+      "label": "西门子星",
+      "description": "黑白辐条组成的圆形图案，适合展示离焦和像散。"
+    },
+    "slantededge": {
+      "label": "斜边",
+      "description": "倾斜的黑白边缘，用于展示边缘清晰度。"
+    },
+    "tiltedsquare": {
+      "label": "倾斜方块",
+      "description": "旋转后的方块，用于展示角点和边缘的变化。"
+    }
+  },
+  "apertureMask": {
+    "title": "孔径遮罩",
+    "shape": "孔径形状",
+    "rotation": "孔径旋转",
+    "centralObstructionRatio": "中央遮挡比例",
+    "obstructionShape": "遮挡形状",
+    "obstructionRotation": "遮挡旋转",
+    "spiderVanes": "蜘蛛支架",
+    "vaneWidth": "支架宽度 (以孔径直径为单位)",
+    "vaneRotation": "支架旋转",
+    "gaussianApodization": "高斯切趾",
+    "standardDeviation": "标准差 (以孔径直径为单位)",
+    "preview": "预览",
+    "preparing": "正在准备孔径遮罩预览...",
+    "previewAlt": "孔径遮罩预览",
+    "cancel": "取消",
+    "confirm": "确认",
+    "cancelAria": "取消孔径遮罩",
+    "confirmAria": "确认孔径遮罩",
+    "previewFailed": "孔径遮罩预览失败",
+    "circle": "圆形",
+    "square": "正方形",
+    "regularHexagon": "正六边形",
+    "summaryObstruction": "{{shape}}，{{percent}}%{{obstructionLabel}}遮挡",
+    "summarySpiderVane": "{{count}} 根蜘蛛支架，旋转 {{rotationDegrees}} 度，每根支架宽 {{width}}D",
+    "summaryGaussianApodization": "高斯切趾，{{sigma}}D 标准差"
+  },
+  "aberrations": {
+    "title": "光学像差 (泽尼克)",
+    "reset": "重置",
+    "resetAria": "重置像差",
+    "resetAllWavelengths": "重置所有波长",
+    "coefficientUnit": "系数单位 (RMS)",
+    "syncWavelengths": "同步波长",
+    "lowerOrder": "低阶像差 (通常可用普通眼镜矫正)",
+    "higherOrder": "高阶像差",
+    "coefficientLabel": "{{label}} Z({{n}},{{m}}) 系数",
+    "termLabel": "{{label}} Z({{n}},{{m}})",
+    "rangeError": "值必须介于 {{min}} 和 {{max}} 之间。",
+    "approxStrehl": "近似 Strehl 比：",
+    "approxStrehlValue": "近似 Strehl 比：{{value}}%",
+    "terms": {
+      "2_-2": "像散 (斜向)",
+      "2_0": "离焦",
+      "2_2": "像散 (垂直)",
+      "3_-3": "三叶差 (垂直)",
+      "3_-1": "彗差 (垂直)",
+      "3_1": "彗差 (水平)",
+      "3_3": "三叶差 (斜向)",
+      "4_-4": "四叶差 (斜向)",
+      "4_-2": "二级像散 (斜向)",
+      "4_0": "初级球差",
+      "4_2": "二级像散 (垂直)",
+      "4_4": "四叶差 (垂直)",
+      "5_-5": "五叶差 (垂直)",
+      "5_-3": "二级三叶差 (垂直)",
+      "5_-1": "二级彗差 (垂直)",
+      "5_1": "二级彗差 (水平)",
+      "5_3": "二级三叶差 (斜向)",
+      "5_5": "五叶差 (斜向)",
+      "6_-6": "六叶差 (斜向)",
+      "6_-4": "二级四叶差 (斜向)",
+      "6_-2": "三级像散 (斜向)",
+      "6_0": "二级球差",
+      "6_2": "三级像散 (垂直)",
+      "6_4": "二级四叶差 (垂直)",
+      "6_6": "六叶差 (垂直)"
+    }
+  }
+}

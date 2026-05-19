@@ -4,10 +4,11 @@ import HttpBackend from 'i18next-http-backend';
 import { initReactI18next } from 'react-i18next';
 
 const isTest = import.meta.env.MODE === 'test';
-export const supportedLanguageCodes = ['en', 'zh-Hant'] as const;
+export const supportedLanguageCodes = ['en', 'zh-Hant', 'zh-Hans'] as const;
 export type SupportedLanguageCode = (typeof supportedLanguageCodes)[number];
 export const cachedLanguageKey = 'i18nextLng';
 const traditionalChineseLocales = ['zh-hant', 'zh-tw', 'zh-hk', 'zh-mo'] as const;
+const simplifiedChineseLocales = ['zh-hans', 'zh-cn', 'zh-sg', 'zh'] as const;
 
 const testResources = isTest
   ? {
@@ -16,6 +17,9 @@ const testResources = isTest
       },
       'zh-Hant': {
         translation: (await import('../public/locales/zh-Hant/translation.json')).default
+      },
+      'zh-Hans': {
+        translation: (await import('../public/locales/zh-Hans/translation.json')).default
       }
     }
   : undefined;
@@ -66,6 +70,14 @@ function matchSupportedLanguage(language: string | undefined): SupportedLanguage
     )
   ) {
     return 'zh-Hant';
+  }
+
+  if (
+    simplifiedChineseLocales.includes(
+      normalizedLanguage as (typeof simplifiedChineseLocales)[number]
+    )
+  ) {
+    return 'zh-Hans';
   }
 
   const baseLanguage = normalizedLanguage.split(/[-_]/)[0];

@@ -137,24 +137,25 @@ it('renders the language selector before the settings button and supports explic
   expect(screen.queryByRole('option', { name: 'Browser default' })).not.toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: '繁體中文' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '简体中文' })).toBeInTheDocument();
   expect(
     languageSelect.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
 
-  fireEvent.change(languageSelect, { target: { value: 'zh-Hant' } });
+  fireEvent.change(languageSelect, { target: { value: 'zh-Hans' } });
 
-  expect(changeLanguage).toHaveBeenCalledWith('zh-Hant');
+  expect(changeLanguage).toHaveBeenCalledWith('zh-Hans');
   changeLanguage.mockRestore();
-  expect(languageSelect).toHaveValue('zh-Hant');
+  expect(languageSelect).toHaveValue('zh-Hans');
 });
 
 it('uses cached supported language before checking browser languages', async () => {
-  window.localStorage.setItem(cachedLanguageKey, 'zh-Hant');
+  window.localStorage.setItem(cachedLanguageKey, 'zh-Hans');
   setNavigatorLanguages('en-US', ['en-US']);
 
   render(<App workerClient={createMockWorkerClient()} />);
 
-  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('zh-Hant');
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('zh-Hans');
 });
 
 it.each([
@@ -171,7 +172,20 @@ it.each([
   expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
 });
 
-it.each(['zh-CN', 'zh-SG', 'zh', 'fr-FR'])(
+it.each([
+  ['zh-Hans', 'zh-Hans'],
+  ['zh-CN', 'zh-Hans'],
+  ['zh-SG', 'zh-Hans'],
+  ['zh', 'zh-Hans']
+])('matches browser language variant %s to supported language %s', async (browserLanguage, expected) => {
+  setNavigatorLanguages(browserLanguage, [browserLanguage]);
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue(expected);
+});
+
+it.each(['fr-FR'])(
   'falls back to English for unsupported browser language %s',
   async (browserLanguage) => {
     setNavigatorLanguages(browserLanguage, [browserLanguage]);
@@ -202,6 +216,18 @@ it('renders representative core UI text through the Traditional Chinese translat
   expect(screen.getByRole('heading', { name: '光學像差 (Zernike)' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '重設像差' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '模擬影像' })).toBeInTheDocument();
+});
+
+it('renders representative core UI text through the Simplified Chinese translation file', async () => {
+  await i18n.changeLanguage('zh-Hans');
+
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: '光学系统配置' })).toBeInTheDocument();
+  expect(screen.getByLabelText('孔径直径 (mm)')).toHaveValue('6');
+  expect(screen.getByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '重置像差' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '模拟图像' })).toBeInTheDocument();
 });
 
 it('shows an app-level initialization mask while the worker initializes', async () => {
@@ -957,6 +983,29 @@ it('renders the Traditional Chinese aperture mask summary without hardcoded Engl
   expect(summary).not.toHaveTextContent(
     /obstruction|spider|rotated|Gaussian apodization|sigma/iu
   );
+});
+
+it('uses Mainland Simplified Chinese terminology for aperture and optics text', async () => {
+  const user = userEvent.setup();
+  await i18n.changeLanguage('zh-Hans');
+  render(<App workerClient={createMockWorkerClient()} />);
+
+  expect(screen.getByRole('heading', { name: '光学像差 (泽尼克)' })).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '设置' }));
+  await user.click(screen.getByRole('button', { name: '高级' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.getByText('点扩散函数')).toBeInTheDocument();
+  expect(screen.getByText('波前图')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '编辑孔径遮罩' }));
+
+  expect(screen.getByRole('textbox', { name: '中央遮挡比例' })).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: '蜘蛛支架' })).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: '高斯切趾' })).toBeInTheDocument();
+
+  expect(document.body).not.toHaveTextContent(/點擴散函數|波前誤差圖|Zernike|光圈|中央遮蔽|高斯變跡/u);
 });
 
 it('describes the default simulated image target in plain language', async () => {
