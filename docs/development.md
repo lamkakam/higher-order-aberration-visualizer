@@ -80,7 +80,7 @@ Run the Python test suite:
 scripts/test-python.sh
 ```
 
-The script creates `.venv` if needed, installs the package in editable mode, and runs `pytest` against [`tests/python`](../tests/python). Python package metadata is in [`pyproject.toml`](../pyproject.toml).
+The script creates `.venv` if needed, installs the package in editable mode, and runs `pytest` against [`src/hoa_visualizer_utils/tests/python`](../src/hoa_visualizer_utils/tests/python). Python package metadata is in [`pyproject.toml`](../pyproject.toml).
 
 Build the internal Python wheel into `public/pyodide`:
 
@@ -96,4 +96,4 @@ This is for the app's own `hoa_visualizer_utils` wheel. The committed `prysm` wh
 - Worker unit tests: [`src/workers/test/optics.worker.test.ts`](../src/workers/test/optics.worker.test.ts)
 - Shared test setup and mocks: [`src/test`](../src/test)
 - Browser tests: [`e2e`](../e2e)
-- Python tests: [`tests/python`](../tests/python)
+- Python tests: [`src/hoa_visualizer_utils/tests/python`](../src/hoa_visualizer_utils/tests/python)

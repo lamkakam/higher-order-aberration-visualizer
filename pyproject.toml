@@ -21,4 +21,4 @@ where = ["src"]
 "hoa_visualizer_utils.simulation.assets" = ["*.npz"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/python"]
+testpaths = ["src/hoa_visualizer_utils/tests/python"]
