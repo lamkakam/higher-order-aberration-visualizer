@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Connect, Plugin, ResolvedConfig, ViteDevServer } from 'vite';
 import { afterEach, describe, expect, it } from 'vitest';
-import { excludePyodideReadmePlugin } from '../../vite.config';
+import { excludePyodideReadmePlugin, pagesSpaFallbackPlugin } from '../../vite.config';
 
 const tempDirs: string[] = [];
 
@@ -102,5 +102,26 @@ describe('excludePyodideReadmePlugin', () => {
     await runCloseBundleHook(plugin);
 
     await expect(readFile(outputReadme, 'utf8')).rejects.toThrow();
+  });
+});
+
+describe('pagesSpaFallbackPlugin', () => {
+  it('copies index.html to 404.html when building for GitHub Pages', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hoa-vite-plugin-'));
+    tempDirs.push(root);
+    await mkdir(join(root, 'dist'), { recursive: true });
+    await writeFile(join(root, 'dist/index.html'), '<main>app shell</main>');
+
+    const plugin = pagesSpaFallbackPlugin() as Plugin;
+    runConfigResolvedHook(plugin, {
+      root,
+      base: '/higher-order-aberration-visualizer/',
+      build: { outDir: 'dist' }
+    } as ResolvedConfig);
+    await runCloseBundleHook(plugin);
+
+    await expect(readFile(join(root, 'dist/404.html'), 'utf8')).resolves.toBe(
+      '<main>app shell</main>'
+    );
   });
 });
