@@ -93,7 +93,7 @@ This is for the app's own `hoa_visualizer_utils` wheel. The committed `prysm` wh
 ## Test Layout
 
 - React unit tests: [`src/App.test.tsx`](../src/App.test.tsx) and colocated `*.test.ts` files
-- Worker unit tests: [`src/workers/optics.worker.test.ts`](../src/workers/optics.worker.test.ts)
+- Worker unit tests: [`src/workers/test/optics.worker.test.ts`](../src/workers/test/optics.worker.test.ts)
 - Shared test setup and mocks: [`src/test`](../src/test)
 - Browser tests: [`e2e`](../e2e)
 - Python tests: [`tests/python`](../tests/python)

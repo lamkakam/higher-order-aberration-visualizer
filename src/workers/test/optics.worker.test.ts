@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { supportedTargetIds } from './types';
+import { supportedTargetIds } from '../types';
 
 vi.mock('comlink', () => ({
   expose: vi.fn()
@@ -69,7 +69,7 @@ describe('optics worker', () => {
 
   it('initializes Pyodide without installing local wheel URLs', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
@@ -105,7 +105,7 @@ describe('optics worker', () => {
 
   it('loads the internal Python package from source files', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
@@ -147,7 +147,7 @@ describe('optics worker', () => {
 
   it('computes a convolved image through Pyodide using serializable inputs', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     const result = await api.computeConvolvedImage({
@@ -245,7 +245,7 @@ describe('optics worker', () => {
 
   it('passes single-channel wavelength weights and scoped coefficients for monochromatic payloads', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
@@ -281,7 +281,7 @@ describe('optics worker', () => {
 
   it('passes polychromatic wavelength weights and scoped coefficients into simulation', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
@@ -343,7 +343,7 @@ describe('optics worker', () => {
 
   it('renders an aperture mask preview through Pyodide using serializable inputs', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     const result = await api.renderApertureMask({
@@ -384,7 +384,7 @@ describe('optics worker', () => {
 
   it('passes expanded aperture settings into simulation ApertureSpec', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
@@ -451,7 +451,7 @@ describe('optics worker', () => {
 
   it('passes expanded aperture settings into preview ApertureSpec', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.renderApertureMask({
@@ -510,7 +510,7 @@ describe('optics worker', () => {
 
   it('passes disabled scale bar preference to image and PSF renderers only', async () => {
     const { expose } = await import('comlink');
-    await import('./optics.worker');
+    await import('../optics.worker');
 
     const api = vi.mocked(expose).mock.calls[0][0];
     await api.computeConvolvedImage({
