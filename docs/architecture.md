@@ -26,6 +26,10 @@ The header language selector always shows a concrete supported language. On firs
 
 The app uses client-side `wouter` routing for bookmarkable language and display-mode state. Supported routes are `/:lang/:mode`, where `lang` is `en`, `zh-Hant`, or `zh-Hans`, and `mode` is `basic` or `advanced`. Missing or invalid route state is normalized with history replacement to the detected supported language and `basic`; i18next remains responsible for loading and applying translations.
 
+## Public Asset Cache
+
+[`src/main.tsx`](../src/main.tsx) registers [`public/sw.js`](../public/sw.js) when the browser supports service workers. The service worker uses a versioned cache for selected same-origin `public/` runtime assets: supported translation JSON files, the committed `prysm` wheel, and the app's Pyodide wheel. Fetch handling is cache-first only for that fixed URL list. Vite dev server, HMR, source module, HTML, API-like, and cross-origin requests are left to the browser without service worker response handling.
+
 ## Worker Boundary
 
 Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
