@@ -1,0 +1,1 @@
+export { CommitSlider } from './CommitSlider';

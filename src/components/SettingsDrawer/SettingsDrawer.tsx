@@ -8,8 +8,8 @@ import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supportedLanguageCodes } from '../i18n';
-import type { SupportedLanguageCode } from '../i18n';
+import { supportedLanguageCodes } from '../../i18n';
+import type { SupportedLanguageCode } from '../../i18n';
 
 export type ThemeMode = 'light' | 'system' | 'dark';
 export type DisplayMode = 'basic' | 'advanced';
