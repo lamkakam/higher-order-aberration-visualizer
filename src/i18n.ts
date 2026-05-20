@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import HttpBackend from 'i18next-http-backend';
 import { initReactI18next } from 'react-i18next';
+import { resolvePublicAssetPath } from './publicAssetUrls';
 
 const isTest = import.meta.env.MODE === 'test';
 export const supportedLanguageCodes = ['en', 'zh-Hant', 'zh-Hans'] as const;
@@ -32,7 +33,7 @@ if (!isTest) {
 
 void i18nInstance.init({
   backend: {
-    loadPath: '/locales/{{lng}}/{{ns}}.json'
+    loadPath: resolvePublicAssetPath('/locales/{{lng}}/{{ns}}.json')
   },
   detection: {
     caches: ['localStorage'],

@@ -6,7 +6,7 @@ describe('registerServiceWorker', () => {
     vi.unstubAllGlobals();
   });
 
-  it('registers /sw.js when service workers are supported', () => {
+  it('registers the service worker under the current Vite base path when supported', () => {
     const registration = Promise.resolve({} as ServiceWorkerRegistration);
     const register = vi.fn(() => registration);
 
@@ -17,7 +17,7 @@ describe('registerServiceWorker', () => {
     });
 
     expect(registerServiceWorker()).toBe(registration);
-    expect(register).toHaveBeenCalledWith('/sw.js');
+    expect(register).toHaveBeenCalledWith('/sw.js', { scope: '/' });
   });
 
   it('does nothing when service workers are unsupported', () => {

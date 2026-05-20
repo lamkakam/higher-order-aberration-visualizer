@@ -1,12 +1,17 @@
 const CACHE_VERSION = '0.1.0';
 const CACHE_NAME = `hoa-visualizer-public-assets-${CACHE_VERSION}`;
+const scopePathname = new URL(self.registration.scope).pathname;
+const BASE_PATH = scopePathname.endsWith('/')
+  ? scopePathname.slice(0, -1)
+  : scopePathname;
+const resolveAssetPath = (assetPath) => `${BASE_PATH}${assetPath}`;
 const PRECACHE_URLS = [
   '/locales/en/translation.json',
   '/locales/zh-Hant/translation.json',
   '/locales/zh-Hans/translation.json',
   '/pyodide/prysm-0.21.1-py2.py3-none-any.whl',
   '/pyodide/higher_order_aberration_visualizer_utils-0.1.0-py3-none-any.whl'
-];
+].map(resolveAssetPath);
 const PRECACHE_PATHS = new Set(PRECACHE_URLS);
 
 self.addEventListener('install', (event) => {

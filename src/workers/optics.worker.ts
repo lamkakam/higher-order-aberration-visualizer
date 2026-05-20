@@ -22,6 +22,7 @@ import targetsSource from '../hoa_visualizer_utils/simulation/targets.py?raw';
 import utilsInitSource from '../hoa_visualizer_utils/utils/__init__.py?raw';
 import figuresSource from '../hoa_visualizer_utils/utils/figures.py?raw';
 import type { ApertureSettings } from '../types/domain';
+import { resolvePublicAssetPath } from '../publicAssetUrls';
 import type {
   ApertureMaskResult,
   ConvolvedImageInput,
@@ -30,9 +31,11 @@ import type {
   WorkerDiagnostics
 } from './types';
 
-const pyodideIndexUrl = '/node_modules/pyodide/';
 const pyodidePackageBaseUrl = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/';
-const prysmWheelUrl = '/pyodide/prysm-0.21.1-py2.py3-none-any.whl';
+const pyodideIndexUrl = import.meta.env.DEV
+  ? resolvePublicAssetPath('/node_modules/pyodide/')
+  : pyodidePackageBaseUrl;
+const prysmWheelUrl = resolvePublicAssetPath('/pyodide/prysm-0.21.1-py2.py3-none-any.whl');
 const pythonPackageRoot = '/home/pyodide';
 const pythonSources = [
   ['hoa_visualizer_utils/__init__.py', packageInitSource],

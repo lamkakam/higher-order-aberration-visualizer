@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { loadPyodide } from 'pyodide';
 import { supportedTargetIds } from '../../types/domain';
 
 vi.mock('comlink', () => ({
@@ -82,6 +83,10 @@ describe('optics worker', () => {
       ...defaultMonochromaticChannels
     });
 
+    expect(loadPyodide).toHaveBeenCalledWith({
+      indexURL: '/node_modules/pyodide/',
+      packageBaseUrl: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/'
+    });
     expect(loadPackage).toHaveBeenCalledWith([
       'micropip',
       'numpy',
