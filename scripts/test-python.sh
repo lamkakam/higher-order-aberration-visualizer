@@ -13,4 +13,4 @@ source "${VENV_DIR}/bin/activate"
 python -m pip install --upgrade pip
 python -m pip install pytest setuptools==76.0.0
 python -m pip install --editable "${REPO_ROOT}"
-python -m pytest "${REPO_ROOT}/tests/python"
+python -m pytest "${REPO_ROOT}/src/hoa_visualizer_utils/tests/python"

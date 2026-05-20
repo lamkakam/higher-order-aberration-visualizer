@@ -2,7 +2,7 @@ import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './i18n';
-import { registerServiceWorker } from './registerServiceWorker';
+import { registerServiceWorker } from './workers/registerServiceWorker';
 import './styles.css';
 
 void registerServiceWorker();

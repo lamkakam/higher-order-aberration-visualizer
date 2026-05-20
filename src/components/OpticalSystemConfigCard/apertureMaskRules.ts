@@ -1,4 +1,4 @@
-import type { ApertureSettings, ApertureShape } from '../../workers/types';
+import type { ApertureSettings, ApertureShape } from '../../types/domain';
 import type { TFunction } from 'i18next';
 
 export const apertureShapeOptions = [

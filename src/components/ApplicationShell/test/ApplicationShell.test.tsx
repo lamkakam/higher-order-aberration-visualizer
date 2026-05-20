@@ -1,14 +1,14 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { App } from './App';
-import i18n, { cachedLanguageKey } from './i18n';
-import { createMockWorkerClient } from './test/workerMock';
+import { ApplicationShell } from '../ApplicationShell';
+import i18n, { cachedLanguageKey } from '../../../i18n';
+import { createMockWorkerClient } from '../../../test/workerMock';
 import type {
   ApertureMaskResult,
   ConvolvedImageInput,
   ConvolvedImageResult
-} from './workers/types';
+} from '../../../workers/types';
 
 const psfCutoffNote =
   'The PSF chart may show a clear intensity cutoff around the central region. This limit is intentional: it keeps chart generation responsive while reducing memory use and computational cost, without changing the underlying optical simulation.';
@@ -119,7 +119,7 @@ function setPath(path: string) {
 
 function renderAtPath(path: string) {
   setPath(path);
-  return render(<App workerClient={createMockWorkerClient()} />);
+  return render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 }
 
 async function openSettingsDrawer() {
@@ -348,7 +348,7 @@ it.each(['fr-FR'])(
 );
 
 it('renders core UI text through the English translation file', async () => {
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical System Config' })).toBeInTheDocument();
   expect(screen.getByLabelText('Aperture Diameter (mm)')).toHaveValue('6');
@@ -403,7 +403,7 @@ it('shows an app-level initialization mask while the worker initializes', async 
       })
   );
 
-  render(<App workerClient={createMockWorkerClient({ initialize })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ initialize })} />);
 
   expect(screen.getByRole('status', { name: 'Worker initialization' })).toBeInTheDocument();
   expect(screen.getByText('Initializing...')).toBeInTheDocument();
@@ -422,7 +422,7 @@ it('shows an app-level initialization mask while the worker initializes', async 
 
 it('renders default aperture and supported target options', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   const opticalSystemSummary = screen.getByRole('button', { name: 'Optical System Config' });
   const opticalSystemAccordion = opticalSystemSummary.closest('.MuiAccordion-root');
@@ -471,7 +471,7 @@ it('renders default aperture and supported target options', async () => {
 
 it('shows aperture mask controls only in advanced mode', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByRole('button', { name: 'Edit aperture mask' })).not.toBeInTheDocument();
 
@@ -493,7 +493,7 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
         resolvePreview = resolve;
       })
   );
-  render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ renderApertureMask })} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -565,7 +565,7 @@ it('opens an aperture mask modal that only closes through confirm or cancel', as
 
 it('keeps aperture mask modal actions outside the scrollable content', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -591,7 +591,7 @@ it('keeps aperture mask modal actions outside the scrollable content', async () 
 
 it('shows Gaussian apodization SD controls only when enabled', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -619,7 +619,7 @@ it('shows Gaussian apodization SD controls only when enabled', async () => {
 
 it('shows aperture shape controls conditionally in the aperture mask modal', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -677,7 +677,7 @@ it('shows aperture shape controls conditionally in the aperture mask modal', asy
 
 it('toggles aperture obstruction controls from the ratio slider and textbox', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -713,7 +713,7 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -772,7 +772,7 @@ it('keeps the aperture preview panel height stable while loading and loaded', as
         resolvePreview = resolve;
       })
   );
-  render(<App workerClient={createMockWorkerClient({ renderApertureMask })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ renderApertureMask })} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -811,7 +811,7 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -868,7 +868,7 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -922,7 +922,7 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -982,7 +982,7 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
 
 it('omits spider vane settings from the aperture summary when width is zero', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1001,7 +1001,7 @@ it('omits spider vane settings from the aperture summary when width is zero', as
 
 it('omits spider vane settings from the aperture summary when count is zero', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1036,7 +1036,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1187,7 +1187,7 @@ it('uses Mainland Simplified Chinese terminology for aperture and optics text', 
 it('describes the default simulated image target in plain language', async () => {
   vi.useFakeTimers();
   await act(async () => {
-    render(<App workerClient={createMockWorkerClient()} />);
+    render(<ApplicationShell workerClient={createMockWorkerClient()} />);
   });
 
   expect(screen.queryByText(psfCutoffNote)).not.toBeInTheDocument();
@@ -1201,7 +1201,7 @@ it('describes the default simulated image target in plain language', async () =>
 it('updates the simulated image description when the target changes', async () => {
   vi.useFakeTimers();
   await act(async () => {
-    render(<App workerClient={createMockWorkerClient()} />);
+    render(<ApplicationShell workerClient={createMockWorkerClient()} />);
   });
 
   await act(async () => {
@@ -1232,7 +1232,7 @@ it('updates the simulated image description when the target changes', async () =
 
 it('shows zernike textbox values and resets changed values', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toHaveClass(
     'MuiTypography-h6'
@@ -1278,7 +1278,7 @@ it('shows zernike textbox values and resets changed values', async () => {
 });
 
 it('groups lower and higher order zernike controls in expanded accordions', () => {
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   const lowerOrderSummary = screen.getByRole('button', {
     name: 'Lower Order Aberrations (Generally Correctable with Ordinary Eyeglasses)'
@@ -1327,7 +1327,7 @@ it('groups lower and higher order zernike controls in expanded accordions', () =
 
 it('shows the zernike coefficient unit selector defaulting to wave', async () => {
   vi.useFakeTimers();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1340,7 +1340,7 @@ it('shows the zernike coefficient unit selector defaulting to wave', async () =>
 
 it('shows the spectral selector only in Advanced Mode defaulting to monochromatic', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText('Spectral Mode')).not.toBeInTheDocument();
 
@@ -1362,7 +1362,7 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
 
 it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByRole('tab', { name: '550 nm' })).not.toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: '656 nm' })).not.toBeInTheDocument();
@@ -1379,7 +1379,7 @@ it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode',
 
 it('shows wavelength tabs and sync controls in Advanced Polychromatic mode', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByRole('switch', { name: 'Sync wavelengths' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Reset all wavelengths' })).not.toBeInTheDocument();
@@ -1398,7 +1398,7 @@ it('shows wavelength tabs and sync controls in Advanced Polychromatic mode', asy
 
 it('syncs changed polychromatic coefficient values across wavelength tabs by default', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1425,7 +1425,7 @@ it('syncs changed polychromatic coefficient values across wavelength tabs by def
 
 it('leaves untouched polychromatic coefficients unchanged when syncing one coefficient', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1457,7 +1457,7 @@ it('leaves untouched polychromatic coefficients unchanged when syncing one coeff
 
 it('keeps polychromatic wavelength aberration values independent when sync is off', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1487,7 +1487,7 @@ it('keeps polychromatic wavelength aberration values independent when sync is of
 
 it('resets only the selected polychromatic wavelength when sync is on', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1511,7 +1511,7 @@ it('resets only the selected polychromatic wavelength when sync is on', async ()
 
 it('resets all polychromatic wavelength coefficient values', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1534,7 +1534,7 @@ it('resets all polychromatic wavelength coefficient values', async () => {
 
 it('shares monochromatic aberration edits with the 550 nm polychromatic tab', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
@@ -1571,7 +1571,7 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1628,7 +1628,7 @@ it('recomputes polychromatic diagnostics for the selected wavelength tab', async
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1668,7 +1668,7 @@ it('recomputes polychromatic diagnostics for the selected wavelength tab', async
 
 it('converts zernike textbox values when switching to microns', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   const sphericalCoefficient = screen.getByRole('textbox', {
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
@@ -1688,7 +1688,7 @@ it('converts zernike textbox values when switching to microns', async () => {
 
 it('converts polychromatic zernike textbox values using the selected wavelength tab', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1734,7 +1734,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1784,7 +1784,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
 
 it('resets zernike textbox values to zero in the selected coefficient unit', async () => {
   const user = userEvent.setup();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   const sphericalCoefficient = screen.getByRole('textbox', {
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
@@ -1813,7 +1813,7 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1864,7 +1864,7 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1915,7 +1915,7 @@ it('keeps temporary invalid zernike textbox drafts out of the worker payload', a
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -1960,7 +1960,7 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2007,7 +2007,7 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2059,7 +2059,7 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2111,7 +2111,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2167,7 +2167,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2240,7 +2240,7 @@ it('debounces worker calls using the current UI payload', async () => {
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await Promise.resolve();
@@ -2322,7 +2322,7 @@ it('sends enabled scale bar preference to the worker payload', async () => {
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2363,7 +2363,7 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
     })
   );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2413,7 +2413,7 @@ it('renders simulated image loading and error states', async () => {
     } satisfies ConvolvedImageResult);
 
   const { rerender } = render(
-    <App workerClient={createMockWorkerClient({ computeConvolvedImage })} />
+    <ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />
   );
 
   await act(async () => {
@@ -2425,7 +2425,7 @@ it('renders simulated image loading and error states', async () => {
   });
   expect(screen.getByText('Simulation exploded')).toBeInTheDocument();
 
-  rerender(<App workerClient={createMockWorkerClient()} />);
+  rerender(<ApplicationShell workerClient={createMockWorkerClient()} />);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -2453,7 +2453,7 @@ it('hides stale chart images while a later image render is pending', async () =>
         })
     );
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2490,7 +2490,7 @@ it('hides stale chart images while a later image render is pending', async () =>
 
 it('opens and closes an enlarged preview from the simulated image', async () => {
   vi.useFakeTimers();
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2528,7 +2528,7 @@ it('opens and closes an enlarged preview from the simulated image', async () => 
 });
 
 it('opens enlarged previews from advanced PSF and wavefront images', async () => {
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await screen.findByRole('button', { name: 'Open enlarged Simulated Image image' });
 
@@ -2557,7 +2557,7 @@ it('does not expose image preview buttons for loading and error placeholders', a
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn().mockRejectedValue(new Error('Simulation exploded'));
 
-  render(<App workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
 
   expect(
     screen.queryByRole('button', { name: 'Open enlarged Simulated Image image' })
@@ -2576,7 +2576,7 @@ it('does not expose image preview buttons for loading and error placeholders', a
 it('shows PSF and wavefront panels in one image descriptions accordion on large screens', async () => {
   const user = userEvent.setup();
   setMatchesSm(true);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.getByRole('heading', { name: 'Simulated Image' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
@@ -2658,7 +2658,7 @@ it('shows PSF and wavefront panels in one image descriptions accordion on large 
 it('shows the approximate Strehl ratio above the small-screen advanced simulated image accordion', async () => {
   const user = userEvent.setup();
   setMatchesSm(false);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
 
@@ -2689,7 +2689,7 @@ it('shows the approximate Strehl ratio above the small-screen advanced simulated
 it('shows the approximate Strehl ratio once above the large-screen combined image descriptions accordion', async () => {
   const user = userEvent.setup();
   setMatchesSm(true);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -2720,7 +2720,7 @@ it('shows the approximate Strehl ratio once above the large-screen combined imag
 it('shows independent approximate Strehl ratios for each polychromatic wavelength', async () => {
   const user = userEvent.setup();
   setMatchesSm(true);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -2760,7 +2760,7 @@ it('shows independent approximate Strehl ratios for each polychromatic wavelengt
 it('wraps small-screen polychromatic approximate Strehl ratios inside the simulated image card', async () => {
   const user = userEvent.setup();
   setMatchesSm(false);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -2785,7 +2785,7 @@ it('wraps small-screen polychromatic approximate Strehl ratios inside the simula
 });
 
 it('does not show the approximate Strehl ratio in basic mode', () => {
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText(/Approx\. Strehl Ratio/)).not.toBeInTheDocument();
 });
@@ -2793,7 +2793,7 @@ it('does not show the approximate Strehl ratio in basic mode', () => {
 it('shows the legend unit selector at the bottom of the wavefront map card in advanced display mode', async () => {
   const user = userEvent.setup();
   setMatchesSm(true);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
 
@@ -2817,7 +2817,7 @@ it('shows the legend unit selector at the bottom of the wavefront map card in ad
 it('hides the PSF panel and keeps one image descriptions accordion for point source targets', async () => {
   const user = userEvent.setup();
   setMatchesSm(true);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -2852,7 +2852,7 @@ it('hides the PSF panel and keeps one image descriptions accordion for point sou
 it('keeps advanced result panels in separate cards on extra-small screens', async () => {
   const user = userEvent.setup();
   setMatchesSm(false);
-  render(<App workerClient={createMockWorkerClient()} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));

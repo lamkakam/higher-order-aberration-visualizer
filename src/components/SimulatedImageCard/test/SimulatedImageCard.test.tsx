@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { SimulatedImageCard } from './SimulatedImageCard';
+import { SimulatedImageCard } from '../SimulatedImageCard';
 
 const imageUrl = 'data:image/png;base64,preview';
 const enlargementHint = 'Click the image to view it enlarged.';

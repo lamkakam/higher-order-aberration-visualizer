@@ -4,7 +4,7 @@ import FormLabel from '@mui/material/FormLabel';
 import NativeSelect from '@mui/material/NativeSelect';
 import Switch from '@mui/material/Switch';
 import { useTranslation } from 'react-i18next';
-import type { ApertureShape } from '../../workers/types';
+import type { ApertureShape } from '../../types/domain';
 import { CommitSlider } from '../CommitSlider';
 import {
   apertureShapeOptions,

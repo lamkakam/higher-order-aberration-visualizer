@@ -11,8 +11,7 @@ export default defineConfig([
       '.venv/**',
       'public/pyodide/**',
       'src/hoa_visualizer_utils/**',
-      'test-results/**',
-      'tests/python/**'
+      'test-results/**'
     ]
   },
   plugins.stylistic,

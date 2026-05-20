@@ -21,9 +21,9 @@ import modelsSource from '../hoa_visualizer_utils/simulation/models.py?raw';
 import targetsSource from '../hoa_visualizer_utils/simulation/targets.py?raw';
 import utilsInitSource from '../hoa_visualizer_utils/utils/__init__.py?raw';
 import figuresSource from '../hoa_visualizer_utils/utils/figures.py?raw';
+import type { ApertureSettings } from '../types/domain';
 import type {
   ApertureMaskResult,
-  ApertureSettings,
   ConvolvedImageInput,
   ConvolvedImageResult,
   OpticsWorkerApi,

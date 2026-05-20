@@ -30,5 +30,5 @@ export {
   wavesToMicrons,
   targetOptions,
   zernikeTerms
-} from './simulationConfig';
-export type { WavefrontLegendUnit } from '../workers/types';
+} from './lib/simulationConfig';
+export type { WavefrontLegendUnit } from '../types/domain';

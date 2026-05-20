@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ApertureSettings } from '../../../workers/types';
+import type { ApertureSettings } from '../../../types/domain';
 import {
   formatApertureSummary,
   formatRatioValue,
