@@ -1,6 +1,8 @@
 # Higher-Order Aberration Simulator
 
-A front-end-only browser app for visualizing how higher-order aberrations (HOAs) affect simulated images. All optics computation runs locally in the browser through Pyodide and a Web Worker. No backend service is required. Initial loading can take a moment while the Web Worker for Pyodide initializes.
+A front-end-only browser app for visualizing how higher-order aberrations (HOAs) affect simulated images. All optics computation runs locally in the browser through Pyodide and a Web Worker. No backend service is required. Initial loading can take a moment while the Web Worker for Pyodide initializes. The optics computation uses [prysm 0.21.1](https://github.com/brandondube/prysm).
+
+**Live demo:** [https://lamkakam.github.io/higher-order-aberration-visualizer/](https://lamkakam.github.io/higher-order-aberration-visualizer/)
 
 ## Disclaimer
 
