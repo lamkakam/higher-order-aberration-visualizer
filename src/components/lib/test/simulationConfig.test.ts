@@ -4,7 +4,7 @@ import {
   computeRmsWavefrontError,
   createDefaultZernikeCoefficients,
   formatApproximateStrehlRatio
-} from './simulationConfig';
+} from '../simulationConfig';
 
 describe('Strehl ratio helpers', () => {
   it('formats all-zero coefficients as 100.0%', () => {

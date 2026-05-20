@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   approximateStrehlRatio,
   formatApproximateStrehlRatio
-} from '../simulationConfig';
+} from '../lib/simulationConfig';
 import type {
   SpectralWavelength,
   ZernikeCoefficientsByWavelength

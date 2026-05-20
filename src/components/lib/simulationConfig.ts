@@ -1,4 +1,4 @@
-import type { SupportedTargetId, ZernikeCoefficientKey } from '../types/domain';
+import type { SupportedTargetId, ZernikeCoefficientKey } from '../../types/domain';
 import type { TFunction } from 'i18next';
 
 export const targetOptions = [

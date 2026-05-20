@@ -9,7 +9,7 @@ import type {
 import type { ConvolvedImageResult } from '../../workers/types';
 import type { DisplayMode } from '../SettingsDrawer';
 import { SimulatedImageCard } from '../SimulatedImageCard';
-import { supplementalDescriptions, targetOptions } from '../simulationConfig';
+import { supplementalDescriptions, targetOptions } from '../lib/simulationConfig';
 import { AdvancedResultCard, type AdvancedResultPanel } from './AdvancedResultCard';
 import {
   advancedGridHalfGapPx,

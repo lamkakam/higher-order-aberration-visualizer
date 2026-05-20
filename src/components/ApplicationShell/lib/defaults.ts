@@ -1,4 +1,4 @@
-import { createDefaultZernikeCoefficients } from '../../simulationConfig';
+import { createDefaultZernikeCoefficients } from '../../lib/simulationConfig';
 import type {
   ApertureSettings,
   SupportedTargetId,

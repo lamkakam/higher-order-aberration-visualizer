@@ -21,7 +21,7 @@ import {
   spectralWavelengths,
   type SpectralWavelength
 } from '../lib/defaults';
-import { createDefaultZernikeCoefficients } from '../../simulationConfig';
+import { createDefaultZernikeCoefficients } from '../../lib/simulationConfig';
 
 interface UseSimulationStateOptions {
   readonly displayMode: DisplayMode;

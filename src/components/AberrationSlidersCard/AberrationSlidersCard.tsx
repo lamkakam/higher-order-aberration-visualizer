@@ -24,7 +24,7 @@ import {
   zernikeCoefficientMin,
   zernikeCoefficientStep,
   zernikeTerms
-} from '../simulationConfig';
+} from '../lib/simulationConfig';
 
 type CoefficientDisplayUnit = 'wave' | 'micron';
 

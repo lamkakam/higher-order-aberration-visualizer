@@ -21,7 +21,7 @@ import type {
 import type { ApertureMaskResult } from '../../workers/types';
 import type { DisplayMode } from '../SettingsDrawer';
 import { NumberField } from '../NumberField';
-import { targetOptions } from '../simulationConfig';
+import { targetOptions } from '../lib/simulationConfig';
 import { ApertureMaskModal } from './ApertureMaskModal';
 import { formatApertureSummary } from './apertureMaskRules';
 
