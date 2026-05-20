@@ -3,6 +3,14 @@ import type { DisplayMode } from './components/SettingsDrawer';
 
 const displayModeRouteValues = ['basic', 'advanced'] as const;
 
+export function createRouterBase(baseUrl: string) {
+  if (baseUrl === '/') {
+    return '/';
+  }
+
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
 export function isSupportedLanguageCode(
   language: string | undefined
 ): language is SupportedLanguageCode {
@@ -16,3 +24,5 @@ export function isDisplayMode(displayMode: string | undefined): displayMode is D
 export function createAppPath(language: SupportedLanguageCode, displayMode: DisplayMode) {
   return `/${language}/${displayMode}`;
 }
+
+export const appRouterBase = createRouterBase(import.meta.env.BASE_URL);

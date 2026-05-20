@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { Router } from 'wouter';
 import { ApplicationShell } from '../ApplicationShell';
 import i18n, { cachedLanguageKey } from '../../../i18n';
 import { createMockWorkerClient } from '../../../test/workerMock';
@@ -120,6 +121,15 @@ function setPath(path: string) {
 function renderAtPath(path: string) {
   setPath(path);
   return render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+}
+
+function renderAtPathWithRouterBase(path: string, base: string) {
+  setPath(path);
+  return render(
+    <Router base={base}>
+      <ApplicationShell workerClient={createMockWorkerClient()} />
+    </Router>
+  );
 }
 
 async function openSettingsDrawer() {
@@ -264,6 +274,21 @@ it.each([
   });
 });
 
+it('renders a GitHub Pages route under the deployment base path', async () => {
+  renderAtPathWithRouterBase(
+    '/higher-order-aberration-visualizer/en/advanced',
+    '/higher-order-aberration-visualizer'
+  );
+
+  expect(await screen.findByRole('heading', { name: 'PSF' })).toBeInTheDocument();
+  await openSettingsDrawer();
+
+  await waitFor(() => {
+    expect(getSettingsLanguageSelect()).toHaveValue('en');
+  });
+  expect(window.location.pathname).toBe('/higher-order-aberration-visualizer/en/advanced');
+});
+
 it('normalizes the root route to the detected language and basic mode', async () => {
   setNavigatorLanguages('zh-TW', ['zh-TW']);
 
@@ -271,6 +296,22 @@ it('normalizes the root route to the detected language and basic mode', async ()
 
   await waitFor(() => {
     expect(window.location.pathname).toBe('/zh-Hant/basic');
+  });
+  await openSettingsDrawer();
+  expect(getSettingsLanguageSelect('語言')).toHaveValue('zh-Hant');
+  expect(screen.queryByRole('heading', { name: 'PSF' })).not.toBeInTheDocument();
+});
+
+it('normalizes the GitHub Pages base route to the detected language and basic mode', async () => {
+  setNavigatorLanguages('zh-TW', ['zh-TW']);
+
+  renderAtPathWithRouterBase(
+    '/higher-order-aberration-visualizer/',
+    '/higher-order-aberration-visualizer'
+  );
+
+  await waitFor(() => {
+    expect(window.location.pathname).toBe('/higher-order-aberration-visualizer/zh-Hant/basic');
   });
   await openSettingsDrawer();
   expect(getSettingsLanguageSelect('語言')).toHaveValue('zh-Hant');
