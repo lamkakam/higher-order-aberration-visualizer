@@ -1,0 +1,19 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.md'
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip full CI for documentation-only changes
+        run: echo "Documentation-only change - CI skipped"
