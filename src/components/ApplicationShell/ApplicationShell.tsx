@@ -25,7 +25,7 @@ import { ApproximateStrehlSummary } from './ApproximateStrehlSummary';
 import { SimulatorResults } from './SimulatorResults';
 import { WorkerInitializationMask } from './WorkerInitializationMask';
 import { createAppPath, isDisplayMode, isSupportedLanguageCode } from './routing';
-import { useSimulationState } from './useSimulationState';
+import { useSimulationState } from './hooks/useSimulationState';
 
 interface ApplicationShellProps {
   readonly workerClient?: WorkerClient;

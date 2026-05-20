@@ -10,4 +10,4 @@ export {
   isDisplayMode,
   isSupportedLanguageCode
 } from './routing';
-export { useSimulationState } from './useSimulationState';
+export { useSimulationState } from './hooks/useSimulationState';

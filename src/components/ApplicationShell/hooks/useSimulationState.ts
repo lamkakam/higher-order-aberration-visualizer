@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWorkerClient } from '../../hooks/useWorkerClient';
-import type { WorkerClient } from '../../workers/client';
+import { useWorkerClient } from '../../../hooks/useWorkerClient';
+import type { WorkerClient } from '../../../workers/client';
 import type {
   ApertureSettings,
   ConvolvedImageResult,
@@ -9,8 +9,8 @@ import type {
   SupportedTargetId,
   WavefrontLegendUnit,
   ZernikeCoefficientKey
-} from '../../workers/types';
-import type { DisplayMode } from '../SettingsDrawer';
+} from '../../../workers/types';
+import type { DisplayMode } from '../../SettingsDrawer';
 import {
   computeTimeoutMs,
   createDefaultZernikeCoefficientsByWavelength,
@@ -20,8 +20,8 @@ import {
   defaultTargetId,
   spectralWavelengths,
   type SpectralWavelength
-} from './defaults';
-import { createDefaultZernikeCoefficients } from '../simulationConfig';
+} from '../defaults';
+import { createDefaultZernikeCoefficients } from '../../simulationConfig';
 
 interface UseSimulationStateOptions {
   readonly displayMode: DisplayMode;
