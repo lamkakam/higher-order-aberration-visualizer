@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type {
-  ConvolvedImageResult,
   SupportedTargetId,
   WavefrontLegendUnit
-} from '../../workers/types';
+} from '../../types/domain';
+import type { ConvolvedImageResult } from '../../workers/types';
 import type { DisplayMode } from '../SettingsDrawer';
 import { SimulatedImageCard } from '../SimulatedImageCard';
 import { supplementalDescriptions, targetOptions } from '../simulationConfig';

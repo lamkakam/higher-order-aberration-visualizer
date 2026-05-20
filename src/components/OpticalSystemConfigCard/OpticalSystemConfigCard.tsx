@@ -14,11 +14,11 @@ import type { ChangeEvent, ReactNode } from 'react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
-  ApertureMaskResult,
   ApertureSettings,
   SpectralMode,
   SupportedTargetId
-} from '../../workers/types';
+} from '../../types/domain';
+import type { ApertureMaskResult } from '../../workers/types';
 import type { DisplayMode } from '../SettingsDrawer';
 import { NumberField } from '../NumberField';
 import { targetOptions } from '../simulationConfig';

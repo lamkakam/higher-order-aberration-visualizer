@@ -14,7 +14,7 @@ import Typography from '@mui/material/Typography';
 import type { TFunction } from 'i18next';
 import { memo, useCallback, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ZernikeCoefficientKey } from '../../workers/types';
+import type { ZernikeCoefficientKey } from '../../types/domain';
 import { CommitSlider } from '../CommitSlider';
 import {
   micronsToWaves,

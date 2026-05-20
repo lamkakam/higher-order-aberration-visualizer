@@ -7,11 +7,11 @@ The optics simulation is implemented in the Python package under [`src/hoa_visua
 The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the worker:
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
-- `apertureSettings`: aperture mask settings for circle, square, or regular hexagon apertures, optional matching central obstructions, optional spider vanes, and optional Gaussian apodization
+- `apertureSettings`: [`ApertureSettings`](../src/types/domain.ts) for circle, square, or regular hexagon apertures, optional matching central obstructions, optional spider vanes, and optional Gaussian apodization
 - `diagnosticWavelengthNm`: wavelength used for representative PSF, Wavefront Map, sampling wavelength, and coefficient diagnostics; Basic Mode and Advanced Monochromatic send `550`, and Advanced Polychromatic sends the active wavelength tab
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `spectralMode`: `monochromatic` or `polychromatic`; Basic Mode always sends `monochromatic`
-- `targetId`: one of the supported target ids
+- `targetId`: one of the supported target ids defined in [`src/types/domain.ts`](../src/types/domain.ts)
 - `wavelengthWeights`: required `(wavelength_nm, weight)` channel pairs; Basic Mode and Advanced Monochromatic send `[[550, 1]]`, and Advanced Polychromatic sends `[[550, 1], [656, 1], [486, 1]]`
 - `wavefrontLegendUnit`: whether the Wavefront Map colorbar renders in waves or microns; defaults to `wave` in the UI
 - `zernikeCoefficientsByWavelength`: required wavelength-scoped records using `"n,m"` coefficient keys and coefficient values in waves; Basic Mode and Advanced Monochromatic send the `550 nm` map
@@ -37,7 +37,7 @@ For three-channel results, the simulated RGB image still uses all three waveleng
 
 ## Supported Targets
 
-Supported target ids are defined in both [`src/workers/types.ts`](../src/workers/types.ts) and [`src/hoa_visualizer_utils/simulation/targets.py`](../src/hoa_visualizer_utils/simulation/targets.py):
+Supported target ids are defined in both [`src/types/domain.ts`](../src/types/domain.ts) and [`src/hoa_visualizer_utils/simulation/targets.py`](../src/hoa_visualizer_utils/simulation/targets.py):
 
 - `snellen_e_20_20`
 - `snellen_e_20_20_inverted`

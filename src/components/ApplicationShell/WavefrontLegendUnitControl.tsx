@@ -3,7 +3,7 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
-import type { WavefrontLegendUnit } from '../../workers/types';
+import type { WavefrontLegendUnit } from '../../types/domain';
 
 const wavefrontLegendUnitOptions = [
   { value: 'wave', labelKey: 'opticalSystem.wave' },

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { ApertureMaskResult, ApertureSettings } from '../../../workers/types';
+import type { ApertureSettings } from '../../../types/domain';
+import type { ApertureMaskResult } from '../../../workers/types';
 
 interface ApertureMaskPreview {
   readonly preview: ApertureMaskResult | undefined;

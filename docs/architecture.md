@@ -32,7 +32,7 @@ The app uses client-side `wouter` routing for bookmarkable language and display-
 
 ## Worker Boundary
 
-Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
+Shared serializable domain types, including `ApertureSettings` and supported target ids, live in [`src/types/domain.ts`](../src/types/domain.ts). Worker-facing types live in [`src/workers/types.ts`](../src/workers/types.ts). The main contract is:
 
 - `ConvolvedImageInput`: aperture diameter, aperture settings, diagnostic wavelength, scale-bar visibility, spectral mode, supported target id, required wavelength weights and wavelength-scoped coefficients keyed as `"n,m"` strings, and wavefront legend unit. The channel lists must contain either one entry for monochromatic runs or three entries for RGB polychromatic runs.
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
@@ -59,4 +59,4 @@ Each renderer returns PNG bytes. The worker base64-encodes those bytes into `dat
 
 `renderApertureMask` converts aperture settings to an `ApertureSpec` and calls [`render_aperture_mask`](../src/hoa_visualizer_utils/rendering/aperture_mask.py) without computing a full simulation. It returns a non-enlargeable PNG preview for the advanced aperture mask modal.
 
-`ApertureSettings` carries the outer aperture shape, rotation, central obstruction ratio, obstruction shape, obstruction rotation, spider vane count, spider vane width ratio, spider vane rotation, Gaussian apodization enabled state, and Gaussian standard-deviation ratio. The worker maps those serializable fields directly into the Python `ApertureSpec` used by both full simulations and aperture preview rendering.
+[`ApertureSettings`](../src/types/domain.ts) carries the outer aperture shape, rotation, central obstruction ratio, obstruction shape, obstruction rotation, spider vane count, spider vane width ratio, spider vane rotation, Gaussian apodization enabled state, and Gaussian standard-deviation ratio. The worker maps those serializable fields directly into the Python `ApertureSpec` used by both full simulations and aperture preview rendering.

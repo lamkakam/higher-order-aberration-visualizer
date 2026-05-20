@@ -31,4 +31,4 @@ export {
   targetOptions,
   zernikeTerms
 } from './simulationConfig';
-export type { WavefrontLegendUnit } from '../workers/types';
+export type { WavefrontLegendUnit } from '../types/domain';

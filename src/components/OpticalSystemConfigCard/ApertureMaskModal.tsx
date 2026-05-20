@@ -4,7 +4,8 @@ import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ApertureMaskResult, ApertureSettings } from '../../workers/types';
+import type { ApertureSettings } from '../../types/domain';
+import type { ApertureMaskResult } from '../../workers/types';
 import {
   ApertureShapeControls,
   CentralObstructionControls,

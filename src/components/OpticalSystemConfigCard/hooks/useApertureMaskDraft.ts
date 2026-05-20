@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { ApertureSettings, ApertureShape } from '../../../workers/types';
+import type { ApertureSettings, ApertureShape } from '../../../types/domain';
 import type { ApertureMaskDraftActions } from '../ApertureMaskControls';
 import type { ApertureMaskDraftState } from '../apertureMaskRules';
 

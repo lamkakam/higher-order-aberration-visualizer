@@ -4,12 +4,12 @@ import { useWorkerClient } from '../../../hooks/useWorkerClient';
 import type { WorkerClient } from '../../../workers/client';
 import type {
   ApertureSettings,
-  ConvolvedImageResult,
   SpectralMode,
   SupportedTargetId,
   WavefrontLegendUnit,
   ZernikeCoefficientKey
-} from '../../../workers/types';
+} from '../../../types/domain';
+import type { ConvolvedImageResult } from '../../../workers/types';
 import type { DisplayMode } from '../../SettingsDrawer';
 import {
   computeTimeoutMs,

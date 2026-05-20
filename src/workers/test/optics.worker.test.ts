@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { supportedTargetIds } from '../types';
+import { supportedTargetIds } from '../../types/domain';
 
 vi.mock('comlink', () => ({
   expose: vi.fn()

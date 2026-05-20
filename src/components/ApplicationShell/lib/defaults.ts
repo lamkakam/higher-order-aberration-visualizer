@@ -3,7 +3,7 @@ import type {
   ApertureSettings,
   SupportedTargetId,
   ZernikeCoefficientKey
-} from '../../../workers/types';
+} from '../../../types/domain';
 
 export const defaultTargetId: SupportedTargetId = 'logmar_chart';
 export const defaultApertureDiameterMm = 6;

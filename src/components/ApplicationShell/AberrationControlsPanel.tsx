@@ -2,7 +2,7 @@ import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import { useTranslation } from 'react-i18next';
-import type { ZernikeCoefficientKey } from '../../workers/types';
+import type { ZernikeCoefficientKey } from '../../types/domain';
 import { AberrationSlidersCard } from '../AberrationSlidersCard';
 import {
   spectralWavelengths,
