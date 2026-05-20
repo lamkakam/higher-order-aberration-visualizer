@@ -76,7 +76,7 @@ The app uses [`src/i18n.ts`](../src/i18n.ts) for client-side i18next setup. Loca
 
 Supported languages are English (`en`), Traditional Chinese (`zh-Hant`, labelled `繁體中文`), and Simplified Chinese (`zh-Hans`, labelled `简体中文`). The resolver maps `en-*` locales to English; maps `zh-Hant`, `zh-TW`, `zh-HK`, and `zh-MO` to Traditional Chinese; and maps `zh-Hans`, `zh-CN`, `zh-SG`, and generic `zh` to Simplified Chinese.
 
-Language and display mode are also represented in the client URL as `/:lang/:mode`, for example `/en/basic` or `/zh-Hans/advanced`. Tests that depend on a specific language or display mode should render the app at the matching route instead of changing i18next directly.
+Language and display mode are also represented in the client URL as `/:lang/:mode`, for example `/en/basic` or `/zh-Hans/advanced` in local development. Production client routes include the GitHub Pages base path, for example `/higher-order-aberration-visualizer/en/basic`. Tests that depend on a specific language or display mode should render the app at the matching route instead of changing i18next directly.
 
 To add a future language, add a matching `public/locales/<language>/translation.json`, add the language code to `supportedLngs` in `src/i18n.ts`, and expose it through `language.options.<language>` in each locale file. Keep translation keys stable and update React/Vitest and Playwright coverage when user-visible labels or accessible names change.
 

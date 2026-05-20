@@ -24,7 +24,7 @@ English, Traditional Chinese, and Simplified Chinese are the supported languages
 
 The header language selector always shows a concrete supported language. On first load it uses a cached supported language when available, otherwise matches browser locales in code and falls back to English. English keeps base-language matching, such as `en-US` to `en`. Chinese matching is explicit: `zh-Hant`, `zh-TW`, `zh-HK`, and `zh-MO` resolve to `zh-Hant`; `zh-Hans`, `zh-CN`, `zh-SG`, and generic `zh` resolve to `zh-Hans`.
 
-The app uses client-side `wouter` routing for bookmarkable language and display-mode state. Supported routes are `/:lang/:mode`, where `lang` is `en`, `zh-Hant`, or `zh-Hans`, and `mode` is `basic` or `advanced`. Missing or invalid route state is normalized with history replacement to the detected supported language and `basic`; i18next remains responsible for loading and applying translations.
+The app uses client-side `wouter` routing for bookmarkable language and display-mode state. Supported app routes are `/:lang/:mode`, where `lang` is `en`, `zh-Hant`, or `zh-Hans`, and `mode` is `basic` or `advanced`. The browser entry point passes Vite's base path to Wouter, so local development uses paths such as `/en/basic`, while the GitHub Pages deployment uses paths such as `/higher-order-aberration-visualizer/en/basic`. Missing or invalid route state is normalized with history replacement to the detected supported language and `basic`; i18next remains responsible for loading and applying translations.
 
 ## Public Asset Cache
 
