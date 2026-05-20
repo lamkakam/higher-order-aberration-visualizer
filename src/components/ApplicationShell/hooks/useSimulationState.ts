@@ -20,7 +20,7 @@ import {
   defaultTargetId,
   spectralWavelengths,
   type SpectralWavelength
-} from '../defaults';
+} from '../lib/defaults';
 import { createDefaultZernikeCoefficients } from '../../simulationConfig';
 
 interface UseSimulationStateOptions {

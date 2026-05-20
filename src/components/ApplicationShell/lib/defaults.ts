@@ -1,9 +1,9 @@
-import { createDefaultZernikeCoefficients } from '../simulationConfig';
+import { createDefaultZernikeCoefficients } from '../../simulationConfig';
 import type {
   ApertureSettings,
   SupportedTargetId,
   ZernikeCoefficientKey
-} from '../../workers/types';
+} from '../../../workers/types';
 
 export const defaultTargetId: SupportedTargetId = 'logmar_chart';
 export const defaultApertureDiameterMm = 6;

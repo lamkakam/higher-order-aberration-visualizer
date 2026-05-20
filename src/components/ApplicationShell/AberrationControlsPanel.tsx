@@ -9,7 +9,7 @@ import {
   type SpectralWavelength,
   type ZernikeCoefficientMap,
   type ZernikeCoefficientsByWavelength
-} from './defaults';
+} from './lib/defaults';
 
 interface AberrationControlsPanelProps {
   readonly isPolychromatic: boolean;

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
-import { createDefaultZernikeCoefficientsByWavelength } from '../defaults';
+import { createDefaultZernikeCoefficientsByWavelength } from '../lib/defaults';
 import { ApproximateStrehlSummary } from '../ApproximateStrehlSummary';
 
 it('renders the monochromatic Strehl summary', () => {

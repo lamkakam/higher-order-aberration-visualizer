@@ -9,5 +9,5 @@ export {
   createAppPath,
   isDisplayMode,
   isSupportedLanguageCode
-} from './routing';
+} from '../../routing';
 export { useSimulationState } from './hooks/useSimulationState';

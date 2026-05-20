@@ -10,7 +10,7 @@ import {
 import type {
   SpectralWavelength,
   ZernikeCoefficientsByWavelength
-} from './defaults';
+} from './lib/defaults';
 
 interface ApproximateStrehlSummaryProps {
   readonly isPolychromatic: boolean;

@@ -15,7 +15,7 @@ import {
   advancedGridHalfGapPx,
   desktopStickyTopPx,
   mobileStickyTopPx
-} from './defaults';
+} from './lib/defaults';
 import { WavefrontLegendUnitControl } from './WavefrontLegendUnitControl';
 
 interface SimulatorResultsProps {
