@@ -55,7 +55,7 @@ export function SettingsDrawer({
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box sx={{ width: 280, p: 3 }}>
+      <Box style={{ boxSizing: 'border-box' }} sx={{ maxWidth: '100vw', width: 320, p: 3 }}>
         <Typography
           component="label"
           htmlFor={languageSelectId}
@@ -90,6 +90,7 @@ export function SettingsDrawer({
               key={option.value}
               aria-label={t(option.labelKey)}
               variant={mode === option.value ? 'contained' : 'outlined'}
+              sx={{ whiteSpace: 'nowrap' }}
               onClick={() => {
                 onModeChange(option.value);
               }}

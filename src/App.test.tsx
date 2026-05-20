@@ -367,6 +367,23 @@ it('renders representative core UI text through the Traditional Chinese translat
   expect(screen.getByRole('heading', { name: '模擬影像' })).toBeInTheDocument();
 });
 
+it('keeps Traditional Chinese settings mode labels on one line', async () => {
+  renderAtPath('/zh-Hant/basic');
+
+  await openSettingsDrawer();
+
+  const modeLabel = screen.getByText('模式');
+  const drawerContent = modeLabel.parentElement;
+
+  expect(drawerContent).toHaveStyle({
+    width: '320px',
+    boxSizing: 'border-box'
+  });
+  expect(screen.getByRole('button', { name: '淺色' })).toHaveStyle({ whiteSpace: 'nowrap' });
+  expect(screen.getByRole('button', { name: '系統設定' })).toHaveStyle({ whiteSpace: 'nowrap' });
+  expect(screen.getByRole('button', { name: '深色' })).toHaveStyle({ whiteSpace: 'nowrap' });
+});
+
 it('renders representative core UI text through the Simplified Chinese translation file', async () => {
   renderAtPath('/zh-Hans/basic');
 
