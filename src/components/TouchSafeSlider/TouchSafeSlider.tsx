@@ -9,13 +9,13 @@ const touchSafeSliderThumbProps = {
 
 type SliderSlotProps = NonNullable<SliderProps['slotProps']>;
 type SliderThumbSlotProps = SliderSlotProps['thumb'];
+type SliderSx = SliderProps['sx'];
 
 function isInsideTouchSafeThumb(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest(touchSafeSliderThumbSelector));
 }
 
-function cancelTouchSliderPointerStart(event: PointerEvent) {
-  event.preventDefault();
+function stopTouchSliderPointerStart(event: PointerEvent) {
   event.stopPropagation();
   event.nativeEvent.stopImmediatePropagation();
 }
@@ -25,17 +25,35 @@ function stopTouchSliderTouchStart(event: TouchEvent) {
   event.nativeEvent.stopImmediatePropagation();
 }
 
+function mergeSx(...sxValues: (SliderSx | undefined)[]): SliderSx {
+  const mergedSx = sxValues.flatMap((sx) => {
+    if (sx === undefined) {
+      return [];
+    }
+
+    return Array.isArray(sx) ? sx : [sx];
+  });
+
+  return mergedSx.length === 1 ? mergedSx[0] : mergedSx;
+}
+
 function withTouchSafeThumbSlotProps(thumbSlotProps: SliderThumbSlotProps | undefined) {
   if (typeof thumbSlotProps === 'function') {
-    return ((ownerState) => ({
-      ...thumbSlotProps(ownerState),
-      ...touchSafeSliderThumbProps
-    })) satisfies SliderThumbSlotProps;
+    return ((ownerState) => {
+      const resolvedThumbSlotProps = thumbSlotProps(ownerState);
+
+      return {
+        ...resolvedThumbSlotProps,
+        ...touchSafeSliderThumbProps,
+        sx: mergeSx(resolvedThumbSlotProps.sx, { touchAction: 'none' })
+      };
+    }) satisfies SliderThumbSlotProps;
   }
 
   return {
     ...thumbSlotProps,
-    ...touchSafeSliderThumbProps
+    ...touchSafeSliderThumbProps,
+    sx: mergeSx(thumbSlotProps?.sx, { touchAction: 'none' })
   } satisfies SliderThumbSlotProps;
 }
 
@@ -43,11 +61,13 @@ export function TouchSafeSlider({
   slotProps,
   onPointerDownCapture,
   onTouchStartCapture,
+  sx,
   ...props
 }: SliderProps) {
   return (
     <Slider
       {...props}
+      sx={mergeSx(sx, { touchAction: 'pan-y' })}
       slotProps={{
         ...slotProps,
         thumb: withTouchSafeThumbSlotProps(slotProps?.thumb)
@@ -60,7 +80,7 @@ export function TouchSafeSlider({
           !event.defaultPrevented &&
           !isInsideTouchSafeThumb(event.target)
         ) {
-          cancelTouchSliderPointerStart(event);
+          stopTouchSliderPointerStart(event);
         }
       }}
       onTouchStartCapture={(event) => {
