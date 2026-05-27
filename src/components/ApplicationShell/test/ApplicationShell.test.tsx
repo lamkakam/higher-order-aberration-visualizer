@@ -2308,13 +2308,18 @@ it('ignores touch slider movement that starts away from the thumb', async () => 
     toJSON: () => ({})
   }));
 
-  fireEvent.touchStart(sphericalSliderRoot, {
-    changedTouches: [{ clientX: 125, clientY: 10, identifier: 1 }]
+  const offThumbTouchStart = new Event('touchstart', { bubbles: true, cancelable: true });
+  Object.defineProperty(offThumbTouchStart, 'changedTouches', {
+    value: [{ clientX: 125, clientY: 10, identifier: 1 }]
   });
+  const preventDefault = vi.spyOn(offThumbTouchStart, 'preventDefault');
+
+  fireEvent(sphericalSliderRoot, offThumbTouchStart);
   fireEvent.touchEnd(document, {
     changedTouches: [{ clientX: 125, clientY: 10, identifier: 1 }]
   });
 
+  expect(preventDefault).not.toHaveBeenCalled();
   expect(sphericalCoefficient).toHaveValue('0.00');
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);

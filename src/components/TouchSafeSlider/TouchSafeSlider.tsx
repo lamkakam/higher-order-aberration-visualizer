@@ -14,8 +14,13 @@ function isInsideTouchSafeThumb(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest(touchSafeSliderThumbSelector));
 }
 
-function stopTouchSliderStart(event: PointerEvent | TouchEvent) {
+function cancelTouchSliderPointerStart(event: PointerEvent) {
   event.preventDefault();
+  event.stopPropagation();
+  event.nativeEvent.stopImmediatePropagation();
+}
+
+function stopTouchSliderTouchStart(event: TouchEvent) {
   event.stopPropagation();
   event.nativeEvent.stopImmediatePropagation();
 }
@@ -55,14 +60,14 @@ export function TouchSafeSlider({
           !event.defaultPrevented &&
           !isInsideTouchSafeThumb(event.target)
         ) {
-          stopTouchSliderStart(event);
+          cancelTouchSliderPointerStart(event);
         }
       }}
       onTouchStartCapture={(event) => {
         onTouchStartCapture?.(event);
 
         if (!event.defaultPrevented && !isInsideTouchSafeThumb(event.target)) {
-          stopTouchSliderStart(event);
+          stopTouchSliderTouchStart(event);
         }
       }}
     />
