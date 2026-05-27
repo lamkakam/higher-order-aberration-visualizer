@@ -13,4 +13,6 @@ fi
 source "${VENV_DIR}/bin/activate"
 python -m pip install --upgrade pip
 python -m pip install build setuptools==76.0.0 wheel
+mkdir -p "${OUT_DIR}"
+rm -f "${OUT_DIR}"/higher_order_aberration_visualizer_utils-*.whl
 python -m build --wheel --no-isolation --outdir "${OUT_DIR}" "${REPO_ROOT}"

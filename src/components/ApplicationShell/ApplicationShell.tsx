@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import { ThemeProvider } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useRoute } from 'wouter';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import i18n, { resolveSupportedLanguage, type SupportedLanguageCode } from '../../i18n';
@@ -32,6 +33,7 @@ interface ApplicationShellProps {
 }
 
 export function ApplicationShell({ workerClient }: ApplicationShellProps) {
+  const { t } = useTranslation();
   const [location, navigate] = useLocation();
   const [matchedRoute, routeParams] = useRoute('/:lang/:mode');
   const routeLanguage = matchedRoute ? routeParams.lang : undefined;
@@ -48,6 +50,10 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
   const theme = useAppTheme(themeMode);
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
   const simulation = useSimulationState({ displayMode, workerClient });
+  const diagnosticsMessage =
+    simulation.diagnostics.messageKey !== undefined
+      ? t(simulation.diagnostics.messageKey, { defaultValue: simulation.diagnostics.message })
+      : simulation.diagnostics.message;
   const shouldWrapPolychromaticStrehl = simulation.isPolychromatic && !isSmUp;
   const approximateStrehlContent =
     displayMode === 'advanced' ? (
@@ -127,7 +133,7 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
           >
             <SimulatorResults
               approximateStrehlContent={approximateStrehlContent}
-              diagnosticsMessage={simulation.diagnostics.message}
+              diagnosticsMessage={diagnosticsMessage}
               displayMode={displayMode}
               error={simulation.error}
               isImageLoading={simulation.isImageLoading}
@@ -165,7 +171,9 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
             </Stack>
           </Box>
         </Container>
-        {simulation.isWorkerInitializing ? <WorkerInitializationMask theme={theme} /> : undefined}
+        {simulation.isWorkerInitializing ? (
+          <WorkerInitializationMask diagnostics={simulation.diagnostics} theme={theme} />
+        ) : undefined}
       </Box>
     </ThemeProvider>
   );

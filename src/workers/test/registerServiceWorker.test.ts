@@ -17,7 +17,7 @@ describe('registerServiceWorker', () => {
     });
 
     expect(registerServiceWorker()).toBe(registration);
-    expect(register).toHaveBeenCalledWith('/sw.js', { scope: '/' });
+    expect(register).toHaveBeenCalledWith('/sw.js', { scope: '/', updateViaCache: 'none' });
   });
 
   it('does nothing when service workers are unsupported', () => {

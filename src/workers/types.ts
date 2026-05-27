@@ -8,9 +8,21 @@ import type {
 
 export type WorkerStatus = 'idle' | 'initializing' | 'ready' | 'error';
 
+export type WorkerDiagnosticsMessageKey =
+  | 'status.worker.idle'
+  | 'status.worker.starting'
+  | 'status.worker.loadingPyodide'
+  | 'status.worker.loadingPythonPackages'
+  | 'status.worker.loadingBundledSources'
+  | 'status.worker.installingPrysm'
+  | 'status.worker.ready'
+  | 'status.worker.failed';
+
 export interface WorkerDiagnostics {
   status: WorkerStatus;
   message: string;
+  messageKey?: WorkerDiagnosticsMessageKey;
+  progressPercent?: number;
   pyodideVersion?: string;
 }
 

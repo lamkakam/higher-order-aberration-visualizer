@@ -35,7 +35,17 @@
     "initializationProgress": "初始化进度",
     "simulationFailed": "模拟失败",
     "computeTimedOut": "计算失败：web worker 仍在初始化",
-    "preparingImage": "正在准备图像..."
+    "preparingImage": "正在准备图像...",
+    "worker": {
+      "idle": "Web worker 空闲",
+      "starting": "正在启动 web worker",
+      "loadingPyodide": "正在加载 Pyodide",
+      "loadingPythonPackages": "正在加载 Python 包",
+      "loadingBundledSources": "正在加载内置 Python 源文件和资源",
+      "installingPrysm": "正在安装 prysm",
+      "ready": "Pyodide 已就绪",
+      "failed": "Web worker 初始化失败"
+    }
   },
   "results": {
     "simulatedImage": "模拟图像",

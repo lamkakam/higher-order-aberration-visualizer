@@ -28,7 +28,7 @@ The app uses client-side `wouter` routing for bookmarkable language and display-
 
 ## Public Asset Cache
 
-[`src/main.tsx`](../src/main.tsx) registers [`public/sw.js`](../public/sw.js) when the browser supports service workers. The service worker uses a versioned cache for selected same-origin `public/` runtime assets: supported translation JSON files, the committed `prysm` wheel, and the app's Pyodide wheel. Fetch handling is cache-first only for that fixed URL list. Vite dev server, HMR, source module, HTML, API-like, and cross-origin requests are left to the browser without service worker response handling.
+[`src/main.tsx`](../src/main.tsx) registers [`public/sw.js`](../public/sw.js) when the browser supports service workers. The service worker uses a versioned cache for selected same-origin `public/` runtime assets: supported translation JSON files and the committed `prysm` wheel. Locale JSON fetches are network-first with cached fallback so translation updates can land promptly; the `prysm` wheel remains cache-first for startup stability. Vite dev server, HMR, source module, HTML, API-like, generated internal wheel, and cross-origin requests are left to the browser without service worker response handling.
 
 ## Worker Boundary
 
@@ -37,13 +37,14 @@ Shared serializable domain types, including `ApertureSettings` and supported tar
 - `ConvolvedImageInput`: aperture diameter, aperture settings, diagnostic wavelength, scale-bar visibility, spectral mode, supported target id, required wavelength weights and wavelength-scoped coefficients keyed as `"n,m"` strings, and wavefront legend unit. The channel lists must contain either one entry for monochromatic runs or three entries for RGB polychromatic runs.
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `ApertureMaskResult`: data URL for an aperture preview image and worker diagnostics
+- `WorkerDiagnostics`: worker status, current fallback status message, optional i18n message key for known lifecycle states, optional Pyodide version, and optional stage-based initialization percentage
 - `OpticsWorkerApi`: `initialize`, `getStatus`, `computeConvolvedImage`, and `renderApertureMask`
 
-[`src/workers/client.ts`](../src/workers/client.ts) creates the module worker and wraps it with Comlink. [`src/hooks/useWorkerClient.ts`](../src/hooks/useWorkerClient.ts) owns the React-side session singleton for the app-created worker client and initializes diagnostics. The React UI talks to that Comlink proxy rather than importing worker or Pyodide code directly.
+[`src/workers/client.ts`](../src/workers/client.ts) creates the module worker and wraps it with Comlink. [`src/hooks/useWorkerClient.ts`](../src/hooks/useWorkerClient.ts) owns the React-side session singleton for the app-created worker client and initializes diagnostics. Known app-controlled worker lifecycle diagnostics carry stable i18n keys plus fallback text; unexpected thrown error messages remain literal for debugging. The React UI talks to that Comlink proxy rather than importing worker or Pyodide code directly.
 
 ## Pyodide Worker
 
-[`src/workers/optics.worker.ts`](../src/workers/optics.worker.ts) exposes the `OpticsWorkerApi` implementation with Comlink. Initialization loads Pyodide, installs Pyodide packages, writes the embedded Python sources into Pyodide's in-memory filesystem, and installs the bundled `prysm` wheel.
+[`src/workers/optics.worker.ts`](../src/workers/optics.worker.ts) exposes the `OpticsWorkerApi` implementation with Comlink. Initialization loads Pyodide, installs Pyodide packages, writes the embedded Python sources into Pyodide's in-memory filesystem, and installs the bundled `prysm` wheel. During startup the worker reports determinate stage-based diagnostics through `getStatus`: starting worker, loading Pyodide, loading Python packages, loading bundled Python sources and assets, installing `prysm`, and ready.
 
 The worker imports Python package files with Vite `?raw` imports and writes them under `/home/pyodide/hoa_visualizer_utils`. It imports binary assets with Vite `?url` imports and writes them into the same package tree. This keeps the Python source package in [`src/hoa_visualizer_utils`](../src/hoa_visualizer_utils) as the source of truth for both Python tests and browser execution.
 

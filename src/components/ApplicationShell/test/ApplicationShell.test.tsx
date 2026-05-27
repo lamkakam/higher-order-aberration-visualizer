@@ -443,17 +443,29 @@ it('shows an app-level initialization mask while the worker initializes', async 
         resolveInitialize = resolve;
       })
   );
+  const getStatus = vi.fn(async () => ({
+    status: 'initializing' as const,
+    message: 'Loading Pyodide',
+    messageKey: 'status.worker.loadingPyodide' as const,
+    progressPercent: 20
+  }));
 
-  render(<ApplicationShell workerClient={createMockWorkerClient({ initialize })} />);
+  render(<ApplicationShell workerClient={createMockWorkerClient({ initialize, getStatus })} />);
 
   expect(screen.getByRole('status', { name: 'Worker initialization' })).toBeInTheDocument();
   expect(screen.getByText('Initializing...')).toBeInTheDocument();
-  expect(screen.getByRole('progressbar', { name: 'Initialization progress' })).toBeInTheDocument();
+  expect(await screen.findByText('Loading Pyodide')).toBeInTheDocument();
+  expect(screen.getByText('20%')).toBeInTheDocument();
+  expect(screen.getByRole('progressbar', { name: 'Initialization progress' })).toHaveAttribute(
+    'aria-valuenow',
+    '20'
+  );
 
   await act(async () => {
     resolveInitialize({
       status: 'ready',
-      message: 'Mock worker ready'
+      message: 'Mock worker ready',
+      progressPercent: 100
     });
   });
 

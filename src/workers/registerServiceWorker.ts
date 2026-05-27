@@ -6,6 +6,7 @@ export function registerServiceWorker(): Promise<ServiceWorkerRegistration> | un
   }
 
   return navigator.serviceWorker.register(resolvePublicAssetPath('/sw.js'), {
-    scope: import.meta.env.BASE_URL
+    scope: import.meta.env.BASE_URL,
+    updateViaCache: 'none'
   });
 }

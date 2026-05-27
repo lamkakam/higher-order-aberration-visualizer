@@ -35,7 +35,17 @@
     "initializationProgress": "Initialization progress",
     "simulationFailed": "Simulation failed",
     "computeTimedOut": "Compute failed: worker is still initializing",
-    "preparingImage": "Preparing image..."
+    "preparingImage": "Preparing image...",
+    "worker": {
+      "idle": "Worker idle",
+      "starting": "Starting worker",
+      "loadingPyodide": "Loading Pyodide",
+      "loadingPythonPackages": "Loading Python packages",
+      "loadingBundledSources": "Loading bundled Python sources and assets",
+      "installingPrysm": "Installing prysm",
+      "ready": "Pyodide ready",
+      "failed": "Worker failed to initialize"
+    }
   },
   "results": {
     "simulatedImage": "Simulated Image",
