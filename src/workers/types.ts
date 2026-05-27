@@ -11,6 +11,7 @@ export type WorkerStatus = 'idle' | 'initializing' | 'ready' | 'error';
 export interface WorkerDiagnostics {
   status: WorkerStatus;
   message: string;
+  progressPercent?: number;
   pyodideVersion?: string;
 }
 

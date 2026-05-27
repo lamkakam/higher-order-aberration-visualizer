@@ -165,7 +165,9 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
             </Stack>
           </Box>
         </Container>
-        {simulation.isWorkerInitializing ? <WorkerInitializationMask theme={theme} /> : undefined}
+        {simulation.isWorkerInitializing ? (
+          <WorkerInitializationMask diagnostics={simulation.diagnostics} theme={theme} />
+        ) : undefined}
       </Box>
     </ThemeProvider>
   );

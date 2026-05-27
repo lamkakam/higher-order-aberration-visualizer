@@ -37,13 +37,14 @@ Shared serializable domain types, including `ApertureSettings` and supported tar
 - `ConvolvedImageInput`: aperture diameter, aperture settings, diagnostic wavelength, scale-bar visibility, spectral mode, supported target id, required wavelength weights and wavelength-scoped coefficients keyed as `"n,m"` strings, and wavefront legend unit. The channel lists must contain either one entry for monochromatic runs or three entries for RGB polychromatic runs.
 - `ConvolvedImageResult`: data URLs for the convolved image, PSF image, wavefront image, and worker diagnostics
 - `ApertureMaskResult`: data URL for an aperture preview image and worker diagnostics
+- `WorkerDiagnostics`: worker status, current status message, optional Pyodide version, and optional stage-based initialization percentage
 - `OpticsWorkerApi`: `initialize`, `getStatus`, `computeConvolvedImage`, and `renderApertureMask`
 
 [`src/workers/client.ts`](../src/workers/client.ts) creates the module worker and wraps it with Comlink. [`src/hooks/useWorkerClient.ts`](../src/hooks/useWorkerClient.ts) owns the React-side session singleton for the app-created worker client and initializes diagnostics. The React UI talks to that Comlink proxy rather than importing worker or Pyodide code directly.
 
 ## Pyodide Worker
 
-[`src/workers/optics.worker.ts`](../src/workers/optics.worker.ts) exposes the `OpticsWorkerApi` implementation with Comlink. Initialization loads Pyodide, installs Pyodide packages, writes the embedded Python sources into Pyodide's in-memory filesystem, and installs the bundled `prysm` wheel.
+[`src/workers/optics.worker.ts`](../src/workers/optics.worker.ts) exposes the `OpticsWorkerApi` implementation with Comlink. Initialization loads Pyodide, installs Pyodide packages, writes the embedded Python sources into Pyodide's in-memory filesystem, and installs the bundled `prysm` wheel. During startup the worker reports determinate stage-based diagnostics through `getStatus`: starting worker, loading Pyodide, loading Python packages, loading bundled Python sources and assets, installing `prysm`, and ready.
 
 The worker imports Python package files with Vite `?raw` imports and writes them under `/home/pyodide/hoa_visualizer_utils`. It imports binary assets with Vite `?url` imports and writes them into the same package tree. This keeps the Python source package in [`src/hoa_visualizer_utils`](../src/hoa_visualizer_utils) as the source of truth for both Python tests and browser execution.
 

@@ -4,7 +4,8 @@ import type { WorkerDiagnostics } from '../workers/types';
 
 const initialDiagnostics: WorkerDiagnostics = {
   status: 'idle',
-  message: 'Worker not initialized'
+  message: 'Worker not initialized',
+  progressPercent: 0
 };
 
 let ownedWorkerClient: WorkerClient | undefined;
@@ -24,22 +25,57 @@ export function useWorkerClient(workerClient?: WorkerClient): UseWorkerClientRes
 
     setDiagnostics({
       status: 'initializing',
-      message: 'Starting worker'
+      message: 'Starting worker',
+      progressPercent: 0
     });
+    let shouldPoll = true;
+
+    const pollInitializationStatus = async () => {
+      while (!cancelled && shouldPoll) {
+        await waitForStatusPoll();
+        if (cancelled || !shouldPoll) {
+          return;
+        }
+
+        try {
+          const nextDiagnostics = await client.api.getStatus();
+          if (cancelled) {
+            return;
+          }
+
+          setDiagnostics(nextDiagnostics);
+          if (nextDiagnostics.status !== 'initializing') {
+            shouldPoll = false;
+          }
+        } catch {
+          shouldPoll = false;
+        }
+      }
+    };
+
+    void pollInitializationStatus();
 
     client.api
       .initialize()
       .then((nextDiagnostics) => {
         if (!cancelled) {
+          if (nextDiagnostics.status === 'initializing' && !shouldPoll) {
+            return;
+          }
           setDiagnostics(nextDiagnostics);
+          if (nextDiagnostics.status !== 'initializing') {
+            shouldPoll = false;
+          }
         }
       })
       .catch((caughtError) => {
         if (!cancelled) {
+          shouldPoll = false;
           setDiagnostics({
             status: 'error',
             message:
-              caughtError instanceof Error ? caughtError.message : 'Worker failed to initialize'
+              caughtError instanceof Error ? caughtError.message : 'Worker failed to initialize',
+            progressPercent: 0
           });
         }
       });
@@ -60,4 +96,10 @@ function getOwnedWorkerClient(): WorkerClient {
   ownedWorkerClient ??= createWorkerClient();
 
   return ownedWorkerClient;
+}
+
+function waitForStatusPoll(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, 250);
+  });
 }

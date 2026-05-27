@@ -68,6 +68,105 @@ describe('optics worker', () => {
     expect(supportedTargetIds).toContain('snellen_e_20_20_inverted');
   });
 
+  it('reports determinate initialization progress through stable startup stages', async () => {
+    const { expose } = await import('comlink');
+    let resolveLoadPyodide: () => void = () => {};
+    let resolveLoadPackage: () => void = () => {};
+    let resolveAssetBytes: () => void = () => {};
+    let resolveInstallPrysm: () => void = () => {};
+    const deferredLoadPyodide = new Promise<Awaited<ReturnType<typeof loadPyodide>>>(
+      (resolve) => {
+        resolveLoadPyodide = () => {
+          resolve({
+            version: '0.29.3',
+            FS: {
+              mkdirTree,
+              writeFile
+            },
+            loadPackage,
+            pyimport: vi.fn(() => ({
+              install: vi.fn()
+            })),
+            toPy: vi.fn((value: unknown) => value),
+            runPythonAsync
+          } as unknown as Awaited<ReturnType<typeof loadPyodide>>);
+        };
+      }
+    );
+    vi.mocked(loadPyodide).mockImplementationOnce(async () => deferredLoadPyodide);
+    loadPackage.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveLoadPackage = resolve;
+        })
+    );
+    arrayBuffer.mockImplementationOnce(
+      async () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          resolveAssetBytes = () => {
+            resolve(new Uint8Array([1, 2, 3]).buffer);
+          };
+        })
+    );
+    runPythonAsync.mockImplementationOnce(
+      async () =>
+        new Promise<Uint8Array<ArrayBuffer>>((resolve) => {
+          resolveInstallPrysm = () => {
+            resolve(new Uint8Array(new ArrayBuffer(1)));
+          };
+        })
+    );
+
+    await import('../optics.worker');
+
+    const api = vi.mocked(expose).mock.calls[0][0];
+    const initialDiagnostics = await api.initialize();
+    expect(initialDiagnostics).toMatchObject({
+      status: 'initializing',
+      message: 'Starting worker',
+      progressPercent: 0
+    });
+    await vi.waitFor(async () => {
+      await expect(api.getStatus()).resolves.toMatchObject({
+        message: 'Loading Pyodide',
+        progressPercent: 20
+      });
+    });
+
+    resolveLoadPyodide();
+    await vi.waitFor(async () => {
+      await expect(api.getStatus()).resolves.toMatchObject({
+        message: 'Loading Python packages',
+        progressPercent: 45
+      });
+    });
+
+    resolveLoadPackage();
+    await vi.waitFor(async () => {
+      await expect(api.getStatus()).resolves.toMatchObject({
+        message: 'Loading bundled Python sources and assets',
+        progressPercent: 65
+      });
+    });
+
+    resolveAssetBytes();
+    await vi.waitFor(async () => {
+      await expect(api.getStatus()).resolves.toMatchObject({
+        message: 'Installing prysm',
+        progressPercent: 85
+      });
+    });
+
+    resolveInstallPrysm();
+    await vi.waitFor(async () => {
+      await expect(api.getStatus()).resolves.toMatchObject({
+        status: 'ready',
+        message: 'Pyodide ready',
+        progressPercent: 100
+      });
+    });
+  });
+
   it('initializes Pyodide without installing local wheel URLs', async () => {
     const { expose } = await import('comlink');
     await import('../optics.worker');

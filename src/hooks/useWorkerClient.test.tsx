@@ -4,16 +4,15 @@ import type { WorkerClient } from '../workers/client';
 import type { OpticsWorkerApi, WorkerDiagnostics } from '../workers/types';
 
 function createTestWorkerClient(
-  initialize = vi.fn(() => new Promise<WorkerDiagnostics>(() => {}))
+  initialize = vi.fn(() => new Promise<WorkerDiagnostics>(() => {})),
+  getStatus: OpticsWorkerApi['getStatus'] = vi.fn(async (): Promise<WorkerDiagnostics> => ({
+    status: 'ready',
+    message: 'Mock worker ready'
+  }))
 ): WorkerClient {
   const api: OpticsWorkerApi = {
     initialize,
-    async getStatus() {
-      return {
-        status: 'ready',
-        message: 'Mock worker ready'
-      };
-    },
+    getStatus,
     async computeConvolvedImage() {
       return {
         imageUrl: 'data:image/png;base64,c2ltdWxhdGVk',
@@ -118,12 +117,161 @@ describe('useWorkerClient', () => {
 
     expect(result.current.diagnostics).toEqual({
       status: 'initializing',
-      message: 'Starting worker'
+      message: 'Starting worker',
+      progressPercent: 0
     });
 
     await waitFor(() => {
       expect(result.current.diagnostics).toEqual(diagnostics);
     });
+  });
+
+  it('polls initialization diagnostics until the worker is ready', async () => {
+    vi.useFakeTimers();
+    let resolveInitialize: (diagnostics: WorkerDiagnostics) => void = () => {};
+    const readyDiagnostics: WorkerDiagnostics = {
+      status: 'ready',
+      message: 'Worker ready',
+      progressPercent: 100
+    };
+    const initialize = vi.fn(
+      () =>
+        new Promise<WorkerDiagnostics>((resolve) => {
+          resolveInitialize = resolve;
+        })
+    );
+    const getStatus = vi
+      .fn<OpticsWorkerApi['getStatus']>()
+      .mockResolvedValueOnce({
+        status: 'initializing',
+        message: 'Loading Pyodide',
+        progressPercent: 20
+      })
+      .mockResolvedValueOnce({
+        status: 'initializing',
+        message: 'Loading Python packages',
+        progressPercent: 45
+      })
+      .mockResolvedValue(readyDiagnostics);
+    const { useWorkerClient } = await loadHook(
+      vi.fn(() => createTestWorkerClient(initialize, getStatus))
+    );
+
+    const { result } = renderHook(() => useWorkerClient());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(result.current.diagnostics).toEqual({
+      status: 'initializing',
+      message: 'Loading Pyodide',
+      progressPercent: 20
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(result.current.diagnostics).toEqual({
+      status: 'initializing',
+      message: 'Loading Python packages',
+      progressPercent: 45
+    });
+
+    await act(async () => {
+      resolveInitialize(readyDiagnostics);
+    });
+
+    expect(result.current.diagnostics).toEqual(readyDiagnostics);
+    const statusCallsAfterReady = getStatus.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(getStatus).toHaveBeenCalledTimes(statusCallsAfterReady);
+    vi.useRealTimers();
+  });
+
+  it('keeps polling when initialize resolves with an initializing status', async () => {
+    vi.useFakeTimers();
+    const initialize = vi.fn(async (): Promise<WorkerDiagnostics> => ({
+      status: 'initializing',
+      message: 'Starting worker',
+      progressPercent: 0
+    }));
+    const getStatus = vi
+      .fn<OpticsWorkerApi['getStatus']>()
+      .mockResolvedValueOnce({
+        status: 'initializing',
+        message: 'Loading Pyodide',
+        progressPercent: 20
+      })
+      .mockResolvedValue({
+        status: 'ready',
+        message: 'Worker ready',
+        progressPercent: 100
+      });
+    const { useWorkerClient } = await loadHook(
+      vi.fn(() => createTestWorkerClient(initialize, getStatus))
+    );
+
+    const { result } = renderHook(() => useWorkerClient());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(result.current.diagnostics).toEqual({
+      status: 'initializing',
+      message: 'Loading Pyodide',
+      progressPercent: 20
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(result.current.diagnostics).toEqual({
+      status: 'ready',
+      message: 'Worker ready',
+      progressPercent: 100
+    });
+    vi.useRealTimers();
+  });
+
+  it('stops polling initialization diagnostics after an error status', async () => {
+    vi.useFakeTimers();
+    const initialize = vi.fn(() => new Promise<WorkerDiagnostics>(() => {}));
+    const getStatus = vi.fn<OpticsWorkerApi['getStatus']>().mockResolvedValue({
+      status: 'error',
+      message: 'Pyodide failed',
+      progressPercent: 20
+    });
+    const { useWorkerClient } = await loadHook(
+      vi.fn(() => createTestWorkerClient(initialize, getStatus))
+    );
+
+    const { result } = renderHook(() => useWorkerClient());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(result.current.diagnostics).toEqual({
+      status: 'error',
+      message: 'Pyodide failed',
+      progressPercent: 20
+    });
+    const statusCallsAfterError = getStatus.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(getStatus).toHaveBeenCalledTimes(statusCallsAfterError);
+    vi.useRealTimers();
   });
 
   it('reports initialization failure diagnostics', async () => {
@@ -137,7 +285,8 @@ describe('useWorkerClient', () => {
     await waitFor(() => {
       expect(result.current.diagnostics).toEqual({
         status: 'error',
-        message: 'Initialization exploded'
+        message: 'Initialization exploded',
+        progressPercent: 0
       });
     });
   });
