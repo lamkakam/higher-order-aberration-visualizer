@@ -1,0 +1,1 @@
+export { TouchSafeSlider } from './TouchSafeSlider';

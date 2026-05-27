@@ -1,8 +1,8 @@
 import Box from '@mui/material/Box';
-import Slider from '@mui/material/Slider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useRef, useState } from 'react';
+import { TouchSafeSlider } from '../TouchSafeSlider';
 
 interface CommitSliderInputConfig {
   readonly formatValue: (value: number) => string;
@@ -152,7 +152,7 @@ export function CommitSlider({
           ) : undefined}
         </Box>
       ) : undefined}
-      <Slider
+      <TouchSafeSlider
         aria-label={ariaLabel}
         min={min}
         max={max}
