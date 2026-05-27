@@ -2340,6 +2340,72 @@ it('ignores touch slider movement that starts away from the thumb', async () => 
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 });
 
+it('lets off-thumb touch pointer starts scroll without changing the slider', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  const sphericalSlider = screen.getByRole('slider', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  const sphericalCoefficient = screen.getByRole('textbox', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  const sphericalSliderRoot = sphericalSlider.closest('.MuiSlider-root') as HTMLElement;
+  sphericalSliderRoot.getBoundingClientRect = vi.fn(() => ({
+    bottom: 20,
+    height: 20,
+    left: 0,
+    right: 200,
+    top: 0,
+    width: 200,
+    x: 0,
+    y: 0,
+    toJSON: () => ({})
+  }));
+
+  const offThumbPointerStart = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(offThumbPointerStart, {
+    clientX: { value: 125 },
+    clientY: { value: 10 },
+    pointerId: { value: 1 },
+    pointerType: { value: 'touch' }
+  });
+  const preventDefault = vi.spyOn(offThumbPointerStart, 'preventDefault');
+
+  fireEvent(sphericalSliderRoot, offThumbPointerStart);
+  fireEvent.pointerUp(document, {
+    clientX: 125,
+    clientY: 10,
+    pointerId: 1,
+    pointerType: 'touch'
+  });
+
+  expect(preventDefault).not.toHaveBeenCalled();
+  expect(sphericalCoefficient).toHaveValue('0.00');
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+});
+
 it('debounces worker calls using the current UI payload', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
