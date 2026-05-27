@@ -28,7 +28,7 @@ The app uses client-side `wouter` routing for bookmarkable language and display-
 
 ## Public Asset Cache
 
-[`src/main.tsx`](../src/main.tsx) registers [`public/sw.js`](../public/sw.js) when the browser supports service workers. The service worker uses a versioned cache for selected same-origin `public/` runtime assets: supported translation JSON files, the committed `prysm` wheel, and the app's Pyodide wheel. Locale JSON fetches are network-first with cached fallback so translation updates can land promptly; the wheel assets remain cache-first for startup stability. Vite dev server, HMR, source module, HTML, API-like, and cross-origin requests are left to the browser without service worker response handling.
+[`src/main.tsx`](../src/main.tsx) registers [`public/sw.js`](../public/sw.js) when the browser supports service workers. The service worker uses a versioned cache for selected same-origin `public/` runtime assets: supported translation JSON files and the committed `prysm` wheel. Locale JSON fetches are network-first with cached fallback so translation updates can land promptly; the `prysm` wheel remains cache-first for startup stability. Vite dev server, HMR, source module, HTML, API-like, generated internal wheel, and cross-origin requests are left to the browser without service worker response handling.
 
 ## Worker Boundary
 

@@ -9,8 +9,7 @@ const PRECACHE_URLS = [
   '/locales/en/translation.json',
   '/locales/zh-Hant/translation.json',
   '/locales/zh-Hans/translation.json',
-  '/pyodide/prysm-0.21.1-py2.py3-none-any.whl',
-  '/pyodide/higher_order_aberration_visualizer_utils-0.1.0-py3-none-any.whl'
+  '/pyodide/prysm-0.21.1-py2.py3-none-any.whl'
 ].map(resolveAssetPath);
 const PRECACHE_PATHS = new Set(PRECACHE_URLS);
 const LOCALE_PATHS = new Set([
