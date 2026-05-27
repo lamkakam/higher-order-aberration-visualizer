@@ -124,11 +124,13 @@ describe('optics worker', () => {
     expect(initialDiagnostics).toMatchObject({
       status: 'initializing',
       message: 'Starting worker',
+      messageKey: 'status.worker.starting',
       progressPercent: 0
     });
     await vi.waitFor(async () => {
       await expect(api.getStatus()).resolves.toMatchObject({
         message: 'Loading Pyodide',
+        messageKey: 'status.worker.loadingPyodide',
         progressPercent: 20
       });
     });
@@ -137,6 +139,7 @@ describe('optics worker', () => {
     await vi.waitFor(async () => {
       await expect(api.getStatus()).resolves.toMatchObject({
         message: 'Loading Python packages',
+        messageKey: 'status.worker.loadingPythonPackages',
         progressPercent: 45
       });
     });
@@ -145,6 +148,7 @@ describe('optics worker', () => {
     await vi.waitFor(async () => {
       await expect(api.getStatus()).resolves.toMatchObject({
         message: 'Loading bundled Python sources and assets',
+        messageKey: 'status.worker.loadingBundledSources',
         progressPercent: 65
       });
     });
@@ -153,6 +157,7 @@ describe('optics worker', () => {
     await vi.waitFor(async () => {
       await expect(api.getStatus()).resolves.toMatchObject({
         message: 'Installing prysm',
+        messageKey: 'status.worker.installingPrysm',
         progressPercent: 85
       });
     });
@@ -162,6 +167,7 @@ describe('optics worker', () => {
       await expect(api.getStatus()).resolves.toMatchObject({
         status: 'ready',
         message: 'Pyodide ready',
+        messageKey: 'status.worker.ready',
         progressPercent: 100
       });
     });

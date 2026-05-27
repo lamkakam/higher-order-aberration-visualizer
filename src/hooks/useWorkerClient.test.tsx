@@ -118,6 +118,7 @@ describe('useWorkerClient', () => {
     expect(result.current.diagnostics).toEqual({
       status: 'initializing',
       message: 'Starting worker',
+      messageKey: 'status.worker.starting',
       progressPercent: 0
     });
 
@@ -145,11 +146,13 @@ describe('useWorkerClient', () => {
       .mockResolvedValueOnce({
         status: 'initializing',
         message: 'Loading Pyodide',
+        messageKey: 'status.worker.loadingPyodide',
         progressPercent: 20
       })
       .mockResolvedValueOnce({
         status: 'initializing',
         message: 'Loading Python packages',
+        messageKey: 'status.worker.loadingPythonPackages',
         progressPercent: 45
       })
       .mockResolvedValue(readyDiagnostics);
@@ -166,6 +169,7 @@ describe('useWorkerClient', () => {
     expect(result.current.diagnostics).toEqual({
       status: 'initializing',
       message: 'Loading Pyodide',
+      messageKey: 'status.worker.loadingPyodide',
       progressPercent: 20
     });
 
@@ -176,6 +180,7 @@ describe('useWorkerClient', () => {
     expect(result.current.diagnostics).toEqual({
       status: 'initializing',
       message: 'Loading Python packages',
+      messageKey: 'status.worker.loadingPythonPackages',
       progressPercent: 45
     });
 
@@ -199,6 +204,7 @@ describe('useWorkerClient', () => {
     const initialize = vi.fn(async (): Promise<WorkerDiagnostics> => ({
       status: 'initializing',
       message: 'Starting worker',
+      messageKey: 'status.worker.starting',
       progressPercent: 0
     }));
     const getStatus = vi
@@ -206,6 +212,7 @@ describe('useWorkerClient', () => {
       .mockResolvedValueOnce({
         status: 'initializing',
         message: 'Loading Pyodide',
+        messageKey: 'status.worker.loadingPyodide',
         progressPercent: 20
       })
       .mockResolvedValue({
@@ -226,6 +233,7 @@ describe('useWorkerClient', () => {
     expect(result.current.diagnostics).toEqual({
       status: 'initializing',
       message: 'Loading Pyodide',
+      messageKey: 'status.worker.loadingPyodide',
       progressPercent: 20
     });
 

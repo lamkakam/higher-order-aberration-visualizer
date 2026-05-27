@@ -28,7 +28,8 @@ import type {
   ConvolvedImageInput,
   ConvolvedImageResult,
   OpticsWorkerApi,
-  WorkerDiagnostics
+  WorkerDiagnostics,
+  WorkerDiagnosticsMessageKey
 } from './types';
 
 const pyodidePackageBaseUrl = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/';
@@ -72,7 +73,8 @@ const pythonAssets = [
 let pyodide: PyodideInterface | undefined;
 let diagnostics: WorkerDiagnostics = {
   status: 'idle',
-  message: 'Worker idle'
+  message: 'Worker idle',
+  messageKey: 'status.worker.idle'
 };
 let initializationPromise: Promise<void> | undefined;
 
@@ -84,6 +86,7 @@ function initialize(): Promise<WorkerDiagnostics> {
   diagnostics = {
     status: 'initializing',
     message: 'Starting worker',
+    messageKey: 'status.worker.starting',
     progressPercent: 0
   };
 
@@ -94,14 +97,19 @@ function initialize(): Promise<WorkerDiagnostics> {
 
 async function initializePyodide(): Promise<void> {
   try {
-    setDiagnostics('initializing', 'Loading Pyodide', 20);
+    setDiagnostics('initializing', 'Loading Pyodide', 'status.worker.loadingPyodide', 20);
     const { loadPyodide } = await import('pyodide');
     const nextPyodide = await loadPyodide({
       indexURL: pyodideIndexUrl,
       packageBaseUrl: pyodidePackageBaseUrl
     });
     pyodide = nextPyodide;
-    setDiagnostics('initializing', 'Loading Python packages', 45);
+    setDiagnostics(
+      'initializing',
+      'Loading Python packages',
+      'status.worker.loadingPythonPackages',
+      45
+    );
     await nextPyodide.loadPackage([
       'micropip',
       'numpy',
@@ -109,9 +117,14 @@ async function initializePyodide(): Promise<void> {
       'matplotlib',
       'setuptools'
     ]);
-    setDiagnostics('initializing', 'Loading bundled Python sources and assets', 65);
+    setDiagnostics(
+      'initializing',
+      'Loading bundled Python sources and assets',
+      'status.worker.loadingBundledSources',
+      65
+    );
     await loadPythonSources(nextPyodide);
-    setDiagnostics('initializing', 'Installing prysm', 85);
+    setDiagnostics('initializing', 'Installing prysm', 'status.worker.installingPrysm', 85);
     const installGlobals = nextPyodide.toPy({
       prysm_wheel_url: prysmWheelUrl,
       python_package_root: pythonPackageRoot
@@ -128,13 +141,17 @@ await micropip.install(prysm_wheel_url, deps=False)
 `,
       { globals: installGlobals }
     );
-    setDiagnostics('ready', 'Pyodide ready', 100, nextPyodide.version);
+    setDiagnostics('ready', 'Pyodide ready', 'status.worker.ready', 100, nextPyodide.version);
   } catch (error) {
-    diagnostics = {
+    const nextDiagnostics: WorkerDiagnostics = {
       status: 'error',
       message: error instanceof Error ? error.message : 'Pyodide failed to initialize',
       progressPercent: diagnostics.progressPercent
     };
+    if (!(error instanceof Error)) {
+      nextDiagnostics.messageKey = 'status.worker.failed';
+    }
+    diagnostics = nextDiagnostics;
   }
 }
 
@@ -285,6 +302,7 @@ async function ensureInitialized(): Promise<void> {
     diagnostics = {
       status: 'initializing',
       message: 'Starting worker',
+      messageKey: 'status.worker.starting',
       progressPercent: 0
     };
     initializationPromise = Promise.resolve().then(initializePyodide);
@@ -303,12 +321,14 @@ function bytesToBase64(bytes: Uint8Array): string {
 function setDiagnostics(
   status: WorkerDiagnostics['status'],
   message: string,
+  messageKey: WorkerDiagnosticsMessageKey,
   progressPercent: number,
   pyodideVersion?: string
 ): void {
   const nextDiagnostics: WorkerDiagnostics = {
     status,
     message,
+    messageKey,
     progressPercent
   };
   if (pyodideVersion !== undefined) {

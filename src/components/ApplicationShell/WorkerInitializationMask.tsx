@@ -14,6 +14,10 @@ interface WorkerInitializationMaskProps {
 export function WorkerInitializationMask({ diagnostics, theme }: WorkerInitializationMaskProps) {
   const { t } = useTranslation();
   const progressPercent = clampProgressPercent(diagnostics.progressPercent);
+  const diagnosticsMessage =
+    diagnostics.messageKey !== undefined
+      ? t(diagnostics.messageKey, { defaultValue: diagnostics.message })
+      : diagnostics.message;
 
   return (
     <Box
@@ -36,7 +40,7 @@ export function WorkerInitializationMask({ diagnostics, theme }: WorkerInitializ
           {t('status.initializing')}
         </Typography>
         <Typography color="text.secondary" sx={{ textAlign: 'center' }}>
-          {diagnostics.message}
+          {diagnosticsMessage}
         </Typography>
         <Stack spacing={1}>
           <LinearProgress

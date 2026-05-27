@@ -446,6 +446,7 @@ it('shows an app-level initialization mask while the worker initializes', async 
   const getStatus = vi.fn(async () => ({
     status: 'initializing' as const,
     message: 'Loading Pyodide',
+    messageKey: 'status.worker.loadingPyodide' as const,
     progressPercent: 20
   }));
 

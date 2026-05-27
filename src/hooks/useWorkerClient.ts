@@ -5,6 +5,7 @@ import type { WorkerDiagnostics } from '../workers/types';
 const initialDiagnostics: WorkerDiagnostics = {
   status: 'idle',
   message: 'Worker not initialized',
+  messageKey: 'status.worker.idle',
   progressPercent: 0
 };
 
@@ -26,6 +27,7 @@ export function useWorkerClient(workerClient?: WorkerClient): UseWorkerClientRes
     setDiagnostics({
       status: 'initializing',
       message: 'Starting worker',
+      messageKey: 'status.worker.starting',
       progressPercent: 0
     });
     let shouldPoll = true;
@@ -71,12 +73,16 @@ export function useWorkerClient(workerClient?: WorkerClient): UseWorkerClientRes
       .catch((caughtError) => {
         if (!cancelled) {
           shouldPoll = false;
-          setDiagnostics({
+          const nextDiagnostics: WorkerDiagnostics = {
             status: 'error',
             message:
               caughtError instanceof Error ? caughtError.message : 'Worker failed to initialize',
             progressPercent: 0
-          });
+          };
+          if (!(caughtError instanceof Error)) {
+            nextDiagnostics.messageKey = 'status.worker.failed';
+          }
+          setDiagnostics(nextDiagnostics);
         }
       });
 
