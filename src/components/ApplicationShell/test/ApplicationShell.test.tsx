@@ -2234,7 +2234,9 @@ it('keeps pointer slider movement out of the textbox until release, then commits
     toJSON: () => ({})
   }));
 
-  fireEvent.touchStart(sphericalSliderRoot, {
+  const sphericalSliderThumb = sphericalSlider.closest('.MuiSlider-thumb') as HTMLElement;
+
+  fireEvent.touchStart(sphericalSliderThumb, {
     changedTouches: [{ clientX: 125, clientY: 10, identifier: 1 }]
   });
   expect(sphericalCoefficient).toHaveValue('0.00');
@@ -2264,6 +2266,66 @@ it('keeps pointer slider movement out of the textbox until release, then commits
     wavelengthWeights: [[550, 1]],
     zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 1.25 })]]
   });
+});
+
+it('ignores touch slider movement that starts away from the thumb', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  const sphericalSlider = screen.getByRole('slider', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  const sphericalCoefficient = screen.getByRole('textbox', {
+    name: 'Primary Spherical Aberration Z(4,0) coefficient'
+  });
+  const sphericalSliderRoot = sphericalSlider.closest('.MuiSlider-root') as HTMLElement;
+  sphericalSliderRoot.getBoundingClientRect = vi.fn(() => ({
+    bottom: 20,
+    height: 20,
+    left: 0,
+    right: 200,
+    top: 0,
+    width: 200,
+    x: 0,
+    y: 0,
+    toJSON: () => ({})
+  }));
+
+  const offThumbTouchStart = new Event('touchstart', { bubbles: true, cancelable: true });
+  Object.defineProperty(offThumbTouchStart, 'changedTouches', {
+    value: [{ clientX: 125, clientY: 10, identifier: 1 }]
+  });
+  const preventDefault = vi.spyOn(offThumbTouchStart, 'preventDefault');
+
+  fireEvent(sphericalSliderRoot, offThumbTouchStart);
+  fireEvent.touchEnd(document, {
+    changedTouches: [{ clientX: 125, clientY: 10, identifier: 1 }]
+  });
+
+  expect(preventDefault).not.toHaveBeenCalled();
+  expect(sphericalCoefficient).toHaveValue('0.00');
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
 });
 
 it('debounces worker calls using the current UI payload', async () => {
