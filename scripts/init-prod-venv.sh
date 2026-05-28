@@ -9,5 +9,5 @@ python3 -m venv "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
 
 python -m pip install --upgrade pip
-python -m pip install setuptools==76.0.0
+python -m pip install setuptools==78.1.1
 python -m pip install prysm==0.21.1 scipy==1.14.1 numpy==2.2.5
