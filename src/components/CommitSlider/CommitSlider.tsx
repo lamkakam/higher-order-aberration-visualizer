@@ -4,6 +4,11 @@ import Typography from '@mui/material/Typography';
 import { useRef, useState } from 'react';
 import { TouchSafeSlider } from '../TouchSafeSlider';
 
+interface ScrollPosition {
+  readonly x: number;
+  readonly y: number;
+}
+
 interface CommitSliderInputConfig {
   readonly formatValue: (value: number) => string;
   readonly parseDraft: (draft: string) => number;
@@ -54,6 +59,7 @@ export function CommitSlider({
   const draftValueRef = useRef(value);
   const inputSyncKeyRef = useRef(inputSyncKey);
   const keyboardSlidingRef = useRef(false);
+  const inputFocusScrollPositionRef = useRef<ScrollPosition | undefined>(undefined);
 
   if (committedValueRef.current !== value || inputSyncKeyRef.current !== inputSyncKey) {
     committedValueRef.current = value;
@@ -95,6 +101,39 @@ export function CommitSlider({
     commit(parsedValue);
   }
 
+  function isIosSafari() {
+    const { maxTouchPoints, userAgent } = window.navigator;
+    const isIos = /iP(?:ad|hone|od)/.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1);
+    const isSafari = /Safari/.test(userAgent) && !/(?:CriOS|FxiOS|EdgiOS)/.test(userAgent);
+
+    return isIos && isSafari;
+  }
+
+  function rememberInputFocusScrollPosition() {
+    if (!isIosSafari()) {
+      inputFocusScrollPositionRef.current = undefined;
+      return;
+    }
+
+    inputFocusScrollPositionRef.current = {
+      x: window.scrollX,
+      y: window.scrollY
+    };
+  }
+
+  function restoreInputFocusScrollPosition() {
+    const scrollPosition = inputFocusScrollPositionRef.current;
+    inputFocusScrollPositionRef.current = undefined;
+
+    if (!scrollPosition || !isIosSafari()) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo(scrollPosition.x, scrollPosition.y);
+    });
+  }
+
   const parsedInputValue = input?.parseDraft(inputDraft) ?? Number.NaN;
   const inputErrorText = input?.getErrorText?.(inputDraft, parsedInputValue);
 
@@ -119,10 +158,10 @@ export function CommitSlider({
               inputMode={input.inputMode}
               size="small"
               sx={{
+                flexShrink: 0,
                 '& input': {
                   py: 0.5,
-                  textAlign: 'right',
-                  width: '4.5rem'
+                  textAlign: 'right'
                 }
               }}
               type="text"
@@ -133,7 +172,11 @@ export function CommitSlider({
                   setInputDraft(nextDraft);
                 }
               }}
-              onBlur={commitInputDraft}
+              onBlur={() => {
+                commitInputDraft();
+                restoreInputFocusScrollPosition();
+              }}
+              onFocus={rememberInputFocusScrollPosition}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   commitInputDraft();
@@ -145,7 +188,12 @@ export function CommitSlider({
                   autoComplete: 'off',
                   min: input.inputMin ?? min,
                   max: input.inputMax ?? max,
-                  step: input.inputStep ?? step
+                  step: input.inputStep ?? step,
+                  style: {
+                    maxWidth: '3em',
+                    minWidth: '3em',
+                    width: '3em'
+                  }
                 }
               }}
             />
