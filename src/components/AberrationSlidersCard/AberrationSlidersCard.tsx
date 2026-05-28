@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import type { ZernikeCoefficientKey } from '../../types/domain';
 import { CommitSlider } from '../CommitSlider';
 import {
+  type ZernikeTerm,
   micronsToWaves,
   roundToThreeDecimals,
   wavesToMicrons,
@@ -37,8 +38,6 @@ const coefficientDisplayUnits = [
   readonly labelKey: string;
 }[];
 
-type ZernikeTerm = (typeof zernikeTerms)[number];
-
 const lowerOrderZernikeKeys = new Set<ZernikeCoefficientKey>(['2,-2', '2,0', '2,2']);
 const lowerOrderZernikeTerms = zernikeTerms.filter((term) =>
   lowerOrderZernikeKeys.has(term.key)
@@ -48,11 +47,6 @@ const higherOrderZernikeTermGroups = higherOrderZernikeOrders.map((order) => ({
   order,
   terms: zernikeTerms.filter((term) => term.n === order)
 }));
-const englishVisibleLabelPrefixes = [
-  ['Primary ', 'Pri. '],
-  ['Secondary ', 'Sec. '],
-  ['Tertiary ', 'Ter. ']
-] as const;
 
 interface AberrationSlidersCardProps {
   readonly wavelengthNm: number;
@@ -263,18 +257,15 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   resetVersion,
   onValueChange
 }: AberrationCoefficientRowProps) {
-  const { i18n, t } = useTranslation();
-  const translatedLabel = t(`aberrations.terms.${term.key.replace(',', '_')}`);
+  const { t } = useTranslation();
+  const translatedLabel = getZernikeTermLabel(term, t, 'full');
   const zernikeNotation = `Z(${term.n},${term.m})`;
   const coefficientLabel = t('aberrations.coefficientLabel', {
     label: translatedLabel,
     m: term.m,
     n: term.n
   });
-  const visibleLabelChips = getVisibleZernikeLabelChips(
-    translatedLabel,
-    i18n.resolvedLanguage ?? i18n.language
-  );
+  const visibleLabelChips = getVisibleZernikeLabelChips(term, t);
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
@@ -344,27 +335,48 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   );
 });
 
-function getVisibleZernikeLabelChips(label: string, language: string | undefined): readonly string[] {
-  if (language?.startsWith('en') !== true) {
-    return [label];
-  }
+function getVisibleZernikeLabelChips(term: ZernikeTerm, t: TFunction): readonly string[] {
+  const label = getZernikeMainLabel(term, t, 'compact');
+  const orientation = getZernikeOrientationLabel(term, t);
 
-  const compactLabel = englishVisibleLabelPrefixes.reduce(
-    (currentLabel, [fullPrefix, compactPrefix]) =>
-      currentLabel.startsWith(fullPrefix)
-        ? `${compactPrefix}${currentLabel.slice(fullPrefix.length)}`
-        : currentLabel,
-    label
-  );
-  const orientationMatch = /^(?<baseLabel>.+) \((?<orientation>Oblique|Vertical|Horizontal)\)$/.exec(
-    compactLabel
-  );
+  return orientation === undefined ? [label] : [label, orientation];
+}
 
-  if (orientationMatch?.groups === undefined) {
-    return [compactLabel];
-  }
+function getZernikeTermLabel(
+  term: ZernikeTerm,
+  t: TFunction,
+  orderLength: 'compact' | 'full'
+): string {
+  const label = getZernikeMainLabel(term, t, orderLength);
+  const orientation = getZernikeOrientationLabel(term, t);
 
-  return [orientationMatch.groups.baseLabel, orientationMatch.groups.orientation];
+  return orientation === undefined
+    ? label
+    : t('aberrations.nameParts.orientationLabel', { label, orientation });
+}
+
+function getZernikeMainLabel(
+  term: ZernikeTerm,
+  t: TFunction,
+  orderLength: 'compact' | 'full'
+): string {
+  const base = t(`aberrations.nameParts.bases.${term.name.base}`);
+  const order =
+    term.name.order === undefined
+      ? undefined
+      : t(`aberrations.nameParts.orders.${term.name.order}.${orderLength}`);
+
+  return joinZernikeNameParts(order, base, t);
+}
+
+function getZernikeOrientationLabel(term: ZernikeTerm, t: TFunction): string | undefined {
+  return term.name.orientation === undefined
+    ? undefined
+    : t(`aberrations.nameParts.orientations.${term.name.orientation}`);
+}
+
+function joinZernikeNameParts(order: string | undefined, base: string, t: TFunction): string {
+  return order === undefined ? base : `${order}${t('aberrations.nameParts.orderSeparator')}${base}`;
 }
 
 function formatCommittedValue(

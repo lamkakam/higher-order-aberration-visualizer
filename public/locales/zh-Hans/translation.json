@@ -168,6 +168,39 @@
     "rangeError": "值必须介于 {{min}} 和 {{max}} 之间。",
     "approxStrehl": "近似斯特列尔比率：",
     "approxStrehlValue": "近似斯特列尔比率：{{value}}%",
+    "nameParts": {
+      "orderSeparator": "",
+      "orientationLabel": "{{label}} ({{orientation}})",
+      "bases": {
+        "astigmatism": "像散",
+        "coma": "彗差",
+        "defocus": "离焦",
+        "hexafoil": "六叶差",
+        "pentafoil": "五叶差",
+        "quadrafoil": "四叶差",
+        "sphericalAberration": "球差",
+        "trefoil": "三叶差"
+      },
+      "orders": {
+        "primary": {
+          "full": "初级",
+          "compact": "初级"
+        },
+        "secondary": {
+          "full": "二级",
+          "compact": "二级"
+        },
+        "tertiary": {
+          "full": "三级",
+          "compact": "三级"
+        }
+      },
+      "orientations": {
+        "horizontal": "水平",
+        "oblique": "斜向",
+        "vertical": "垂直"
+      }
+    },
     "terms": {
       "2_-2": "像散/散光 (斜向)",
       "2_0": "离焦",

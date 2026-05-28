@@ -1493,7 +1493,11 @@ it('keeps non-English zernike labels visible as localized chips', async () => {
       name: '二級四葉差 (斜向) Z(6,-4) 係數'
     })
   ).toBeInTheDocument();
-  expect(within(sixthOrderDetails as HTMLElement).getByText('二級四葉差 (斜向)')).toBeInTheDocument();
+  expect(within(sixthOrderDetails as HTMLElement).getAllByText('二級四葉差')).toHaveLength(2);
+  expect(within(sixthOrderDetails as HTMLElement).getAllByText('斜向').length).toBeGreaterThan(0);
+  expect(
+    within(sixthOrderDetails as HTMLElement).queryByText('二級四葉差 (斜向)')
+  ).not.toBeInTheDocument();
   expect(within(sixthOrderDetails as HTMLElement).getByText('Z(6,-4)')).toBeInTheDocument();
 });
 

@@ -168,6 +168,39 @@
     "rangeError": "Value must be between {{min}} and {{max}}.",
     "approxStrehl": "Approx. Strehl Ratio:",
     "approxStrehlValue": "Approx. Strehl Ratio: {{value}}%",
+    "nameParts": {
+      "orderSeparator": " ",
+      "orientationLabel": "{{label}} ({{orientation}})",
+      "bases": {
+        "astigmatism": "Astigmatism",
+        "coma": "Coma",
+        "defocus": "Defocus",
+        "hexafoil": "Hexafoil",
+        "pentafoil": "Pentafoil",
+        "quadrafoil": "Quadrafoil",
+        "sphericalAberration": "Spherical Aberration",
+        "trefoil": "Trefoil"
+      },
+      "orders": {
+        "primary": {
+          "full": "Primary",
+          "compact": "Pri."
+        },
+        "secondary": {
+          "full": "Secondary",
+          "compact": "Sec."
+        },
+        "tertiary": {
+          "full": "Tertiary",
+          "compact": "Ter."
+        }
+      },
+      "orientations": {
+        "horizontal": "Horizontal",
+        "oblique": "Oblique",
+        "vertical": "Vertical"
+      }
+    },
     "terms": {
       "2_-2": "Astigmatism (Oblique)",
       "2_0": "Defocus",
