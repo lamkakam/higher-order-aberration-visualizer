@@ -108,6 +108,7 @@ export function SimulatorResults({
         sx={{
           ...stickyImageCardMaskSx,
           alignSelf: 'stretch',
+          minWidth: 0,
           position: 'sticky',
           top: desktopStickyTopPx,
           zIndex: 3
@@ -127,6 +128,7 @@ export function SimulatorResults({
         sx={{
           ...stickyImageCardMaskSx,
           alignSelf: { xs: 'start', sm: 'stretch' },
+          minWidth: 0,
           position: 'sticky',
           top: { xs: mobileStickyTopPx, sm: desktopStickyTopPx },
           zIndex: 3
@@ -139,6 +141,7 @@ export function SimulatorResults({
           sx={{
             ...desktopStickyImageCardMaskSx,
             alignSelf: { xs: 'start', sm: 'stretch' },
+            minWidth: 0,
             position: { xs: 'static', sm: 'sticky' },
             top: { sm: desktopStickyTopPx },
             zIndex: { sm: 2 }
@@ -152,6 +155,7 @@ export function SimulatorResults({
           sx={{
             ...desktopStickyImageCardMaskSx,
             alignSelf: { xs: 'start', sm: 'stretch' },
+            minWidth: 0,
             position: { xs: 'static', sm: 'sticky' },
             top: { sm: desktopStickyTopPx },
             zIndex: { sm: 2 }

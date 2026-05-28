@@ -1442,8 +1442,16 @@ it('groups lower and higher order zernike controls in expanded accordions', () =
     })
   ).toBeInTheDocument();
   expect(
-    within(fourthOrderDetails as HTMLElement).getByText('Primary Spherical Aberration')
+    within(fourthOrderDetails as HTMLElement).getByRole('textbox', {
+      name: 'Primary Spherical Aberration Z(4,0) coefficient'
+    })
   ).toBeInTheDocument();
+  expect(
+    within(fourthOrderDetails as HTMLElement).getByText('Pri. Spherical Aberration')
+  ).toBeInTheDocument();
+  expect(
+    within(fourthOrderDetails as HTMLElement).queryByText('Primary Spherical Aberration')
+  ).not.toBeInTheDocument();
   expect(within(fourthOrderDetails as HTMLElement).getByText('Z(4,0)')).toBeInTheDocument();
   expect(
     within(fifthOrderDetails as HTMLElement).getByRole('slider', {
@@ -1455,11 +1463,38 @@ it('groups lower and higher order zernike controls in expanded accordions', () =
       name: 'Secondary Spherical Aberration Z(6,0) coefficient'
     })
   ).toBeInTheDocument();
+  expect(within(sixthOrderDetails as HTMLElement).getAllByText('Sec. Quadrafoil')).toHaveLength(2);
+  expect(within(sixthOrderDetails as HTMLElement).getAllByText('Oblique').length).toBeGreaterThan(0);
+  expect(within(sixthOrderDetails as HTMLElement).getAllByText('Ter. Astigmatism')).toHaveLength(2);
+  expect(within(sixthOrderDetails as HTMLElement).getAllByText('Vertical').length).toBeGreaterThan(0);
+  expect(within(sixthOrderDetails as HTMLElement).getByText('Z(6,-4)')).toBeInTheDocument();
+  expect(
+    within(sixthOrderDetails as HTMLElement).queryByText('Secondary Quadrafoil (Oblique)')
+  ).not.toBeInTheDocument();
   expect(
     within(lowerOrderDetails as HTMLElement).queryByRole('slider', {
       name: 'Primary Spherical Aberration Z(4,0) coefficient'
     })
   ).not.toBeInTheDocument();
+});
+
+it('keeps non-English zernike labels visible as localized chips', async () => {
+  window.localStorage.setItem(cachedLanguageKey, 'zh-Hant');
+  renderAtPath('/zh-Hant/basic');
+
+  const sixthOrderSummary = screen.getByRole('button', { name: '第6階' });
+  const sixthOrderDetails = sixthOrderSummary
+    .closest('.MuiAccordion-root')
+    ?.querySelector('.MuiAccordionDetails-root');
+  expect(sixthOrderDetails).toBeInstanceOf(HTMLElement);
+
+  expect(
+    within(sixthOrderDetails as HTMLElement).getByRole('slider', {
+      name: '二級四葉差 (斜向) Z(6,-4) 係數'
+    })
+  ).toBeInTheDocument();
+  expect(within(sixthOrderDetails as HTMLElement).getByText('二級四葉差 (斜向)')).toBeInTheDocument();
+  expect(within(sixthOrderDetails as HTMLElement).getByText('Z(6,-4)')).toBeInTheDocument();
 });
 
 it('shows the zernike coefficient unit selector defaulting to wave', async () => {

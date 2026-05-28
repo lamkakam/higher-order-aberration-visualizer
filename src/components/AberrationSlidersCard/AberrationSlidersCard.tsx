@@ -48,6 +48,11 @@ const higherOrderZernikeTermGroups = higherOrderZernikeOrders.map((order) => ({
   order,
   terms: zernikeTerms.filter((term) => term.n === order)
 }));
+const englishVisibleLabelPrefixes = [
+  ['Primary ', 'Pri. '],
+  ['Secondary ', 'Sec. '],
+  ['Tertiary ', 'Ter. ']
+] as const;
 
 interface AberrationSlidersCardProps {
   readonly wavelengthNm: number;
@@ -258,7 +263,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   resetVersion,
   onValueChange
 }: AberrationCoefficientRowProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const translatedLabel = t(`aberrations.terms.${term.key.replace(',', '_')}`);
   const zernikeNotation = `Z(${term.n},${term.m})`;
   const coefficientLabel = t('aberrations.coefficientLabel', {
@@ -266,6 +271,10 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
     m: term.m,
     n: term.n
   });
+  const visibleLabelChips = getVisibleZernikeLabelChips(
+    translatedLabel,
+    i18n.resolvedLanguage ?? i18n.language
+  );
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
@@ -283,7 +292,15 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
         ariaLabel={coefficientLabel}
         label={
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-            <Chip label={translatedLabel} size="small" variant="outlined" />
+            {visibleLabelChips.map((labelChip) => (
+              <Chip
+                key={labelChip}
+                label={labelChip}
+                size="small"
+                variant="outlined"
+                sx={{ maxWidth: '100%' }}
+              />
+            ))}
             <Chip label={zernikeNotation} size="small" variant="outlined" />
           </Box>
         }
@@ -326,6 +343,29 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
     </Box>
   );
 });
+
+function getVisibleZernikeLabelChips(label: string, language: string | undefined): readonly string[] {
+  if (language?.startsWith('en') !== true) {
+    return [label];
+  }
+
+  const compactLabel = englishVisibleLabelPrefixes.reduce(
+    (currentLabel, [fullPrefix, compactPrefix]) =>
+      currentLabel.startsWith(fullPrefix)
+        ? `${compactPrefix}${currentLabel.slice(fullPrefix.length)}`
+        : currentLabel,
+    label
+  );
+  const orientationMatch = /^(?<baseLabel>.+) \((?<orientation>Oblique|Vertical|Horizontal)\)$/.exec(
+    compactLabel
+  );
+
+  if (orientationMatch?.groups === undefined) {
+    return [compactLabel];
+  }
+
+  return [orientationMatch.groups.baseLabel, orientationMatch.groups.orientation];
+}
 
 function formatCommittedValue(
   value: number,

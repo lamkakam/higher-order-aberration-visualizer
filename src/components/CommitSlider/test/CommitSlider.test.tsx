@@ -45,6 +45,41 @@ describe('CommitSlider', () => {
     expect(textField).toHaveStyle({ flexShrink: '0' });
   });
 
+  it('top-aligns the shrinkable label with the fixed-size textbox group', () => {
+    render(
+      <CommitSlider
+        ariaLabel="Secondary Quadrafoil (Oblique)"
+        label={
+          <span>
+            Secondary Quadrafoil
+            <span>Oblique</span>
+          </span>
+        }
+        min={-2}
+        max={2}
+        step={0.001}
+        value={0}
+        roundValue={(value) => value}
+        onCommit={vi.fn()}
+        input={{
+          formatValue: (value) => value.toFixed(3),
+          parseDraft: (draft) => Number(draft),
+          isDraftAllowed: () => true,
+          isValidDraft: (_draft, parsedValue) => Number.isFinite(parsedValue)
+        }}
+      />
+    );
+
+    const input = screen.getByRole('textbox', { name: 'Secondary Quadrafoil (Oblique)' });
+    const inputGroup = input.closest('.MuiBox-root');
+    const label = screen.getByText('Secondary Quadrafoil').closest('.MuiTypography-root');
+    const header = label?.parentElement;
+
+    expect(inputGroup).toHaveStyle({ flexShrink: '0' });
+    expect(label).toHaveStyle({ flex: '1 1 auto', minWidth: '0' });
+    expect(header).toHaveStyle({ alignItems: 'flex-start' });
+  });
+
   it('renders compact spinner buttons around the textbox', () => {
     renderCommitSlider();
 

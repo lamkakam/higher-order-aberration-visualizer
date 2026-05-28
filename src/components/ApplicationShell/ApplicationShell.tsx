@@ -128,7 +128,7 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
             sx={{
               display: 'grid',
               gap: 3,
-              gridTemplateColumns: '1fr'
+              gridTemplateColumns: 'minmax(0, 1fr)'
             }}
           >
             <SimulatorResults
@@ -143,7 +143,7 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
               wavefrontLegendUnit={simulation.wavefrontLegendUnit}
               onWavefrontLegendUnitChange={simulation.setWavefrontLegendUnit}
             />
-            <Stack spacing={3} sx={{ gridColumn: '1 / -1' }}>
+            <Stack spacing={3} sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
               <OpticalSystemConfigCard
                 apertureDiameterMm={simulation.apertureDiameterMm}
                 apertureSettings={simulation.apertureSettings}

@@ -135,6 +135,39 @@ async function enableAdvancedMode(page: Page) {
   await expect(page.getByText('Mode', { exact: true })).toBeHidden();
 }
 
+async function enableDarkMode(page: Page) {
+  await page.getByRole('button', { name: 'Setting' }).click();
+  await page.getByRole('button', { name: 'Dark' }).click();
+  await page.mouse.click(20, 20);
+  await expect(page.getByText('Mode', { exact: true })).toBeHidden();
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect(
+    page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).resolves.toBe(true);
+}
+
+async function expectVisibleCardGuttersMatch(page: Page, heading: string) {
+  const card = page
+    .getByRole('heading', { name: heading })
+    .locator('xpath=ancestor::*[contains(@class, "MuiCard-root")]');
+  await expect(card).toBeVisible();
+
+  const gutters = await card.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+
+    return {
+      left: rect.left,
+      right: window.innerWidth - rect.right
+    };
+  });
+
+  expect(gutters.left).toBeGreaterThan(0);
+  expect(gutters.right).toBeGreaterThan(0);
+  expect(Math.abs(gutters.left - gutters.right)).toBeLessThanOrEqual(1);
+}
+
 test('app loads the simulator controls', async ({ page }) => {
   await openAppAndAcceptTerms(page);
 
@@ -295,6 +328,69 @@ test('keeps the simulated image card sticky in basic mode on small screens', asy
   await openAppAndAcceptTerms(page);
 
   await expectPrimaryCardSticks(page);
+});
+
+test('preserves card gutters without horizontal overflow on small dark screens', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await openAppAndAcceptTerms(page);
+  await enableDarkMode(page);
+  await waitForPrimaryImageReady(page);
+
+  await page.evaluate(() => window.scrollTo(0, 620));
+  await expect(page.getByRole('heading', { name: 'Simulated Image' })).toBeVisible();
+
+  await expectNoHorizontalOverflow(page);
+  await expectVisibleCardGuttersMatch(page, 'Simulated Image');
+});
+
+test('keeps 6th-order zernike slider labels and textboxes inside mobile cards', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await openAppAndAcceptTerms(page);
+  await waitForWorkerInitialization(page);
+
+  const sixthOrderSummary = page.getByRole('button', { name: '6th Order' });
+  await sixthOrderSummary.scrollIntoViewIfNeeded();
+
+  const sixthOrderAccordion = sixthOrderSummary.locator(
+    'xpath=ancestor::*[contains(@class, "MuiAccordion-root")]'
+  );
+  const zernikeTextbox = page.getByRole('textbox', {
+    name: 'Secondary Quadrafoil (Oblique) Z(6,-4) coefficient'
+  });
+  const firstLabelChip = sixthOrderAccordion.getByText('Sec. Quadrafoil', { exact: true }).first();
+
+  await expect(zernikeTextbox).toBeVisible();
+  await expect(firstLabelChip).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  const bounds = await zernikeTextbox.evaluate((input) => {
+    const inputGroup = input.closest('.MuiBox-root');
+    const accordion = input.closest('.MuiAccordion-root');
+    const labelChip = inputGroup?.parentElement?.querySelector('.MuiChip-root');
+
+    if (!inputGroup || !accordion || !labelChip) {
+      throw new Error('Expected zernike textbox, accordion, and label chip to be rendered.');
+    }
+
+    const inputGroupRect = inputGroup.getBoundingClientRect();
+    const accordionRect = accordion.getBoundingClientRect();
+    const labelChipRect = labelChip.getBoundingClientRect();
+
+    return {
+      accordionLeft: accordionRect.left,
+      accordionRight: accordionRect.right,
+      inputGroupLeft: inputGroupRect.left,
+      inputGroupRight: inputGroupRect.right,
+      inputGroupTop: inputGroupRect.top,
+      labelChipTop: labelChipRect.top
+    };
+  });
+
+  expect(bounds.inputGroupLeft).toBeGreaterThanOrEqual(bounds.accordionLeft);
+  expect(bounds.inputGroupRight).toBeLessThanOrEqual(bounds.accordionRight);
+  expect(Math.abs(bounds.inputGroupTop - bounds.labelChipTop)).toBeLessThanOrEqual(2);
 });
 
 test('keeps the simulated image card sticky in advanced mode on small screens', async ({ page }) => {

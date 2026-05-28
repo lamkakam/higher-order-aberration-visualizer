@@ -205,13 +205,17 @@ export function CommitSlider({
       {input || label ? (
         <Box
           sx={{
-            alignItems: 'baseline',
+            alignItems: 'flex-start',
             display: 'flex',
             gap: 2,
             justifyContent: 'space-between'
           }}
         >
-          <Typography variant="body2" component="div">
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{ flex: '1 1 auto', minWidth: 0 }}
+          >
             {label ?? ariaLabel}
           </Typography>
           {input ? (
