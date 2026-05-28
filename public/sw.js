@@ -1,4 +1,4 @@
-const CACHE_VERSION = '0.1.2';
+const CACHE_VERSION = '0.2.0';
 const CACHE_NAME = `hoa-visualizer-public-assets-${CACHE_VERSION}`;
 const scopePathname = new URL(self.registration.scope).pathname;
 const BASE_PATH = scopePathname.endsWith('/')
