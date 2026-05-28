@@ -19,7 +19,7 @@ import type { ZernikeCoefficientKey } from '../../types/domain';
 import { CommitSlider } from '../CommitSlider';
 import {
   micronsToWaves,
-  roundToTwoDecimals,
+  roundToThreeDecimals,
   wavesToMicrons,
   zernikeCoefficientMax,
   zernikeCoefficientMin,
@@ -269,7 +269,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
-      const roundedValue = roundToTwoDecimals(nextValue);
+      const roundedValue = roundToThreeDecimals(nextValue);
       if (roundedValue !== value) {
         onValueChange(term.key, roundedValue);
       }
@@ -312,11 +312,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
             displayUnit,
             wavelengthNm
           ),
-          inputStep: getDisplayValueFromWaves(
-            zernikeCoefficientStep,
-            displayUnit,
-            wavelengthNm
-          ),
+          inputStep: zernikeCoefficientStep,
           testId: `zernike-value-${term.key}`
         }}
         inputSyncKey={`${displayUnit}-${wavelengthNm}-${resetVersion}`}
@@ -324,7 +320,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
         valueLabelFormat={(nextValue) =>
           formatCommittedValue(nextValue, displayUnit, wavelengthNm)
         }
-        roundValue={roundToTwoDecimals}
+        roundValue={roundToThreeDecimals}
         onCommit={commitSliderValue}
       />
     </Box>
@@ -336,7 +332,7 @@ function formatCommittedValue(
   displayUnit: CoefficientDisplayUnit,
   wavelengthNm: number
 ): string {
-  return getDisplayValueFromWaves(value, displayUnit, wavelengthNm).toFixed(2);
+  return getDisplayValueFromWaves(value, displayUnit, wavelengthNm).toFixed(3);
 }
 
 function getDisplayValueFromWaves(
@@ -345,10 +341,10 @@ function getDisplayValueFromWaves(
   wavelengthNm: number
 ): number {
   if (displayUnit === 'micron') {
-    return roundToTwoDecimals(wavesToMicrons(value, wavelengthNm));
+    return roundToThreeDecimals(wavesToMicrons(value, wavelengthNm));
   }
 
-  return roundToTwoDecimals(value);
+  return roundToThreeDecimals(value);
 }
 
 function getWaveValueFromDraft(
@@ -358,7 +354,7 @@ function getWaveValueFromDraft(
 ): number {
   const value = Number(draft);
   if (displayUnit === 'micron') {
-    return roundToTwoDecimals(micronsToWaves(value, wavelengthNm));
+    return roundToThreeDecimals(micronsToWaves(value, wavelengthNm));
   }
 
   return value;

@@ -752,6 +752,46 @@ it('toggles aperture obstruction controls from the ratio slider and textbox', as
   expect(within(modal).queryByLabelText('Obstruction Shape')).not.toBeInTheDocument();
 });
 
+it('commits aperture mask spinner steps and disables boundary buttons', async () => {
+  const user = userEvent.setup();
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  await user.click(screen.getByRole('button', { name: 'Edit aperture mask' }));
+
+  const modal = screen.getByRole('dialog', { name: 'Aperture Mask' });
+  expect(within(modal).getByRole('button', { name: 'Decrease Central Obstruction Ratio' })).toBeDisabled();
+  await user.click(within(modal).getByRole('button', { name: 'Increase Central Obstruction Ratio' }));
+  expect(getCentralObstructionRatioTextbox(modal)).toHaveValue('0.01');
+  await user.click(within(modal).getByRole('button', { name: 'Decrease Central Obstruction Ratio' }));
+  expect(getCentralObstructionRatioTextbox(modal)).toHaveValue('0');
+
+  await user.click(within(modal).getByRole('button', { name: 'Increase Spider Vanes' }));
+  expect(getSpiderVanesTextbox(modal)).toHaveValue('1');
+  await user.click(within(modal).getByRole('button', { name: 'Decrease Spider Vanes' }));
+  expect(getSpiderVanesTextbox(modal)).toHaveValue('0');
+  expect(within(modal).getByRole('button', { name: 'Decrease Spider Vanes' })).toBeDisabled();
+
+  await user.click(within(modal).getByRole('button', { name: 'Increase Vane Width (times Aperture Diameter)' }));
+  expect(getSpiderVaneWidthTextbox(modal)).toHaveValue('0.01');
+
+  await user.click(getGaussianApodizationSwitch(modal));
+  await user.click(
+    within(modal).getByRole('button', {
+      name: 'Increase Standard Deviation (times Aperture Diameter)'
+    })
+  );
+  expect(getGaussianSigmaRatioTextbox(modal)).toHaveValue('0.51');
+
+  fireEvent.change(getSpiderVaneRotationTextbox(modal), {
+    target: { value: '360' }
+  });
+  fireEvent.blur(getSpiderVaneRotationTextbox(modal));
+  expect(within(modal).getByRole('button', { name: 'Increase Vane Rotation' })).toBeDisabled();
+});
+
 it('commits aperture rotation textbox values to the confirmed payload', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
@@ -1292,16 +1332,16 @@ it('shows zernike textbox values and resets changed values', async () => {
   );
   expect(
     screen.getByRole('textbox', { name: 'Pentafoil (Vertical) Z(5,-5) coefficient' })
-  ).toHaveValue('0.00');
+  ).toHaveValue('0.000');
   expect(
     screen.getByRole('textbox', {
       name: 'Secondary Spherical Aberration Z(6,0) coefficient'
     })
-  ).toHaveValue('0.00');
+  ).toHaveValue('0.000');
   const sphericalCoefficient = screen.getByRole('textbox', {
     name: 'Primary Spherical Aberration Z(4,0) coefficient'
   });
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
   expect(sphericalCoefficient).toHaveAttribute('autocomplete', 'off');
 
   const spherical = screen.getByRole('slider', {
@@ -1313,21 +1353,23 @@ it('shows zernike textbox values and resets changed values', async () => {
   await act(async () => {
     fireEvent.keyDown(spherical, { key: 'ArrowRight' });
   });
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
   await act(async () => {
     fireEvent.keyUp(spherical, { key: 'ArrowRight' });
   });
-  expect(sphericalCoefficient).toHaveValue('0.10');
+  expect(sphericalCoefficient).toHaveValue('0.002');
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
 
   await user.clear(sphericalCoefficient);
-  await user.type(sphericalCoefficient, '1.25');
-  expect(sphericalCoefficient).toHaveValue('1.25');
+  await user.type(sphericalCoefficient, '1.2345');
+  expect(sphericalCoefficient).toHaveValue('1.2345');
+  fireEvent.blur(sphericalCoefficient);
+  expect(sphericalCoefficient).toHaveValue('1.235');
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
 });
 
 it('groups lower and higher order zernike controls in expanded accordions', () => {
@@ -1502,20 +1544,20 @@ it('syncs changed polychromatic coefficient values across wavelength tabs by def
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.000');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.000');
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.000');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.000');
 
   await user.click(screen.getByRole('tab', { name: '550 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.000');
 });
 
 it('leaves untouched polychromatic coefficients unchanged when syncing one coefficient', async () => {
@@ -1532,22 +1574,22 @@ it('leaves untouched polychromatic coefficients unchanged when syncing one coeff
   await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
   await user.clear(screen.getByRole('textbox', { name: defocusName }));
-  await user.type(screen.getByRole('textbox', { name: defocusName }), '1.50');
+  await user.type(screen.getByRole('textbox', { name: defocusName }), '1.500');
   fireEvent.blur(screen.getByRole('textbox', { name: defocusName }));
   await user.click(screen.getByRole('switch', { name: 'Sync wavelengths' }));
 
   await user.click(screen.getByRole('tab', { name: '550 nm' }));
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.000');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
-  expect(screen.getByRole('textbox', { name: defocusName })).toHaveValue('1.50');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.000');
+  expect(screen.getByRole('textbox', { name: defocusName })).toHaveValue('1.500');
 
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
-  expect(screen.getByRole('textbox', { name: defocusName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.000');
+  expect(screen.getByRole('textbox', { name: defocusName })).toHaveValue('0.000');
 });
 
 it('keeps polychromatic wavelength aberration values independent when sync is off', async () => {
@@ -1562,22 +1604,22 @@ it('keeps polychromatic wavelength aberration values independent when sync is of
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.00');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.000');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.000');
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.000');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.000');
 
   await user.click(screen.getByRole('tab', { name: '550 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.000');
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.000');
 });
 
 it('resets only the selected polychromatic wavelength when sync is on', async () => {
@@ -1591,17 +1633,17 @@ it('resets only the selected polychromatic wavelength when sync is on', async ()
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.250');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.000');
 
   await user.click(screen.getByRole('tab', { name: '550 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.25');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.250');
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.25');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.250');
 });
 
 it('resets all polychromatic wavelength coefficient values', async () => {
@@ -1615,16 +1657,16 @@ it('resets all polychromatic wavelength coefficient values', async () => {
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.250');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('button', { name: 'Reset all wavelengths' }));
 
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.000');
   await user.click(screen.getByRole('tab', { name: '656 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.000');
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.000');
 });
 
 it('shares monochromatic aberration edits with the 550 nm polychromatic tab', async () => {
@@ -1633,7 +1675,7 @@ it('shares monochromatic aberration edits with the 550 nm polychromatic tab', as
 
   const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.25');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '1.250');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
@@ -1641,15 +1683,15 @@ it('shares monochromatic aberration edits with the 550 nm polychromatic tab', as
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
 
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.25');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('1.250');
   await user.clear(screen.getByRole('textbox', { name: sphericalName }));
-  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.00');
+  await user.type(screen.getByRole('textbox', { name: sphericalName }), '2.000');
   fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
 
   await user.click(screen.getByRole('button', { name: 'Monochromatic' }));
 
   expect(screen.queryByRole('tab', { name: '550 nm' })).not.toBeInTheDocument();
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.00');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('2.000');
 });
 
 it('sends polychromatic worker payloads with wavelength weights and coefficient maps', async () => {
@@ -1778,7 +1820,7 @@ it('converts zernike textbox values when switching to microns', async () => {
   expect(coefficientMicronButton).toBeDefined();
   await user.click(coefficientMicronButton as HTMLButtonElement);
 
-  expect(sphericalCoefficient).toHaveValue('0.55');
+  expect(sphericalCoefficient).toHaveValue('0.550');
 });
 
 it('converts polychromatic zernike textbox values using the selected wavelength tab', async () => {
@@ -1808,11 +1850,11 @@ it('converts polychromatic zernike textbox values using the selected wavelength 
   expect(coefficientMicronButton).toBeDefined();
   await user.click(coefficientMicronButton as HTMLButtonElement);
 
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.66');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.656');
 
   await user.click(screen.getByRole('tab', { name: '486 nm' }));
 
-  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.49');
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.486');
 });
 
 it('commits micron zernike textbox values to the worker payload in waves', async () => {
@@ -1846,7 +1888,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
       name: 'Primary Spherical Aberration Z(4,0) coefficient'
     }),
     {
-      target: { value: '1.10' }
+      target: { value: '1.100' }
     }
   );
 
@@ -1877,6 +1919,57 @@ it('commits micron zernike textbox values to the worker payload in waves', async
   });
 });
 
+it('commits micron zernike spinner steps in displayed microns', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Micron' }));
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Increase Primary Spherical Aberration Z(4,0) coefficient'
+    })
+  );
+
+  expect(
+    screen.getByRole('textbox', {
+      name: 'Primary Spherical Aberration Z(4,0) coefficient'
+    })
+  ).toHaveValue('0.001');
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(computeConvolvedImage).toHaveBeenCalledWith({
+    apertureSettings: defaultApertureSettings,
+    apertureDiameterMm: 6,
+    diagnosticWavelengthNm: 550,
+    showScaleBar: false,
+    spectralMode: 'monochromatic',
+    targetId: 'logmar_chart',
+    wavefrontLegendUnit: 'wave',
+    wavelengthWeights: [[550, 1]],
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0.002 })]]
+  });
+});
+
 it('resets zernike textbox values to zero in the selected coefficient unit', async () => {
   const user = userEvent.setup();
   render(<ApplicationShell workerClient={createMockWorkerClient()} />);
@@ -1886,11 +1979,11 @@ it('resets zernike textbox values to zero in the selected coefficient unit', asy
   });
   await user.click(screen.getByRole('button', { name: 'Micron' }));
   await user.clear(sphericalCoefficient);
-  await user.type(sphericalCoefficient, '1.10');
+  await user.type(sphericalCoefficient, '1.100');
 
   await user.click(screen.getByRole('button', { name: 'Reset aberrations' }));
 
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
   expect(screen.getByRole('button', { name: 'Micron' })).toHaveAttribute('aria-pressed', 'true');
 });
 
@@ -2221,7 +2314,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
   });
 
   fireEvent.keyDown(sphericalSlider, { key: 'ArrowRight' });
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2229,7 +2322,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
   expect(computeConvolvedImage).not.toHaveBeenCalled();
 
   fireEvent.keyUp(sphericalSlider, { key: 'ArrowRight' });
-  expect(sphericalCoefficient).toHaveValue('0.05');
+  expect(sphericalCoefficient).toHaveValue('0.001');
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -2244,7 +2337,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
     targetId: 'logmar_chart',
     wavefrontLegendUnit: 'wave',
     wavelengthWeights: [[550, 1]],
-    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0.05 })]]
+    zernikeCoefficientsByWavelength: [[550, expect.objectContaining({ '4,0': 0.001 })]]
   });
 });
 
@@ -2293,7 +2386,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
   fireEvent.touchStart(sphericalSliderThumb, {
     changedTouches: [{ clientX: 125, clientY: 10, identifier: 1 }]
   });
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
@@ -2303,7 +2396,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
   fireEvent.touchEnd(document, {
     changedTouches: [{ clientX: 125, clientY: 10, identifier: 1 }]
   });
-  expect(sphericalCoefficient).toHaveValue('1.25');
+  expect(sphericalCoefficient).toHaveValue('1.250');
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -2374,7 +2467,7 @@ it('ignores touch slider movement that starts away from the thumb', async () => 
   });
 
   expect(preventDefault).not.toHaveBeenCalled();
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -2440,7 +2533,7 @@ it('lets off-thumb touch pointer starts scroll without changing the slider', asy
   });
 
   expect(preventDefault).not.toHaveBeenCalled();
-  expect(sphericalCoefficient).toHaveValue('0.00');
+  expect(sphericalCoefficient).toHaveValue('0.000');
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
@@ -2524,7 +2617,7 @@ it('debounces worker calls using the current UI payload', async () => {
     wavelengthWeights: [[550, 1]],
     zernikeCoefficientsByWavelength: [
       [550, expect.objectContaining({
-        '2,0': 0.05,
+        '2,0': 0.001,
         '4,0': 0
       })]
     ]

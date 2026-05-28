@@ -85,11 +85,11 @@ export const zernikeTerms = [
 
 export const zernikeCoefficientMin = -5;
 export const zernikeCoefficientMax = 5;
-export const zernikeCoefficientStep = 0.05;
+export const zernikeCoefficientStep = 0.001;
 export const wavelengthNm = 550;
 
-export function roundToTwoDecimals(value: number): number {
-  return Math.round(value * 100) / 100;
+export function roundToThreeDecimals(value: number): number {
+  return Math.round(value * 1000) / 1000;
 }
 
 export function wavesToMicrons(waves: number, wavelengthNm: number): number {

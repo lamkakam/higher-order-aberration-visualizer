@@ -45,6 +45,61 @@ describe('CommitSlider', () => {
     expect(textField).toHaveStyle({ flexShrink: '0' });
   });
 
+  it('renders compact spinner buttons around the textbox', () => {
+    renderCommitSlider();
+
+    expect(screen.getByRole('button', { name: 'Decrease Defocus' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Defocus' })).toHaveValue('-1.234');
+    expect(screen.getByRole('button', { name: 'Increase Defocus' })).toBeInTheDocument();
+  });
+
+  it('commits one input step when the spinner buttons are clicked', () => {
+    const onCommit = vi.fn();
+    renderCommitSlider(onCommit);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Defocus' }));
+    expect(onCommit).toHaveBeenLastCalledWith(-1.233);
+    expect(screen.getByRole('textbox', { name: 'Defocus' })).toHaveValue('-1.233');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Defocus' }));
+    expect(onCommit).toHaveBeenLastCalledWith(-1.234);
+    expect(screen.getByRole('textbox', { name: 'Defocus' })).toHaveValue('-1.234');
+  });
+
+  it('disables spinner buttons when the next step would exceed input limits', () => {
+    const onCommit = vi.fn();
+    render(
+      <CommitSlider
+        ariaLabel="Defocus"
+        label="Defocus"
+        min={-5}
+        max={5}
+        step={1}
+        value={1.9}
+        roundValue={(value) => value}
+        onCommit={onCommit}
+        input={{
+          formatValue: (value) => value.toFixed(1),
+          parseDraft: (draft) => Number(draft),
+          isDraftAllowed: () => true,
+          isValidDraft: (_draft, parsedValue) => Number.isFinite(parsedValue),
+          inputMin: -2,
+          inputMax: 2,
+          inputStep: 0.2
+        }}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Increase Defocus' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Increase Defocus' })).toHaveStyle({
+      cursor: 'not-allowed'
+    });
+    expect(screen.getByRole('button', { name: 'Decrease Defocus' })).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Defocus' }));
+    expect(onCommit).toHaveBeenCalledWith(1.7);
+  });
+
   it('restores the focused scroll position after iOS Safari blur', () => {
     const requestAnimationFrameSpy = vi
       .spyOn(window, 'requestAnimationFrame')
