@@ -7,6 +7,7 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -42,9 +43,11 @@ const lowerOrderZernikeKeys = new Set<ZernikeCoefficientKey>(['2,-2', '2,0', '2,
 const lowerOrderZernikeTerms = zernikeTerms.filter((term) =>
   lowerOrderZernikeKeys.has(term.key)
 );
-const higherOrderZernikeTerms = zernikeTerms.filter(
-  (term) => !lowerOrderZernikeKeys.has(term.key)
-);
+const higherOrderZernikeOrders = [3, 4, 5, 6] as const;
+const higherOrderZernikeTermGroups = higherOrderZernikeOrders.map((order) => ({
+  order,
+  terms: zernikeTerms.filter((term) => term.n === order)
+}));
 
 interface AberrationSlidersCardProps {
   readonly wavelengthNm: number;
@@ -142,15 +145,21 @@ export function AberrationSlidersCard({
               resetVersion={resetVersion}
               onValueChange={onValueChange}
             />
-            <ZernikeControlsAccordion
-              title={t('aberrations.higherOrder')}
-              terms={higherOrderZernikeTerms}
-              values={values}
-              wavelengthNm={wavelengthNm}
-              displayUnit={displayUnit}
-              resetVersion={resetVersion}
-              onValueChange={onValueChange}
-            />
+            <Typography variant="h6" component="h3" sx={{ pt: 1 }}>
+              {t('aberrations.higherOrder')}
+            </Typography>
+            {higherOrderZernikeTermGroups.map((group) => (
+              <ZernikeControlsAccordion
+                key={group.order}
+                title={t(`aberrations.orders.${group.order}`)}
+                terms={group.terms}
+                values={values}
+                wavelengthNm={wavelengthNm}
+                displayUnit={displayUnit}
+                resetVersion={resetVersion}
+                onValueChange={onValueChange}
+              />
+            ))}
           </Stack>
         </Stack>
       </CardContent>
@@ -188,8 +197,18 @@ function ZernikeControlsAccordion({
           display: 'none'
         },
         border: 1,
+        borderRadius: 1,
         borderColor: 'divider',
-        boxShadow: 'none'
+        boxShadow: 'none',
+        '&.Mui-expanded': {
+          borderRadius: 1
+        },
+        '&:first-of-type': {
+          borderRadius: 1
+        },
+        '&:last-of-type': {
+          borderRadius: 1
+        }
       }}
     >
       <AccordionSummary
@@ -241,11 +260,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
 }: AberrationCoefficientRowProps) {
   const { t } = useTranslation();
   const translatedLabel = t(`aberrations.terms.${term.key.replace(',', '_')}`);
-  const label = t('aberrations.termLabel', {
-    label: translatedLabel,
-    m: term.m,
-    n: term.n
-  });
+  const zernikeNotation = `Z(${term.n},${term.m})`;
   const coefficientLabel = t('aberrations.coefficientLabel', {
     label: translatedLabel,
     m: term.m,
@@ -266,7 +281,12 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
     <Box>
       <CommitSlider
         ariaLabel={coefficientLabel}
-        label={label}
+        label={
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+            <Chip label={translatedLabel} size="small" variant="outlined" />
+            <Chip label={zernikeNotation} size="small" variant="outlined" />
+          </Box>
+        }
         min={zernikeCoefficientMin}
         max={zernikeCoefficientMax}
         step={zernikeCoefficientStep}

@@ -1336,20 +1336,43 @@ it('groups lower and higher order zernike controls in expanded accordions', () =
   const lowerOrderSummary = screen.getByRole('button', {
     name: 'Lower Order Aberrations (Generally Correctable with Ordinary Eyeglasses)'
   });
-  const higherOrderSummary = screen.getByRole('button', {
-    name: 'Higher Order Aberrations'
-  });
+  const thirdOrderSummary = screen.getByRole('button', { name: '3rd Order' });
+  const fourthOrderSummary = screen.getByRole('button', { name: '4th Order' });
+  const fifthOrderSummary = screen.getByRole('button', { name: '5th Order' });
+  const sixthOrderSummary = screen.getByRole('button', { name: '6th Order' });
+
+  expect(
+    screen.getByRole('heading', { name: 'Higher Order Aberrations' })
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Higher Order Aberrations' })
+  ).not.toBeInTheDocument();
   expect(lowerOrderSummary).toHaveAttribute('aria-expanded', 'true');
-  expect(higherOrderSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(thirdOrderSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(fourthOrderSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(fifthOrderSummary).toHaveAttribute('aria-expanded', 'true');
+  expect(sixthOrderSummary).toHaveAttribute('aria-expanded', 'true');
 
   const lowerOrderDetails = lowerOrderSummary
     .closest('.MuiAccordion-root')
     ?.querySelector('.MuiAccordionDetails-root');
-  const higherOrderDetails = higherOrderSummary
+  const thirdOrderDetails = thirdOrderSummary
+    .closest('.MuiAccordion-root')
+    ?.querySelector('.MuiAccordionDetails-root');
+  const fourthOrderDetails = fourthOrderSummary
+    .closest('.MuiAccordion-root')
+    ?.querySelector('.MuiAccordionDetails-root');
+  const fifthOrderDetails = fifthOrderSummary
+    .closest('.MuiAccordion-root')
+    ?.querySelector('.MuiAccordionDetails-root');
+  const sixthOrderDetails = sixthOrderSummary
     .closest('.MuiAccordion-root')
     ?.querySelector('.MuiAccordionDetails-root');
   expect(lowerOrderDetails).toBeInstanceOf(HTMLElement);
-  expect(higherOrderDetails).toBeInstanceOf(HTMLElement);
+  expect(thirdOrderDetails).toBeInstanceOf(HTMLElement);
+  expect(fourthOrderDetails).toBeInstanceOf(HTMLElement);
+  expect(fifthOrderDetails).toBeInstanceOf(HTMLElement);
+  expect(sixthOrderDetails).toBeInstanceOf(HTMLElement);
 
   expect(
     within(lowerOrderDetails as HTMLElement).getByRole('slider', {
@@ -1367,8 +1390,27 @@ it('groups lower and higher order zernike controls in expanded accordions', () =
     })
   ).toBeInTheDocument();
   expect(
-    within(higherOrderDetails as HTMLElement).getByRole('slider', {
+    within(thirdOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Trefoil (Vertical) Z(3,-3) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(fourthOrderDetails as HTMLElement).getByRole('slider', {
       name: 'Primary Spherical Aberration Z(4,0) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(fourthOrderDetails as HTMLElement).getByText('Primary Spherical Aberration')
+  ).toBeInTheDocument();
+  expect(within(fourthOrderDetails as HTMLElement).getByText('Z(4,0)')).toBeInTheDocument();
+  expect(
+    within(fifthOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Secondary Coma (Vertical) Z(5,-1) coefficient'
+    })
+  ).toBeInTheDocument();
+  expect(
+    within(sixthOrderDetails as HTMLElement).getByRole('slider', {
+      name: 'Secondary Spherical Aberration Z(6,0) coefficient'
     })
   ).toBeInTheDocument();
   expect(

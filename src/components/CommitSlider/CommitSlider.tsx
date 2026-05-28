@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import { TouchSafeSlider } from '../TouchSafeSlider';
 
@@ -24,7 +25,7 @@ interface CommitSliderInputConfig {
 
 interface CommitSliderProps {
   readonly ariaLabel: string;
-  readonly label?: string;
+  readonly label?: ReactNode;
   readonly min: number;
   readonly max: number;
   readonly step: number;
@@ -148,7 +149,9 @@ export function CommitSlider({
             justifyContent: 'space-between'
           }}
         >
-          <Typography variant="body2">{label ?? ariaLabel}</Typography>
+          <Typography variant="body2" component="div">
+            {label ?? ariaLabel}
+          </Typography>
           {input ? (
             <TextField
               data-testid={input.testId}
