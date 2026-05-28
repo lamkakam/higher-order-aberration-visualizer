@@ -52,7 +52,9 @@ export function AdvancedResultCard({
             },
             border: 1,
             borderColor: 'divider',
-            boxShadow: 'none'
+            borderRadius: 1,
+            boxShadow: 'none',
+            overflow: 'hidden'
           }}
         >
           <AccordionSummary
