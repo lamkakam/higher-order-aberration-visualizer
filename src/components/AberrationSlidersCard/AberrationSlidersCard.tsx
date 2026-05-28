@@ -7,6 +7,7 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -17,8 +18,9 @@ import { useTranslation } from 'react-i18next';
 import type { ZernikeCoefficientKey } from '../../types/domain';
 import { CommitSlider } from '../CommitSlider';
 import {
+  type ZernikeTerm,
   micronsToWaves,
-  roundToTwoDecimals,
+  roundToThreeDecimals,
   wavesToMicrons,
   zernikeCoefficientMax,
   zernikeCoefficientMin,
@@ -36,15 +38,15 @@ const coefficientDisplayUnits = [
   readonly labelKey: string;
 }[];
 
-type ZernikeTerm = (typeof zernikeTerms)[number];
-
 const lowerOrderZernikeKeys = new Set<ZernikeCoefficientKey>(['2,-2', '2,0', '2,2']);
 const lowerOrderZernikeTerms = zernikeTerms.filter((term) =>
   lowerOrderZernikeKeys.has(term.key)
 );
-const higherOrderZernikeTerms = zernikeTerms.filter(
-  (term) => !lowerOrderZernikeKeys.has(term.key)
-);
+const higherOrderZernikeOrders = [3, 4, 5, 6] as const;
+const higherOrderZernikeTermGroups = higherOrderZernikeOrders.map((order) => ({
+  order,
+  terms: zernikeTerms.filter((term) => term.n === order)
+}));
 
 interface AberrationSlidersCardProps {
   readonly wavelengthNm: number;
@@ -142,15 +144,21 @@ export function AberrationSlidersCard({
               resetVersion={resetVersion}
               onValueChange={onValueChange}
             />
-            <ZernikeControlsAccordion
-              title={t('aberrations.higherOrder')}
-              terms={higherOrderZernikeTerms}
-              values={values}
-              wavelengthNm={wavelengthNm}
-              displayUnit={displayUnit}
-              resetVersion={resetVersion}
-              onValueChange={onValueChange}
-            />
+            <Typography variant="h6" component="h3" sx={{ pt: 1 }}>
+              {t('aberrations.higherOrder')}
+            </Typography>
+            {higherOrderZernikeTermGroups.map((group) => (
+              <ZernikeControlsAccordion
+                key={group.order}
+                title={t(`aberrations.orders.${group.order}`)}
+                terms={group.terms}
+                values={values}
+                wavelengthNm={wavelengthNm}
+                displayUnit={displayUnit}
+                resetVersion={resetVersion}
+                onValueChange={onValueChange}
+              />
+            ))}
           </Stack>
         </Stack>
       </CardContent>
@@ -188,8 +196,18 @@ function ZernikeControlsAccordion({
           display: 'none'
         },
         border: 1,
+        borderRadius: 1,
         borderColor: 'divider',
-        boxShadow: 'none'
+        boxShadow: 'none',
+        '&.Mui-expanded': {
+          borderRadius: 1
+        },
+        '&:first-of-type': {
+          borderRadius: 1
+        },
+        '&:last-of-type': {
+          borderRadius: 1
+        }
       }}
     >
       <AccordionSummary
@@ -240,21 +258,18 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
   onValueChange
 }: AberrationCoefficientRowProps) {
   const { t } = useTranslation();
-  const translatedLabel = t(`aberrations.terms.${term.key.replace(',', '_')}`);
-  const label = t('aberrations.termLabel', {
-    label: translatedLabel,
-    m: term.m,
-    n: term.n
-  });
+  const translatedLabel = getZernikeTermLabel(term, t, 'full');
+  const zernikeNotation = `Z(${term.n},${term.m})`;
   const coefficientLabel = t('aberrations.coefficientLabel', {
     label: translatedLabel,
     m: term.m,
     n: term.n
   });
+  const visibleLabelChips = getVisibleZernikeLabelChips(term, t);
 
   const commitSliderValue = useCallback(
     (nextValue: number) => {
-      const roundedValue = roundToTwoDecimals(nextValue);
+      const roundedValue = roundToThreeDecimals(nextValue);
       if (roundedValue !== value) {
         onValueChange(term.key, roundedValue);
       }
@@ -266,7 +281,20 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
     <Box>
       <CommitSlider
         ariaLabel={coefficientLabel}
-        label={label}
+        label={
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+            {visibleLabelChips.map((labelChip) => (
+              <Chip
+                key={labelChip}
+                label={labelChip}
+                size="small"
+                variant="outlined"
+                sx={{ maxWidth: '100%' }}
+              />
+            ))}
+            <Chip label={zernikeNotation} size="small" variant="outlined" />
+          </Box>
+        }
         min={zernikeCoefficientMin}
         max={zernikeCoefficientMax}
         step={zernikeCoefficientStep}
@@ -292,11 +320,7 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
             displayUnit,
             wavelengthNm
           ),
-          inputStep: getDisplayValueFromWaves(
-            zernikeCoefficientStep,
-            displayUnit,
-            wavelengthNm
-          ),
+          inputStep: zernikeCoefficientStep,
           testId: `zernike-value-${term.key}`
         }}
         inputSyncKey={`${displayUnit}-${wavelengthNm}-${resetVersion}`}
@@ -304,19 +328,63 @@ const AberrationCoefficientRow = memo(function AberrationCoefficientRow({
         valueLabelFormat={(nextValue) =>
           formatCommittedValue(nextValue, displayUnit, wavelengthNm)
         }
-        roundValue={roundToTwoDecimals}
+        roundValue={roundToThreeDecimals}
         onCommit={commitSliderValue}
       />
     </Box>
   );
 });
 
+function getVisibleZernikeLabelChips(term: ZernikeTerm, t: TFunction): readonly string[] {
+  const label = getZernikeMainLabel(term, t, 'compact');
+  const orientation = getZernikeOrientationLabel(term, t);
+
+  return orientation === undefined ? [label] : [label, orientation];
+}
+
+function getZernikeTermLabel(
+  term: ZernikeTerm,
+  t: TFunction,
+  orderLength: 'compact' | 'full'
+): string {
+  const label = getZernikeMainLabel(term, t, orderLength);
+  const orientation = getZernikeOrientationLabel(term, t);
+
+  return orientation === undefined
+    ? label
+    : t('aberrations.nameParts.orientationLabel', { label, orientation });
+}
+
+function getZernikeMainLabel(
+  term: ZernikeTerm,
+  t: TFunction,
+  orderLength: 'compact' | 'full'
+): string {
+  const base = t(`aberrations.nameParts.bases.${term.name.base}`);
+  const order =
+    term.name.order === undefined
+      ? undefined
+      : t(`aberrations.nameParts.orders.${term.name.order}.${orderLength}`);
+
+  return joinZernikeNameParts(order, base, t);
+}
+
+function getZernikeOrientationLabel(term: ZernikeTerm, t: TFunction): string | undefined {
+  return term.name.orientation === undefined
+    ? undefined
+    : t(`aberrations.nameParts.orientations.${term.name.orientation}`);
+}
+
+function joinZernikeNameParts(order: string | undefined, base: string, t: TFunction): string {
+  return order === undefined ? base : `${order}${t('aberrations.nameParts.orderSeparator')}${base}`;
+}
+
 function formatCommittedValue(
   value: number,
   displayUnit: CoefficientDisplayUnit,
   wavelengthNm: number
 ): string {
-  return getDisplayValueFromWaves(value, displayUnit, wavelengthNm).toFixed(2);
+  return getDisplayValueFromWaves(value, displayUnit, wavelengthNm).toFixed(3);
 }
 
 function getDisplayValueFromWaves(
@@ -325,10 +393,10 @@ function getDisplayValueFromWaves(
   wavelengthNm: number
 ): number {
   if (displayUnit === 'micron') {
-    return roundToTwoDecimals(wavesToMicrons(value, wavelengthNm));
+    return roundToThreeDecimals(wavesToMicrons(value, wavelengthNm));
   }
 
-  return roundToTwoDecimals(value);
+  return roundToThreeDecimals(value);
 }
 
 function getWaveValueFromDraft(
@@ -338,7 +406,7 @@ function getWaveValueFromDraft(
 ): number {
   const value = Number(draft);
   if (displayUnit === 'micron') {
-    return roundToTwoDecimals(micronsToWaves(value, wavelengthNm));
+    return roundToThreeDecimals(micronsToWaves(value, wavelengthNm));
   }
 
   return value;

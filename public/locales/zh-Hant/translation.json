@@ -157,11 +157,50 @@
     "syncWavelengths": "同步所有波長的設定",
     "lowerOrder": "低階像差 (通常可用普通眼鏡矯正)",
     "higherOrder": "高階像差",
+    "orders": {
+      "3": "第3階",
+      "4": "第4階",
+      "5": "第5階",
+      "6": "第6階"
+    },
     "coefficientLabel": "{{label}} Z({{n}},{{m}}) 係數",
     "termLabel": "{{label}} Z({{n}},{{m}})",
     "rangeError": "值必須介於 {{min}} 和 {{max}} 之間。",
     "approxStrehl": "近似 Strehl 率：",
     "approxStrehlValue": "近似 Strehl 率：{{value}}%",
+    "nameParts": {
+      "orderSeparator": "",
+      "orientationLabel": "{{label}} ({{orientation}})",
+      "bases": {
+        "astigmatism": "像散",
+        "coma": "彗差",
+        "defocus": "離焦",
+        "hexafoil": "六葉差",
+        "pentafoil": "五葉差",
+        "quadrafoil": "四葉差",
+        "sphericalAberration": "球面像差",
+        "trefoil": "三葉差"
+      },
+      "orders": {
+        "primary": {
+          "full": "初級",
+          "compact": "初級"
+        },
+        "secondary": {
+          "full": "二級",
+          "compact": "二級"
+        },
+        "tertiary": {
+          "full": "三級",
+          "compact": "三級"
+        }
+      },
+      "orientations": {
+        "horizontal": "水平",
+        "oblique": "斜向",
+        "vertical": "垂直"
+      }
+    },
     "terms": {
       "2_-2": "像散/散光 (斜向)",
       "2_0": "離焦",

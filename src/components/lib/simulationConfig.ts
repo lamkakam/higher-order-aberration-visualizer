@@ -52,44 +52,106 @@ export interface ZernikeTerm {
   readonly key: ZernikeCoefficientKey;
   readonly n: number;
   readonly m: number;
-  readonly label: string;
+  readonly name: {
+    readonly base:
+      | 'astigmatism'
+      | 'coma'
+      | 'defocus'
+      | 'hexafoil'
+      | 'pentafoil'
+      | 'quadrafoil'
+      | 'sphericalAberration'
+      | 'trefoil';
+    readonly order?: 'primary' | 'secondary' | 'tertiary';
+    readonly orientation?: 'horizontal' | 'oblique' | 'vertical';
+  };
 }
 
 export const zernikeTerms = [
-  { key: '2,-2', n: 2, m: -2, label: 'Astigmatism (Oblique)' },
-  { key: '2,0', n: 2, m: 0, label: 'Defocus' },
-  { key: '2,2', n: 2, m: 2, label: 'Astigmatism (Vertical)' },
-  { key: '3,-3', n: 3, m: -3, label: 'Trefoil (Vertical)' },
-  { key: '3,-1', n: 3, m: -1, label: 'Coma (Vertical)' },
-  { key: '3,1', n: 3, m: 1, label: 'Coma (Horizontal)' },
-  { key: '3,3', n: 3, m: 3, label: 'Trefoil (Oblique)' },
-  { key: '4,-4', n: 4, m: -4, label: 'Quadrafoil (Oblique)' },
-  { key: '4,-2', n: 4, m: -2, label: 'Secondary Astigmatism (Oblique)' },
-  { key: '4,0', n: 4, m: 0, label: 'Primary Spherical Aberration' },
-  { key: '4,2', n: 4, m: 2, label: 'Secondary Astigmatism (Vertical)' },
-  { key: '4,4', n: 4, m: 4, label: 'Quadrafoil (Vertical)' },
-  { key: '5,-5', n: 5, m: -5, label: 'Pentafoil (Vertical)' },
-  { key: '5,-3', n: 5, m: -3, label: 'Secondary Trefoil (Vertical)' },
-  { key: '5,-1', n: 5, m: -1, label: 'Secondary Coma (Vertical)' },
-  { key: '5,1', n: 5, m: 1, label: 'Secondary Coma (Horizontal)' },
-  { key: '5,3', n: 5, m: 3, label: 'Secondary Trefoil (Oblique)' },
-  { key: '5,5', n: 5, m: 5, label: 'Pentafoil (Oblique)' },
-  { key: '6,-6', n: 6, m: -6, label: 'Hexafoil (Oblique)' },
-  { key: '6,-4', n: 6, m: -4, label: 'Secondary Quadrafoil (Oblique)' },
-  { key: '6,-2', n: 6, m: -2, label: 'Tertiary Astigmatism (Oblique)' },
-  { key: '6,0', n: 6, m: 0, label: 'Secondary Spherical Aberration' },
-  { key: '6,2', n: 6, m: 2, label: 'Tertiary Astigmatism (Vertical)' },
-  { key: '6,4', n: 6, m: 4, label: 'Secondary Quadrafoil (Vertical)' },
-  { key: '6,6', n: 6, m: 6, label: 'Hexafoil (Vertical)' }
+  { key: '2,-2', n: 2, m: -2, name: { base: 'astigmatism', orientation: 'oblique' } },
+  { key: '2,0', n: 2, m: 0, name: { base: 'defocus' } },
+  { key: '2,2', n: 2, m: 2, name: { base: 'astigmatism', orientation: 'vertical' } },
+  { key: '3,-3', n: 3, m: -3, name: { base: 'trefoil', orientation: 'vertical' } },
+  { key: '3,-1', n: 3, m: -1, name: { base: 'coma', orientation: 'vertical' } },
+  { key: '3,1', n: 3, m: 1, name: { base: 'coma', orientation: 'horizontal' } },
+  { key: '3,3', n: 3, m: 3, name: { base: 'trefoil', orientation: 'oblique' } },
+  { key: '4,-4', n: 4, m: -4, name: { base: 'quadrafoil', orientation: 'oblique' } },
+  {
+    key: '4,-2',
+    n: 4,
+    m: -2,
+    name: { base: 'astigmatism', order: 'secondary', orientation: 'oblique' }
+  },
+  { key: '4,0', n: 4, m: 0, name: { base: 'sphericalAberration', order: 'primary' } },
+  {
+    key: '4,2',
+    n: 4,
+    m: 2,
+    name: { base: 'astigmatism', order: 'secondary', orientation: 'vertical' }
+  },
+  { key: '4,4', n: 4, m: 4, name: { base: 'quadrafoil', orientation: 'vertical' } },
+  { key: '5,-5', n: 5, m: -5, name: { base: 'pentafoil', orientation: 'vertical' } },
+  {
+    key: '5,-3',
+    n: 5,
+    m: -3,
+    name: { base: 'trefoil', order: 'secondary', orientation: 'vertical' }
+  },
+  {
+    key: '5,-1',
+    n: 5,
+    m: -1,
+    name: { base: 'coma', order: 'secondary', orientation: 'vertical' }
+  },
+  {
+    key: '5,1',
+    n: 5,
+    m: 1,
+    name: { base: 'coma', order: 'secondary', orientation: 'horizontal' }
+  },
+  {
+    key: '5,3',
+    n: 5,
+    m: 3,
+    name: { base: 'trefoil', order: 'secondary', orientation: 'oblique' }
+  },
+  { key: '5,5', n: 5, m: 5, name: { base: 'pentafoil', orientation: 'oblique' } },
+  { key: '6,-6', n: 6, m: -6, name: { base: 'hexafoil', orientation: 'oblique' } },
+  {
+    key: '6,-4',
+    n: 6,
+    m: -4,
+    name: { base: 'quadrafoil', order: 'secondary', orientation: 'oblique' }
+  },
+  {
+    key: '6,-2',
+    n: 6,
+    m: -2,
+    name: { base: 'astigmatism', order: 'tertiary', orientation: 'oblique' }
+  },
+  { key: '6,0', n: 6, m: 0, name: { base: 'sphericalAberration', order: 'secondary' } },
+  {
+    key: '6,2',
+    n: 6,
+    m: 2,
+    name: { base: 'astigmatism', order: 'tertiary', orientation: 'vertical' }
+  },
+  {
+    key: '6,4',
+    n: 6,
+    m: 4,
+    name: { base: 'quadrafoil', order: 'secondary', orientation: 'vertical' }
+  },
+  { key: '6,6', n: 6, m: 6, name: { base: 'hexafoil', orientation: 'vertical' } }
 ] as const satisfies readonly ZernikeTerm[];
 
 export const zernikeCoefficientMin = -5;
 export const zernikeCoefficientMax = 5;
-export const zernikeCoefficientStep = 0.05;
+export const zernikeCoefficientStep = 0.001;
 export const wavelengthNm = 550;
 
-export function roundToTwoDecimals(value: number): number {
-  return Math.round(value * 100) / 100;
+export function roundToThreeDecimals(value: number): number {
+  return Math.round(value * 1000) / 1000;
 }
 
 export function wavesToMicrons(waves: number, wavelengthNm: number): number {

@@ -1,13 +1,55 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
-import { SimulatedImageCard } from '../SimulatedImageCard';
+import { ImageResultDetailsAccordion, SimulatedImageCard } from '../SimulatedImageCard';
 
 const imageUrl = 'data:image/png;base64,preview';
 const enlargementHint = 'Click the image to view it enlarged.';
 const supplementalDescription = 'Additional chart context.';
+const appTheme = createTheme({ shape: { borderRadius: 8 } });
+
+function renderWithAppTheme(ui: ReactNode) {
+  return render(<ThemeProvider theme={appTheme}>{ui}</ThemeProvider>);
+}
 
 describe('SimulatedImageCard', () => {
+  it('rounds standalone result accordion roots with the theme default radius', () => {
+    const panels = [
+      { key: 'simulated-image', title: undefined },
+      { key: 'psf', title: 'PSF' },
+      { key: 'wavefront-map', title: 'Wavefront Map' }
+    ];
+
+    renderWithAppTheme(
+      <>
+        {panels.map((panel) => (
+          <ImageResultDetailsAccordion
+            key={panel.key}
+            imageUrl={imageUrl}
+            isLoading={false}
+            error={undefined}
+            title={panel.title}
+            description={`${panel.key} description`}
+            supplementalDescription={undefined}
+            aboveAccordionContent={undefined}
+            bottomContent={undefined}
+          />
+        ))}
+      </>
+    );
+
+    for (const title of ['Simulated Image', 'PSF', 'Wavefront Map']) {
+      const accordionRoot = screen.getByRole('button', { name: title }).closest('.MuiAccordion-root');
+
+      expect(accordionRoot).toHaveStyle({
+        borderRadius: '8px',
+        overflow: 'hidden'
+      });
+    }
+  });
+
   it('renders text details inside an expanded accordion', () => {
     render(
       <SimulatedImageCard

@@ -1,6 +1,10 @@
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import { TouchSafeSlider } from '../TouchSafeSlider';
 
@@ -24,7 +28,7 @@ interface CommitSliderInputConfig {
 
 interface CommitSliderProps {
   readonly ariaLabel: string;
-  readonly label?: string;
+  readonly label?: ReactNode;
   readonly min: number;
   readonly max: number;
   readonly step: number;
@@ -57,11 +61,13 @@ export function CommitSlider({
   const [inputDraft, setInputDraft] = useState(input?.formatValue(value) ?? '');
   const committedValueRef = useRef(value);
   const draftValueRef = useRef(value);
+  const valueRef = useRef(value);
   const inputSyncKeyRef = useRef(inputSyncKey);
   const keyboardSlidingRef = useRef(false);
   const inputFocusScrollPositionRef = useRef<ScrollPosition | undefined>(undefined);
 
-  if (committedValueRef.current !== value || inputSyncKeyRef.current !== inputSyncKey) {
+  if (valueRef.current !== value || inputSyncKeyRef.current !== inputSyncKey) {
+    valueRef.current = value;
     committedValueRef.current = value;
     inputSyncKeyRef.current = inputSyncKey;
     draftValueRef.current = value;
@@ -101,6 +107,61 @@ export function CommitSlider({
     commit(parsedValue);
   }
 
+  function getInputDisplayValue() {
+    if (!input) {
+      return Number.NaN;
+    }
+
+    const numericDraft = Number(inputDraft);
+    if (Number.isFinite(numericDraft)) {
+      return numericDraft;
+    }
+
+    return Number(input.formatValue(committedValueRef.current));
+  }
+
+  function getDisplayStepPrecision(value: number) {
+    const [, fraction = ''] = value.toString().split('.');
+
+    return fraction.length;
+  }
+
+  function getSteppedDisplayValue(direction: -1 | 1) {
+    if (!input) {
+      return Number.NaN;
+    }
+
+    const displayStep = input.inputStep ?? step;
+    const precision = getDisplayStepPrecision(displayStep);
+    const nextDisplayValue = getInputDisplayValue() + direction * displayStep;
+
+    return Number(nextDisplayValue.toFixed(precision));
+  }
+
+  function canStepInput(direction: -1 | 1) {
+    if (!input) {
+      return false;
+    }
+
+    const nextDisplayValue = getSteppedDisplayValue(direction);
+    if (!Number.isFinite(nextDisplayValue)) {
+      return false;
+    }
+
+    const inputMin = input.inputMin ?? min;
+    const inputMax = input.inputMax ?? max;
+
+    return nextDisplayValue >= inputMin && nextDisplayValue <= inputMax;
+  }
+
+  function commitInputStep(direction: -1 | 1) {
+    if (!input || !canStepInput(direction)) {
+      return;
+    }
+
+    commit(input.parseDraft(String(getSteppedDisplayValue(direction))));
+  }
+
   function isIosSafari() {
     const { maxTouchPoints, userAgent } = window.navigator;
     const isIos = /iP(?:ad|hone|od)/.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1);
@@ -136,67 +197,115 @@ export function CommitSlider({
 
   const parsedInputValue = input?.parseDraft(inputDraft) ?? Number.NaN;
   const inputErrorText = input?.getErrorText?.(inputDraft, parsedInputValue);
+  const canDecreaseInput = canStepInput(-1);
+  const canIncreaseInput = canStepInput(1);
 
   return (
     <Box>
       {input || label ? (
         <Box
           sx={{
-            alignItems: 'baseline',
+            alignItems: 'flex-start',
             display: 'flex',
             gap: 2,
             justifyContent: 'space-between'
           }}
         >
-          <Typography variant="body2">{label ?? ariaLabel}</Typography>
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{ flex: '1 1 auto', minWidth: 0 }}
+          >
+            {label ?? ariaLabel}
+          </Typography>
           {input ? (
-            <TextField
-              data-testid={input.testId}
-              autoComplete="off"
-              error={Boolean(inputErrorText)}
-              helperText={inputErrorText}
-              inputMode={input.inputMode}
-              size="small"
+            <Box
               sx={{
-                flexShrink: 0,
-                '& input': {
-                  py: 0.5,
-                  textAlign: 'right'
-                }
+                alignItems: 'flex-start',
+                display: 'flex',
+                flexShrink: 0
               }}
-              type="text"
-              value={inputDraft}
-              onChange={(event) => {
-                const nextDraft = event.target.value;
-                if (input.isDraftAllowed(nextDraft)) {
-                  setInputDraft(nextDraft);
-                }
-              }}
-              onBlur={() => {
-                commitInputDraft();
-                restoreInputFocusScrollPosition();
-              }}
-              onFocus={rememberInputFocusScrollPosition}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  commitInputDraft();
-                }
-              }}
-              slotProps={{
-                htmlInput: {
-                  'aria-label': ariaLabel,
-                  autoComplete: 'off',
-                  min: input.inputMin ?? min,
-                  max: input.inputMax ?? max,
-                  step: input.inputStep ?? step,
-                  style: {
-                    maxWidth: '3em',
-                    minWidth: '3em',
-                    width: '3em'
+            >
+              <IconButton
+                aria-label={`Decrease ${ariaLabel}`}
+                disabled={!canDecreaseInput}
+                size="small"
+                sx={{
+                  '&.Mui-disabled': {
+                    cursor: 'not-allowed',
+                    pointerEvents: 'auto'
                   }
-                }
-              }}
-            />
+                }}
+                onClick={() => {
+                  commitInputStep(-1);
+                }}
+              >
+                <RemoveIcon fontSize="inherit" />
+              </IconButton>
+              <TextField
+                data-testid={input.testId}
+                autoComplete="off"
+                error={Boolean(inputErrorText)}
+                helperText={inputErrorText}
+                inputMode={input.inputMode}
+                size="small"
+                sx={{
+                  flexShrink: 0,
+                  '& input': {
+                    py: 0.5,
+                    textAlign: 'right'
+                  }
+                }}
+                type="text"
+                value={inputDraft}
+                onChange={(event) => {
+                  const nextDraft = event.target.value;
+                  if (input.isDraftAllowed(nextDraft)) {
+                    setInputDraft(nextDraft);
+                  }
+                }}
+                onBlur={() => {
+                  commitInputDraft();
+                  restoreInputFocusScrollPosition();
+                }}
+                onFocus={rememberInputFocusScrollPosition}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    commitInputDraft();
+                  }
+                }}
+                slotProps={{
+                  htmlInput: {
+                    'aria-label': ariaLabel,
+                    autoComplete: 'off',
+                    min: input.inputMin ?? min,
+                    max: input.inputMax ?? max,
+                    step: input.inputStep ?? step,
+                    style: {
+                      maxWidth: '3em',
+                      minWidth: '3em',
+                      width: '3em'
+                    }
+                  }
+                }}
+              />
+              <IconButton
+                aria-label={`Increase ${ariaLabel}`}
+                disabled={!canIncreaseInput}
+                size="small"
+                sx={{
+                  '&.Mui-disabled': {
+                    cursor: 'not-allowed',
+                    pointerEvents: 'auto'
+                  }
+                }}
+                onClick={() => {
+                  commitInputStep(1);
+                }}
+              >
+                <AddIcon fontSize="inherit" />
+              </IconButton>
+            </Box>
           ) : undefined}
         </Box>
       ) : undefined}
