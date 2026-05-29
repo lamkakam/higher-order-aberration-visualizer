@@ -110,7 +110,7 @@
     },
     "wide_point_source": {
       "label": "Point Source (Airy Disc) for Star Test",
-      "description": "A point source with a wider field for comparing star-test diffraction patterns."
+      "description": "A point source with a wider field for star tests. Before observing how aberrations other than defocus alter the diffraction pattern, set the defocus term to 0.577 waves or 1.155 waves, corresponding to 2 or 4 waves peak-to-valley, respectively."
     },
     "siemensstar": {
       "label": "Siemens Star",
