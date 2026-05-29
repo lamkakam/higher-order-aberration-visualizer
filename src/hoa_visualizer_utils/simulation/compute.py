@@ -28,7 +28,6 @@ LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION = 0.8
 LOGMAR_CHART_WIDEST_ROW_ARCMIN = 450
 JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION = 0.7
 POINT_SOURCE_AIRY_DIAMETER_PX = 64
-WIDE_POINT_SOURCE_REFERENCE_APERTURE_MM = 6
 WIDE_POINT_SOURCE_SAMPLING_MULTIPLIER = 4
 _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
@@ -400,7 +399,7 @@ def _resolve_image_dx_arcmin(
         )
     if target_id == "wide_point_source":
         return WIDE_POINT_SOURCE_SAMPLING_MULTIPLIER * _point_source_image_dx_arcmin(
-            aperture_diameter_mm=WIDE_POINT_SOURCE_REFERENCE_APERTURE_MM,
+            aperture_diameter_mm=entrance_pupil_diameter_mm,
             wavelength_nm=wavelength_nm,
         )
     return DEFAULT_IMAGE_DX_ARCMIN

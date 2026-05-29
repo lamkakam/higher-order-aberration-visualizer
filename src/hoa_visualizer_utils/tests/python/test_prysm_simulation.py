@@ -1305,9 +1305,17 @@ def test_wide_point_source_uses_supported_target_id() -> None:
     assert simulation.convolved_image.shape == (64, 64)
 
 
-def test_wide_point_source_default_sampling_is_four_times_reference_airy_diameter() -> None:
+def test_wide_point_source_default_sampling_is_four_times_point_source_sampling() -> None:
     wavelength_nm = 550
-    simulation = compute_simulation(
+    point_source = compute_simulation(
+        10,
+        {},
+        "point_source",
+        wavelength_nm=wavelength_nm,
+        pupil_samples=32,
+        image_samples=128,
+    )
+    wide_point_source = compute_simulation(
         10,
         {},
         "wide_point_source",
@@ -1316,16 +1324,35 @@ def test_wide_point_source_default_sampling_is_four_times_reference_airy_diamete
         image_samples=128,
     )
 
-    reference_airy_diameter_arcmin = math.degrees(
-        2 * 1.22 * (wavelength_nm * 1e-6) / 6
-    ) * 60
-
-    assert simulation.sampling.image_dx_arcmin == pytest.approx(
-        4 * reference_airy_diameter_arcmin / 64
+    assert wide_point_source.sampling.image_dx_arcmin == pytest.approx(
+        4 * point_source.sampling.image_dx_arcmin
     )
 
 
-def test_wide_point_source_default_sampling_does_not_change_with_aperture() -> None:
+@pytest.mark.parametrize("aperture_mm", [3, 60])
+def test_wide_point_source_default_sampling_tracks_airy_diameter(
+    aperture_mm: float,
+) -> None:
+    wavelength_nm = 550
+    simulation = compute_simulation(
+        aperture_mm,
+        {},
+        "wide_point_source",
+        wavelength_nm=wavelength_nm,
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    airy_diameter_arcmin = math.degrees(
+        2 * 1.22 * (wavelength_nm * 1e-6) / aperture_mm
+    ) * 60
+
+    assert airy_diameter_arcmin / simulation.sampling.image_dx_arcmin == pytest.approx(
+        16
+    )
+
+
+def test_wide_point_source_default_sampling_changes_with_aperture() -> None:
     small_aperture = compute_simulation(
         3,
         {},
@@ -1342,7 +1369,7 @@ def test_wide_point_source_default_sampling_does_not_change_with_aperture() -> N
     )
 
     assert small_aperture.sampling.image_dx_arcmin == pytest.approx(
-        large_aperture.sampling.image_dx_arcmin
+        large_aperture.sampling.image_dx_arcmin * 2
     )
 
 
