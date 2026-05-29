@@ -108,6 +108,10 @@
       "label": "点光源 (艾里衍射斑)",
       "description": "单个点光源，适合展示理想点光源如何因衍射而扩散。"
     },
+    "wide_point_source": {
+      "label": "星點測試",
+      "description": "较宽视场的点光源，适合比较星点测试的衍射图样。"
+    },
     "siemensstar": {
       "label": "西门子星形测试图",
       "description": "黑白辐条组成的圆形图案，适合展示离焦和像散。"

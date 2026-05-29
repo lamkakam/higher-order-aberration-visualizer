@@ -63,6 +63,10 @@ describe('optics worker', () => {
     expect(supportedTargetIds).toContain('point_source');
   });
 
+  it('exposes the wide point source target id', () => {
+    expect(supportedTargetIds).toContain('wide_point_source');
+  });
+
   it('exposes inverted eye-chart target ids', () => {
     expect(supportedTargetIds).toContain('logmar_chart_inverted');
     expect(supportedTargetIds).toContain('snellen_e_20_20_inverted');

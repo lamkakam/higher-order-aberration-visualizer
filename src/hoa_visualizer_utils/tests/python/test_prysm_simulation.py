@@ -1289,6 +1289,90 @@ def test_point_source_explicit_sampling_overrides_airy_default() -> None:
     assert simulation.sampling.image_dx_arcmin == 0.25
 
 
+def test_wide_point_source_uses_supported_target_id() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "wide_point_source",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    assert "wide_point_source" in SUPPORTED_TARGET_IDS
+    assert simulation.target_id == "wide_point_source"
+    assert simulation.target.shape == (64, 64)
+    assert simulation.psf.shape == (64, 64)
+    assert simulation.convolved_image.shape == (64, 64)
+
+
+def test_wide_point_source_default_sampling_is_four_times_reference_airy_diameter() -> None:
+    wavelength_nm = 550
+    simulation = compute_simulation(
+        10,
+        {},
+        "wide_point_source",
+        wavelength_nm=wavelength_nm,
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    reference_airy_diameter_arcmin = math.degrees(
+        2 * 1.22 * (wavelength_nm * 1e-6) / 6
+    ) * 60
+
+    assert simulation.sampling.image_dx_arcmin == pytest.approx(
+        4 * reference_airy_diameter_arcmin / 64
+    )
+
+
+def test_wide_point_source_default_sampling_does_not_change_with_aperture() -> None:
+    small_aperture = compute_simulation(
+        3,
+        {},
+        "wide_point_source",
+        pupil_samples=32,
+        image_samples=128,
+    )
+    large_aperture = compute_simulation(
+        6,
+        {},
+        "wide_point_source",
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    assert small_aperture.sampling.image_dx_arcmin == pytest.approx(
+        large_aperture.sampling.image_dx_arcmin
+    )
+
+
+def test_wide_point_source_convolved_image_is_display_normalized_psf() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "wide_point_source",
+        pupil_samples=32,
+        image_samples=128,
+    )
+
+    assert simulation.convolved_image.shape == simulation.psf.shape
+    assert simulation.convolved_image.max() == pytest.approx(1)
+    assert simulation.convolved_image == pytest.approx(simulation.psf / simulation.psf.max())
+
+
+def test_wide_point_source_explicit_sampling_overrides_wide_default() -> None:
+    simulation = compute_simulation(
+        10,
+        {},
+        "wide_point_source",
+        pupil_samples=32,
+        image_samples=128,
+        image_dx_arcmin=0.25,
+    )
+
+    assert simulation.sampling.image_dx_arcmin == 0.25
+
+
 def test_non_snellen_target_uses_default_angular_sampling() -> None:
     simulation = compute_simulation(
         10,
@@ -1450,6 +1534,7 @@ def test_supported_targets_keep_same_convolved_grid_with_current_visible_sizes()
         "snellen_e_20_20": (15, 15),
         "snellen_e_20_20_inverted": (15, 15),
         "tiltedsquare": (47, 47),
+        "wide_point_source": (1, 1),
     }
 
 

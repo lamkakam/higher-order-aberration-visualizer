@@ -21,6 +21,7 @@ SUPPORTED_TARGET_IDS = frozenset(
         "logmar_chart_inverted",
         "jupiter",
         "point_source",
+        "wide_point_source",
     }
 )
 
@@ -148,7 +149,7 @@ def _make_target(
             x.shape,
             image_dx_arcmin=image_dx_arcmin,
         )
-    if target_id == "point_source":
+    if target_id in {"point_source", "wide_point_source"}:
         return _make_point_source(x.shape)
 
     raise ValueError(f"target_id must be one of {sorted(SUPPORTED_TARGET_IDS)}")

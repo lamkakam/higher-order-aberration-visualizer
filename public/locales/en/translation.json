@@ -108,6 +108,10 @@
       "label": "Point Source (Airy Disc)",
       "description": "A single tiny bright point, useful for showing how a perfect dot spreads out."
     },
+    "wide_point_source": {
+      "label": "Point Source (Airy Disc) for Star Test",
+      "description": "A point source with a wider field for comparing star-test diffraction patterns."
+    },
     "siemensstar": {
       "label": "Siemens Star",
       "description": "A circular pattern of black-and-white spokes, useful for showing defocus and astigmatism."

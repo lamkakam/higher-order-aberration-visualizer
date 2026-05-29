@@ -5,6 +5,7 @@ export const supportedTargetIds = [
   'logmar_chart_inverted',
   'jupiter',
   'point_source',
+  'wide_point_source',
   'siemensstar',
   'slantededge',
   'tiltedsquare'

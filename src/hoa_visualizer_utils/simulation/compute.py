@@ -28,6 +28,8 @@ LOGMAR_CHART_DEFAULT_IMAGE_WIDTH_FRACTION = 0.8
 LOGMAR_CHART_WIDEST_ROW_ARCMIN = 450
 JUPITER_502NM_DEFAULT_IMAGE_DIAMETER_FRACTION = 0.7
 POINT_SOURCE_AIRY_DIAMETER_PX = 64
+WIDE_POINT_SOURCE_REFERENCE_APERTURE_MM = 6
+WIDE_POINT_SOURCE_SAMPLING_MULTIPLIER = 4
 _DEFAULT_IMAGE_DX_ARCMIN_SENTINEL = object()
 
 
@@ -323,7 +325,7 @@ def _compute_psf(
 
 
 def _convolve_target(target: np.ndarray, psf: np.ndarray, target_id: str, convolution):
-    if target_id == "point_source":
+    if target_id in {"point_source", "wide_point_source"}:
         return psf / psf.max()
     convolved_image = convolution.conv(target, psf)
     return np.clip(convolved_image, 0, 1)
@@ -392,11 +394,27 @@ def _resolve_image_dx_arcmin(
         )
         return JUPITER_502NM_DIAMETER_ARCMIN / target_diameter_px
     if target_id == "point_source":
-        airy_diameter_arcmin = math.degrees(
-            2 * 1.22 * (wavelength_nm * 1e-6) / entrance_pupil_diameter_mm
-        ) * 60
-        return airy_diameter_arcmin / POINT_SOURCE_AIRY_DIAMETER_PX
+        return _point_source_image_dx_arcmin(
+            aperture_diameter_mm=entrance_pupil_diameter_mm,
+            wavelength_nm=wavelength_nm,
+        )
+    if target_id == "wide_point_source":
+        return WIDE_POINT_SOURCE_SAMPLING_MULTIPLIER * _point_source_image_dx_arcmin(
+            aperture_diameter_mm=WIDE_POINT_SOURCE_REFERENCE_APERTURE_MM,
+            wavelength_nm=wavelength_nm,
+        )
     return DEFAULT_IMAGE_DX_ARCMIN
+
+
+def _point_source_image_dx_arcmin(
+    *,
+    aperture_diameter_mm: float,
+    wavelength_nm: float,
+) -> float:
+    airy_diameter_arcmin = math.degrees(
+        2 * 1.22 * (wavelength_nm * 1e-6) / aperture_diameter_mm
+    ) * 60
+    return airy_diameter_arcmin / POINT_SOURCE_AIRY_DIAMETER_PX
 
 
 def _angular_dx_to_image_dx_um(

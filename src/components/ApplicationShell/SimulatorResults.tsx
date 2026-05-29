@@ -81,6 +81,8 @@ export function SimulatorResults({
     supplementalDescription: psfSupplementalDescription,
     altText: t('results.psfAlt')
   };
+  const isPointSourceLikeTarget =
+    targetId === 'point_source' || targetId === 'wide_point_source';
   const wavefrontPanel: AdvancedResultPanel = {
     id: 'wavefront-map',
     imageUrl: result?.wavefrontImageUrl,
@@ -98,7 +100,7 @@ export function SimulatorResults({
     )
   };
   const advancedResultPanels =
-    targetId === 'point_source'
+    isPointSourceLikeTarget
       ? ([simulatedImagePanel, wavefrontPanel] as const)
       : ([simulatedImagePanel, psfPanel, wavefrontPanel] as const);
 
@@ -136,7 +138,7 @@ export function SimulatorResults({
       >
         <SimulatedImageCard {...simulatedImagePanel} />
       </Box>
-      {displayMode === 'advanced' && targetId !== 'point_source' ? (
+      {displayMode === 'advanced' && !isPointSourceLikeTarget ? (
         <Box
           sx={{
             ...desktopStickyImageCardMaskSx,

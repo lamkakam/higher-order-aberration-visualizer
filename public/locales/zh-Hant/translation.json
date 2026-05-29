@@ -108,6 +108,10 @@
       "label": "點光源 (艾里繞射斑)",
       "description": "單一點光源，用於顯示理想點光源如何因繞射而擴散。"
     },
+    "wide_point_source": {
+      "label": "星點測試",
+      "description": "較寬視場的點光源，用於比較星點測試的繞射圖樣。"
+    },
     "siemensstar": {
       "label": "星標測試板",
       "description": "黑白輻條的圓形圖案，用於顯示焦距誤差與像散。"
