@@ -27,6 +27,10 @@ export const targetOptions = [
     label: 'Point Source (Airy Disc)'
   },
   {
+    id: 'wide_point_source',
+    label: 'Point Source (Airy Disc) for Star Test'
+  },
+  {
     id: 'siemensstar',
     label: 'Siemens Star'
   },

@@ -517,9 +517,19 @@ it('renders default aperture and supported target options', async () => {
     screen.getByRole('option', { name: 'Jupiter (angular diameter 50 arcsecond)' })
   ).toHaveValue('jupiter');
   expect(screen.getByRole('option', { name: 'Point Source (Airy Disc)' })).toBeInTheDocument();
+  expect(targetOptions[6]).toHaveTextContent('Point Source (Airy Disc) for Star Test');
+  expect(targetOptions[6]).toHaveValue('wide_point_source');
   expect(screen.getByRole('option', { name: 'Siemens Star' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Slanted Edge' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Tilted Square' })).toBeInTheDocument();
+});
+
+it('renders the star-test point source label in Chinese locales', () => {
+  renderAtPath('/zh-Hans/basic');
+
+  expect(screen.getByRole('option', { name: '点光源 (用于星点测试)' })).toHaveValue(
+    'wide_point_source'
+  );
 });
 
 it('shows aperture mask controls only in advanced mode', async () => {
@@ -3169,40 +3179,45 @@ it('shows the legend unit selector at the bottom of the wavefront map card in ad
   expect(wavefrontCard.getByRole('button', { name: 'Micron' })).toBeInTheDocument();
 });
 
-it('hides the PSF panel and keeps one image descriptions accordion for point source targets', async () => {
-  const user = userEvent.setup();
-  setMatchesSm(true);
-  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+it.each(['point_source', 'wide_point_source'] as const)(
+  'hides the PSF panel and keeps one image descriptions accordion for %s targets',
+  async (targetId) => {
+    const user = userEvent.setup();
+    setMatchesSm(true);
+    render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
-  await user.click(screen.getByRole('button', { name: 'Settings' }));
-  await user.click(screen.getByRole('button', { name: 'Advanced' }));
-  await user.keyboard('{Escape}');
-  fireEvent.change(screen.getByLabelText('Target'), {
-    target: { value: 'point_source' }
-  });
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Advanced' }));
+    await user.keyboard('{Escape}');
+    fireEvent.change(screen.getByLabelText('Target'), {
+      target: { value: targetId }
+    });
 
-  const imageDescriptionsButton = screen.getByRole('button', {
-    name: 'Image Descriptions'
-  });
-  expect(imageDescriptionsButton).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.queryByRole('button', { name: 'PSF' })).not.toBeInTheDocument();
-  expect(within(imageDescriptionsButton).queryByText('Simulated Image')).not.toBeInTheDocument();
-  expect(within(imageDescriptionsButton).queryByText('PSF')).not.toBeInTheDocument();
-  expect(within(imageDescriptionsButton).queryByText('Wavefront Map')).not.toBeInTheDocument();
+    const imageDescriptionsButton = screen.getByRole('button', {
+      name: 'Image Descriptions'
+    });
+    expect(imageDescriptionsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByRole('button', { name: 'PSF' })).not.toBeInTheDocument();
+    expect(within(imageDescriptionsButton).queryByText('Simulated Image')).not.toBeInTheDocument();
+    expect(within(imageDescriptionsButton).queryByText('PSF')).not.toBeInTheDocument();
+    expect(within(imageDescriptionsButton).queryByText('Wavefront Map')).not.toBeInTheDocument();
 
-  const imageDescriptionsDetails = screen
-    .getByRole('group', { name: 'Wavefront Map description' })
-    .closest('.MuiAccordionDetails-root');
-  expect(imageDescriptionsDetails).not.toBeNull();
-  expect(
-    within(imageDescriptionsDetails as HTMLElement).getByText('Simulated Image')
-  ).toBeInTheDocument();
-  expect(within(imageDescriptionsDetails as HTMLElement).queryByText('PSF')).not.toBeInTheDocument();
-  expect(
-    within(imageDescriptionsDetails as HTMLElement).getByText('Wavefront Map')
-  ).toBeInTheDocument();
-  expect(screen.queryByRole('group', { name: 'PSF description' })).not.toBeInTheDocument();
-});
+    const imageDescriptionsDetails = screen
+      .getByRole('group', { name: 'Wavefront Map description' })
+      .closest('.MuiAccordionDetails-root');
+    expect(imageDescriptionsDetails).not.toBeNull();
+    expect(
+      within(imageDescriptionsDetails as HTMLElement).getByText('Simulated Image')
+    ).toBeInTheDocument();
+    expect(
+      within(imageDescriptionsDetails as HTMLElement).queryByText('PSF')
+    ).not.toBeInTheDocument();
+    expect(
+      within(imageDescriptionsDetails as HTMLElement).getByText('Wavefront Map')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'PSF description' })).not.toBeInTheDocument();
+  }
+);
 
 it('keeps advanced result panels in separate cards on extra-small screens', async () => {
   const user = userEvent.setup();
