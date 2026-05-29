@@ -527,7 +527,9 @@ it('renders default aperture and supported target options', async () => {
 it('renders the star-test point source label in Chinese locales', () => {
   renderAtPath('/zh-Hans/basic');
 
-  expect(screen.getByRole('option', { name: '星點測試' })).toHaveValue('wide_point_source');
+  expect(screen.getByRole('option', { name: '点光源 (用于星点测试)' })).toHaveValue(
+    'wide_point_source'
+  );
 });
 
 it('shows aperture mask controls only in advanced mode', async () => {
