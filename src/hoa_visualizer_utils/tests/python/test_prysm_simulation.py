@@ -11,6 +11,7 @@ from scipy import ndimage
 
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
 from hoa_visualizer_utils.rendering.aperture_mask import render_aperture_mask
+from hoa_visualizer_utils.rendering.mtf import render_mtf
 from hoa_visualizer_utils.rendering.psf import render_psf
 from hoa_visualizer_utils.rendering.scale_bar import _scale_bar_spec, add_scale_bar
 from hoa_visualizer_utils.rendering.wavefront import render_wavefront
@@ -1468,9 +1469,67 @@ def test_render_helpers_return_png_and_svg_bytes() -> None:
     assert render_wavefront(simulation, image_format="png").startswith(b"\x89PNG\r\n\x1a\n")
     assert render_psf(simulation, image_format="png").startswith(b"\x89PNG\r\n\x1a\n")
     assert render_convolved_image(simulation, image_format="png").startswith(b"\x89PNG\r\n\x1a\n")
+    assert render_mtf(simulation, image_format="png").startswith(b"\x89PNG\r\n\x1a\n")
     assert render_wavefront(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_psf(simulation, image_format="svg").lstrip().startswith(b"<?xml")
     assert render_convolved_image(simulation, image_format="svg").lstrip().startswith(b"<?xml")
+    assert render_mtf(simulation, image_format="svg").lstrip().startswith(b"<?xml")
+
+
+def test_compute_simulation_returns_finite_mtf_data() -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    mtf_data = simulation.mtf
+    lengths = {
+        len(mtf_data.spatial_frequency_cycles_per_mm),
+        len(mtf_data.x_mtf),
+        len(mtf_data.y_mtf),
+        len(mtf_data.azimuthal_average_mtf),
+    }
+
+    assert lengths == {len(mtf_data.spatial_frequency_cycles_per_mm)}
+    assert len(mtf_data.spatial_frequency_cycles_per_mm) > 2
+    assert np.all(np.isfinite(mtf_data.spatial_frequency_cycles_per_mm))
+    assert np.all(np.isfinite(mtf_data.x_mtf))
+    assert np.all(np.isfinite(mtf_data.y_mtf))
+    assert np.all(np.isfinite(mtf_data.azimuthal_average_mtf))
+    assert mtf_data.spatial_frequency_cycles_per_mm[0] == pytest.approx(0)
+    assert np.all(np.diff(mtf_data.spatial_frequency_cycles_per_mm) >= 0)
+
+
+def test_compute_simulation_mtf_sampling_reaches_dawes_limit_for_coarse_targets() -> None:
+    simulation = compute_simulation(
+        6,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+    )
+    dawes_arcsec = 116 / simulation.inputs.entrance_pupil_diameter_mm
+    dawes_radians = math.radians(dawes_arcsec / 3600)
+    image_plane_separation_mm = (
+        simulation.inputs.effective_focal_length_mm * math.tan(dawes_radians)
+    )
+    dawes_frequency_cycles_per_mm = 1 / image_plane_separation_mm
+
+    assert (
+        simulation.mtf.spatial_frequency_cycles_per_mm[-1]
+        >= dawes_frequency_cycles_per_mm * 1.1
+    )
+    assert (
+        np.interp(
+            dawes_frequency_cycles_per_mm,
+            simulation.mtf.spatial_frequency_cycles_per_mm,
+            simulation.mtf.azimuthal_average_mtf,
+        )
+        < 0.05
+    )
 
 
 def test_rgb_convolved_image_renderer_can_show_scale_bar() -> None:
@@ -1577,6 +1636,11 @@ def test_supported_targets_keep_same_convolved_grid_with_current_visible_sizes()
         (
             render_wavefront,
             "hoa_visualizer_utils.rendering.wavefront._figure_to_bytes",
+            (10, 9),
+        ),
+        (
+            render_mtf,
+            "hoa_visualizer_utils.rendering.mtf._figure_to_bytes",
             (10, 9),
         ),
     ],
@@ -1800,6 +1864,112 @@ def test_wavefront_renderer_rejects_invalid_unit() -> None:
 
     with pytest.raises(ValueError, match="Unsupported wavefront unit"):
         render_wavefront(simulation, unit="nanometer")
+
+
+def test_mtf_renderer_plots_three_marked_curves_with_axis_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.2},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.mtf._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_mtf(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        ax = fig.axes[0]
+
+        assert ax.get_xlabel() == "Spatial frequency (Dawes limit = 1)"
+        assert ax.get_ylabel() == "MTF"
+        assert len(ax.lines) == 3
+        assert {line.get_label() for line in ax.lines} == {
+            "X",
+            "Y",
+            "Azimuthal average",
+        }
+        assert all(line.get_marker() != "None" for line in ax.lines)
+        assert ax.get_legend() is not None
+    finally:
+        _load_pyplot().close(fig)
+
+
+def test_mtf_renderer_plots_spatial_frequency_in_dawes_limit_units(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.2},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.mtf._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_mtf(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures.pop()
+    try:
+        ax = fig.axes[0]
+        dawes_arcsec = 116 / simulation.inputs.entrance_pupil_diameter_mm
+        dawes_radians = math.radians(dawes_arcsec / 3600)
+        image_plane_separation_mm = (
+            simulation.inputs.effective_focal_length_mm * math.tan(dawes_radians)
+        )
+        dawes_frequency_cycles_per_mm = 1 / image_plane_separation_mm
+
+        assert ax.lines[0].get_xdata() == pytest.approx(
+            simulation.mtf.spatial_frequency_cycles_per_mm
+            / dawes_frequency_cycles_per_mm
+        )
+        assert ax.get_xlim()[0] == pytest.approx(0)
+        assert ax.get_xlim()[1] == pytest.approx(1.1)
+    finally:
+        _load_pyplot().close(fig)
+
+    narrower_aperture_simulation = replace(
+        simulation,
+        inputs=replace(simulation.inputs, entrance_pupil_diameter_mm=5),
+    )
+
+    assert render_mtf(narrower_aperture_simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures.pop()
+    try:
+        ax = fig.axes[0]
+        narrower_dawes_frequency_cycles_per_mm = (
+            dawes_frequency_cycles_per_mm / 2
+        )
+        assert ax.lines[0].get_xdata() == pytest.approx(
+            narrower_aperture_simulation.mtf.spatial_frequency_cycles_per_mm
+            / narrower_dawes_frequency_cycles_per_mm
+        )
+        assert ax.get_xlim()[0] == pytest.approx(0)
+        assert ax.get_xlim()[1] == pytest.approx(1.1)
+    finally:
+        _load_pyplot().close(fig)
 
 
 def test_scale_bar_uses_arcsec_label_for_sub_arcminute_length() -> None:

@@ -7,6 +7,7 @@ import packageInitSource from '../hoa_visualizer_utils/__init__.py?raw';
 import renderingInitSource from '../hoa_visualizer_utils/rendering/__init__.py?raw';
 import apertureMaskSource from '../hoa_visualizer_utils/rendering/aperture_mask.py?raw';
 import convolvedImageSource from '../hoa_visualizer_utils/rendering/convolved_image.py?raw';
+import mtfSource from '../hoa_visualizer_utils/rendering/mtf.py?raw';
 import psfSource from '../hoa_visualizer_utils/rendering/psf.py?raw';
 import scaleBarSource from '../hoa_visualizer_utils/rendering/scale_bar.py?raw';
 import wavefrontSource from '../hoa_visualizer_utils/rendering/wavefront.py?raw';
@@ -43,6 +44,7 @@ const pythonSources = [
   ['hoa_visualizer_utils/rendering/__init__.py', renderingInitSource],
   ['hoa_visualizer_utils/rendering/aperture_mask.py', apertureMaskSource],
   ['hoa_visualizer_utils/rendering/convolved_image.py', convolvedImageSource],
+  ['hoa_visualizer_utils/rendering/mtf.py', mtfSource],
   ['hoa_visualizer_utils/rendering/psf.py', psfSource],
   ['hoa_visualizer_utils/rendering/scale_bar.py', scaleBarSource],
   ['hoa_visualizer_utils/rendering/wavefront.py', wavefrontSource],
@@ -228,11 +230,16 @@ simulation = compute_simulation(
     globals,
     'from hoa_visualizer_utils.rendering.wavefront import render_wavefront\nrender_wavefront(simulation, unit=str(wavefront_legend_unit))'
   );
+  const mtfImageBytes = await renderSimulationImage(
+    globals,
+    'from hoa_visualizer_utils.rendering.mtf import render_mtf\nrender_mtf(simulation)'
+  );
 
   return {
     imageUrl: `data:image/png;base64,${bytesToBase64(imageBytes)}`,
     psfImageUrl: `data:image/png;base64,${bytesToBase64(psfImageBytes)}`,
     wavefrontImageUrl: `data:image/png;base64,${bytesToBase64(wavefrontImageBytes)}`,
+    mtfImageUrl: `data:image/png;base64,${bytesToBase64(mtfImageBytes)}`,
     diagnostics
   };
 }

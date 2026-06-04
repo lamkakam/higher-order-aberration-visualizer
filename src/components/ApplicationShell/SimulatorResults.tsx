@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type {
+  AdvancedDiagnosticImage,
   SupportedTargetId,
   WavefrontLegendUnit
 } from '../../types/domain';
@@ -27,6 +28,7 @@ interface SimulatorResultsProps {
   readonly isSmUp: boolean;
   readonly result?: ConvolvedImageResult;
   readonly targetId: SupportedTargetId;
+  readonly advancedDiagnosticImage: AdvancedDiagnosticImage;
   readonly wavefrontLegendUnit: WavefrontLegendUnit;
   readonly onWavefrontLegendUnitChange: (unit: WavefrontLegendUnit) => void;
 }
@@ -40,6 +42,7 @@ export function SimulatorResults({
   isSmUp,
   result,
   targetId,
+  advancedDiagnosticImage,
   wavefrontLegendUnit,
   onWavefrontLegendUnitChange
 }: SimulatorResultsProps) {
@@ -99,10 +102,22 @@ export function SimulatorResults({
       />
     )
   };
+  const mtfPanel: AdvancedResultPanel = {
+    id: 'mtf',
+    imageUrl: result?.mtfImageUrl,
+    statusText: diagnosticsMessage,
+    isLoading: isImageLoading,
+    error,
+    title: t('results.mtf'),
+    description: t('results.mtfDescription'),
+    altText: t('results.mtfAlt')
+  };
+  const selectedDiagnosticPanel =
+    advancedDiagnosticImage === 'mtf' ? mtfPanel : wavefrontPanel;
   const advancedResultPanels =
     isPointSourceLikeTarget
-      ? ([simulatedImagePanel, wavefrontPanel] as const)
-      : ([simulatedImagePanel, psfPanel, wavefrontPanel] as const);
+      ? ([simulatedImagePanel, selectedDiagnosticPanel] as const)
+      : ([simulatedImagePanel, psfPanel, selectedDiagnosticPanel] as const);
 
   if (shouldMergeAdvancedResults) {
     return (
@@ -163,7 +178,7 @@ export function SimulatorResults({
             zIndex: { sm: 2 }
           }}
         >
-          <SimulatedImageCard {...wavefrontPanel} />
+          <SimulatedImageCard {...selectedDiagnosticPanel} />
         </Box>
       ) : undefined}
     </>

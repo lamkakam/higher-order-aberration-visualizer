@@ -4,6 +4,7 @@ import { useWorkerClient } from '../../../hooks/useWorkerClient';
 import type { WorkerClient } from '../../../workers/client';
 import type {
   ApertureSettings,
+  AdvancedDiagnosticImage,
   SpectralMode,
   SupportedTargetId,
   WavefrontLegendUnit,
@@ -40,6 +41,8 @@ export function useSimulationState({
   const [syncWavelengthCoefficients, setSyncWavelengthCoefficients] = useState(true);
   const [wavefrontLegendUnit, setWavefrontLegendUnit] =
     useState<WavefrontLegendUnit>('wave');
+  const [advancedDiagnosticImage, setAdvancedDiagnosticImage] =
+    useState<AdvancedDiagnosticImage>('wavefront_map');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
   const [apertureSettings, setApertureSettings] = useState(defaultApertureSettings);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
@@ -191,6 +194,7 @@ export function useSimulationState({
   return {
     apertureDiameterMm,
     apertureSettings,
+    advancedDiagnosticImage,
     diagnostics,
     effectiveSpectralMode,
     error,
@@ -204,6 +208,7 @@ export function useSimulationState({
     selectedWavelength,
     setApertureDiameterMm,
     setApertureSettings,
+    setAdvancedDiagnosticImage,
     setSelectedWavelength,
     setShowScaleBar,
     setSyncWavelengthCoefficients,

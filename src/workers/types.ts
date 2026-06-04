@@ -45,6 +45,7 @@ export interface ConvolvedImageResult {
   imageUrl: string;
   psfImageUrl: string;
   wavefrontImageUrl: string;
+  mtfImageUrl: string;
   diagnostics: WorkerDiagnostics;
 }
 

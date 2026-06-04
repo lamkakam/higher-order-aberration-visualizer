@@ -50,13 +50,16 @@ The worker imports Python package files with Vite `?raw` imports and writes them
 
 ## Result Data Flow
 
-`computeConvolvedImage` converts the TypeScript input into Python globals, converts wavelength-scoped Zernike keys from `"n,m"` strings to `(n, m)` tuples, converts aperture settings to an `ApertureSpec`, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with the required channel lists and diagnostic wavelength. Monochromatic calls send one `550 nm` channel and a `550 nm` diagnostic wavelength; polychromatic calls send the fixed `550 nm`, `656 nm`, and `486 nm` channels and use the active wavelength tab for PSF and wavefront diagnostics. The returned `OpticalSimulation` object is rendered by:
+`computeConvolvedImage` converts the TypeScript input into Python globals, converts wavelength-scoped Zernike keys from `"n,m"` strings to `(n, m)` tuples, converts aperture settings to an `ApertureSpec`, and calls [`compute_simulation`](../src/hoa_visualizer_utils/simulation/compute.py) with the required channel lists and diagnostic wavelength. Monochromatic calls send one `550 nm` channel and a `550 nm` diagnostic wavelength; polychromatic calls send the fixed `550 nm`, `656 nm`, and `486 nm` channels and use the active wavelength tab for PSF, wavefront, and MTF diagnostics. The returned `OpticalSimulation` object is rendered by:
 
 - [`render_convolved_image`](../src/hoa_visualizer_utils/rendering/convolved_image.py)
 - [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
+- [`render_mtf`](../src/hoa_visualizer_utils/rendering/mtf.py)
 
 Each renderer returns PNG bytes. The worker base64-encodes those bytes into `data:image/png` URLs and returns them to the React UI.
+
+Advanced Mode includes a Settings drawer selector for the final diagnostic panel. It defaults to Wavefront Map and can switch to MTF. The worker returns both `wavefrontImageUrl` and `mtfImageUrl` for each simulation result, so changing the selector swaps the displayed panel without starting another worker computation.
 
 `renderApertureMask` converts aperture settings to an `ApertureSpec` and calls [`render_aperture_mask`](../src/hoa_visualizer_utils/rendering/aperture_mask.py) without computing a full simulation. It returns a non-enlargeable PNG preview for the advanced aperture mask modal.
 

@@ -293,6 +293,7 @@ describe('optics worker', () => {
     expect(result.imageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.psfImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.wavefrontImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
+    expect(result.mtfImageUrl).toBe('data:image/png;base64,cHluZy1ieXRlcw==');
     expect(result.diagnostics.status).toBe('ready');
     expect(runPythonAsync).toHaveBeenCalledWith(
       expect.stringContaining('simulation = compute_simulation('),
@@ -350,6 +351,14 @@ describe('optics worker', () => {
           wavefront_legend_unit: 'micron'
         })
       })
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('from hoa_visualizer_utils.rendering.mtf import render_mtf'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('render_mtf(simulation)'),
+      expect.any(Object)
     );
     expect(runPythonAsync).not.toHaveBeenCalledWith(
       expect.stringContaining('render_wavefront(simulation, show_scale_bar='),

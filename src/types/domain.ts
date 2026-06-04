@@ -15,6 +15,7 @@ export type SupportedTargetId = (typeof supportedTargetIds)[number];
 
 export type ZernikeCoefficientKey = `${number},${number}`;
 export type WavefrontLegendUnit = 'wave' | 'micron';
+export type AdvancedDiagnosticImage = 'wavefront_map' | 'mtf';
 export type SpectralMode = 'monochromatic' | 'polychromatic';
 export type ApertureShape = 'circle' | 'square' | 'regular_hexagon';
 

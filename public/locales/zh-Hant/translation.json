@@ -19,6 +19,9 @@
     "display": "顯示",
     "basic": "基本",
     "advanced": "進階",
+    "advancedDiagnosticImage": "進階診斷影像",
+    "wavefrontMap": "波前誤差圖",
+    "mtf": "MTF",
     "showScaleBar": "顯示比例尺"
   },
   "termsOfUse": {
@@ -63,7 +66,10 @@
     "psfAlt": "點擴散函數算繪圖",
     "wavefrontMap": "波前誤差圖",
     "wavefrontDescription": "目前 Zernike 像差值的波前誤差算繪結果。",
-    "wavefrontAlt": "波前誤差算繪結果"
+    "wavefrontAlt": "波前誤差算繪結果",
+    "mtf": "MTF",
+    "mtfDescription": "目前光學系統的調制傳遞函數。",
+    "mtfAlt": "調制傳遞函數算繪圖"
   },
   "opticalSystem": {
     "title": "光學系統設定",

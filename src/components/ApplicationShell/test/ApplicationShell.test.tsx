@@ -142,7 +142,9 @@ function getSettingsLanguageSelect(label?: string) {
     return screen.getByRole('combobox', { name: label });
   }
 
-  return within(screen.getByRole('dialog')).getByRole('combobox');
+  return within(screen.getByRole('dialog')).getByRole('combobox', {
+    name: /^(Language|語言|语言)$/
+  });
 }
 
 it('shows the terms of use modal on first render until the user agrees', async () => {
@@ -219,6 +221,63 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.queryByText('Wavefront legend unit')).not.toBeInTheDocument();
   expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
+});
+
+it('shows the advanced diagnostic image selector only in advanced mode', async () => {
+  renderAtPath('/en/basic');
+
+  await openSettingsDrawer();
+  expect(
+    screen.queryByRole('combobox', { name: 'Advanced diagnostic image' })
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+
+  expect(screen.getByRole('combobox', { name: 'Advanced diagnostic image' })).toHaveValue(
+    'wavefront_map'
+  );
+  expect(screen.getByRole('option', { name: 'Wavefront Map' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'MTF' })).toBeInTheDocument();
+});
+
+it('switches the final advanced diagnostic panel to MTF without recomputing', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-mtf`)}`,
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.change(screen.getByRole('combobox', { name: 'Advanced diagnostic image' }), {
+    target: { value: 'mtf' }
+  });
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  expect(screen.getByRole('heading', { name: 'MTF' })).toBeInTheDocument();
+  expect(screen.getByText('The modulation transfer function for the current optical system.')).toBeInTheDocument();
+  expect(screen.getByAltText('Rendered modulation transfer function plot')).toHaveAttribute(
+    'src',
+    'data:image/png;base64,bG9nbWFyX2NoYXJ0LW10Zg=='
+  );
+  expect(screen.queryByText('Legend Unit')).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Open enlarged MTF image' })
+  ).toBeInTheDocument();
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
 });
 
 it('renders language as the first settings control and supports explicit languages', async () => {
@@ -809,6 +868,7 @@ it('commits aperture rotation textbox values to the confirmed payload', async ()
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -907,6 +967,7 @@ it('cancels draft aperture mask changes and preserves previous simulation settin
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -964,6 +1025,7 @@ it('cancels draft Gaussian apodization changes and preserves previous simulation
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -1018,6 +1080,7 @@ it('commits spider vane textbox values to the confirmed payload', async () => {
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -1132,6 +1195,7 @@ it('confirms aperture mask changes and sends them in the next simulation payload
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -1750,6 +1814,7 @@ it('sends polychromatic worker payloads with wavelength weights and coefficient 
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -1807,6 +1872,7 @@ it('recomputes polychromatic diagnostics for the selected wavelength tab', async
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.diagnosticWavelengthNm}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.diagnosticWavelengthNm}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -1913,6 +1979,7 @@ it('commits micron zernike textbox values to the worker payload in waves', async
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -1975,6 +2042,7 @@ it('commits micron zernike spinner steps in displayed microns', async () => {
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2043,6 +2111,7 @@ it('commits valid zernike textbox values on blur to the worker payload', async (
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2094,6 +2163,7 @@ it('commits valid zernike textbox values on Enter to the worker payload', async 
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2145,6 +2215,7 @@ it('keeps temporary invalid zernike textbox drafts out of the worker payload', a
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2190,6 +2261,7 @@ it('shows inline errors for out-of-range zernike textbox drafts without worker c
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2237,6 +2309,7 @@ it('keeps aperture typing out of the worker payload until blur commits it', asyn
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2289,6 +2362,7 @@ it('keeps aperture typing out of the worker payload until Enter commits it', asy
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2341,6 +2415,7 @@ it('keeps keyboard slider movement out of the textbox until keyup, then commits 
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2397,6 +2472,7 @@ it('keeps pointer slider movement out of the textbox until release, then commits
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2471,6 +2547,7 @@ it('ignores touch slider movement that starts away from the thumb', async () => 
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2531,6 +2608,7 @@ it('lets off-thumb touch pointer starts scroll without changing the slider', asy
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2597,6 +2675,7 @@ it('debounces worker calls using the current UI payload', async () => {
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready',
@@ -2680,6 +2759,7 @@ it('sends enabled scale bar preference to the worker payload', async () => {
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2721,6 +2801,7 @@ it('sends selected wavefront legend unit to the worker payload', async () => {
       imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
       psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
       wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2771,6 +2852,7 @@ it('renders simulated image loading and error states', async () => {
       imageUrl: 'data:image/png;base64,c2ltdWxhdGVk',
       psfImageUrl: 'data:image/png;base64,cHNm',
       wavefrontImageUrl: 'data:image/png;base64,d2F2ZWZyb250',
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2806,6 +2888,7 @@ it('hides stale chart images while a later image render is pending', async () =>
       imageUrl: 'data:image/png;base64,bG9nbWFy',
       psfImageUrl: 'data:image/png;base64,cHNm',
       wavefrontImageUrl: 'data:image/png;base64,d2F2ZWZyb250',
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
@@ -2843,6 +2926,7 @@ it('hides stale chart images while a later image render is pending', async () =>
       imageUrl: 'data:image/png;base64,c2llbWVuc3N0YXI=',
       psfImageUrl: 'data:image/png;base64,c2llbWVuc3N0YXItcHNm',
       wavefrontImageUrl: 'data:image/png;base64,c2llbWVuc3N0YXItd2F2ZWZyb250',
+      mtfImageUrl: 'data:image/png;base64,bXRm',
       diagnostics: {
         status: 'ready',
         message: 'Mock worker ready'
