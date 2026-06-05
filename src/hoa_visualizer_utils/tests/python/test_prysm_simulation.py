@@ -7,6 +7,7 @@ from matplotlib.colors import LogNorm
 from matplotlib.ticker import LogFormatterSciNotation, ScalarFormatter
 import numpy as np
 import pytest
+from prysm.otf import diffraction_limited_mtf
 from scipy import ndimage
 
 from hoa_visualizer_utils.rendering.convolved_image import render_convolved_image
@@ -1866,7 +1867,7 @@ def test_wavefront_renderer_rejects_invalid_unit() -> None:
         render_wavefront(simulation, unit="nanometer")
 
 
-def test_mtf_renderer_plots_three_marked_curves_with_axis_labels(
+def test_mtf_renderer_plots_mtf_curves_and_ideal_reference_with_axis_labels(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     simulation = compute_simulation(
@@ -1895,14 +1896,66 @@ def test_mtf_renderer_plots_three_marked_curves_with_axis_labels(
 
         assert ax.get_xlabel() == "Spatial frequency (Dawes limit = 1)"
         assert ax.get_ylabel() == "MTF"
-        assert len(ax.lines) == 3
+        assert len(ax.lines) == 4
         assert {line.get_label() for line in ax.lines} == {
             "X",
             "Y",
             "Azimuthal average",
+            "Ideal",
         }
-        assert all(line.get_marker() != "None" for line in ax.lines)
+        marked_lines = [
+            line for line in ax.lines if line.get_label() != "Ideal"
+        ]
+        ideal_line = next(line for line in ax.lines if line.get_label() == "Ideal")
+
+        assert all(line.get_marker() != "None" for line in marked_lines)
+        assert ideal_line.get_linestyle() == "--"
+        assert ideal_line.get_marker() == "None"
         assert ax.get_legend() is not None
+    finally:
+        _load_pyplot().close(fig)
+
+
+def test_mtf_renderer_plots_prysm_diffraction_limited_ideal_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    simulation = compute_simulation(
+        10,
+        {(4, 0): 0.2},
+        "tiltedsquare",
+        pupil_samples=32,
+        image_samples=64,
+    )
+    rendered_figures = []
+
+    def figure_to_bytes(fig, image_format):
+        rendered_figures.append(fig)
+        return b"rendered"
+
+    monkeypatch.setattr(
+        "hoa_visualizer_utils.rendering.mtf._figure_to_bytes",
+        figure_to_bytes,
+    )
+
+    assert render_mtf(simulation, image_format="png") == b"rendered"
+
+    fig = rendered_figures[0]
+    try:
+        ax = fig.axes[0]
+        ideal_line = next(line for line in ax.lines if line.get_label() == "Ideal")
+        fno = (
+            simulation.inputs.effective_focal_length_mm
+            / simulation.inputs.entrance_pupil_diameter_mm
+        )
+        wavelength_um = simulation.sampling.wavelength_nm / 1000
+
+        assert ideal_line.get_ydata() == pytest.approx(
+            diffraction_limited_mtf(
+                fno,
+                wavelength_um,
+                simulation.mtf.spatial_frequency_cycles_per_mm,
+            )
+        )
     finally:
         _load_pyplot().close(fig)
 

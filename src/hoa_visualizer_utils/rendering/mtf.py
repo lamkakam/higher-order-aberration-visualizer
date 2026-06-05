@@ -11,6 +11,7 @@ from hoa_visualizer_utils.utils.figures import (
     _figure_to_bytes,
     _load_pyplot,
 )
+from prysm.otf import diffraction_limited_mtf
 
 
 def render_mtf(
@@ -27,6 +28,12 @@ def render_mtf(
     )
     dawes_frequency = _dawes_limit_frequency_cycles_per_mm(simulation)
     frequency = simulation.mtf.spatial_frequency_cycles_per_mm / dawes_frequency
+    ideal_mtf = diffraction_limited_mtf(
+        simulation.inputs.effective_focal_length_mm
+        / simulation.inputs.entrance_pupil_diameter_mm,
+        simulation.sampling.wavelength_nm / 1000,
+        simulation.mtf.spatial_frequency_cycles_per_mm,
+    )
     ax.plot(frequency, simulation.mtf.x_mtf, marker="o", markersize=3, label="X")
     ax.plot(frequency, simulation.mtf.y_mtf, marker="s", markersize=3, label="Y")
     ax.plot(
@@ -36,6 +43,7 @@ def render_mtf(
         markersize=3,
         label="Azimuthal average",
     )
+    ax.plot(frequency, ideal_mtf, linestyle="--", marker="None", label="Ideal")
     ax.set_xlabel("Spatial frequency (Dawes limit = 1)")
     ax.set_ylabel("MTF")
     ax.set_xlim(0, 1.1)
