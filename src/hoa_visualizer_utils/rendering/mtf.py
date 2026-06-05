@@ -14,6 +14,14 @@ from hoa_visualizer_utils.utils.figures import (
 from prysm.otf import diffraction_limited_mtf
 
 
+MTF_LINE_COLORS = {
+    "X": "#0072B2",
+    "Y": "#D55E00",
+    "Azimuthal average": "#009E73",
+    "Ideal": "#000000",
+}
+
+
 def render_mtf(
     simulation: OpticalSimulation,
     *,
@@ -34,16 +42,35 @@ def render_mtf(
         simulation.sampling.wavelength_nm / 1000,
         simulation.mtf.spatial_frequency_cycles_per_mm,
     )
-    ax.plot(frequency, simulation.mtf.x_mtf, marker="o", markersize=3, label="X")
-    ax.plot(frequency, simulation.mtf.y_mtf, marker="s", markersize=3, label="Y")
+    ax.plot(
+        frequency,
+        simulation.mtf.x_mtf,
+        color=MTF_LINE_COLORS["X"],
+        marker="None",
+        label="X",
+    )
+    ax.plot(
+        frequency,
+        simulation.mtf.y_mtf,
+        color=MTF_LINE_COLORS["Y"],
+        marker="None",
+        label="Y",
+    )
     ax.plot(
         frequency,
         simulation.mtf.azimuthal_average_mtf,
-        marker="^",
-        markersize=3,
+        color=MTF_LINE_COLORS["Azimuthal average"],
+        marker="None",
         label="Azimuthal average",
     )
-    ax.plot(frequency, ideal_mtf, linestyle="--", marker="None", label="Ideal")
+    ax.plot(
+        frequency,
+        ideal_mtf,
+        color=MTF_LINE_COLORS["Ideal"],
+        linestyle="--",
+        marker="None",
+        label="Ideal",
+    )
     ax.set_xlabel("Spatial frequency (Dawes limit = 1)")
     ax.set_ylabel("MTF")
     ax.set_xlim(0, 1.1)

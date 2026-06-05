@@ -1903,14 +1903,20 @@ def test_mtf_renderer_plots_mtf_curves_and_ideal_reference_with_axis_labels(
             "Azimuthal average",
             "Ideal",
         }
-        marked_lines = [
-            line for line in ax.lines if line.get_label() != "Ideal"
-        ]
+        expected_colors = {
+            "X": "#0072B2",
+            "Y": "#D55E00",
+            "Azimuthal average": "#009E73",
+            "Ideal": "#000000",
+        }
         ideal_line = next(line for line in ax.lines if line.get_label() == "Ideal")
 
-        assert all(line.get_marker() != "None" for line in marked_lines)
+        assert {
+            line.get_label(): line.get_color()
+            for line in ax.lines
+        } == expected_colors
+        assert all(line.get_marker() == "None" for line in ax.lines)
         assert ideal_line.get_linestyle() == "--"
-        assert ideal_line.get_marker() == "None"
         assert ax.get_legend() is not None
     finally:
         _load_pyplot().close(fig)
