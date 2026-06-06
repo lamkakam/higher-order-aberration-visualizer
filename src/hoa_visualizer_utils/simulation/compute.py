@@ -428,7 +428,7 @@ def _mtf_diagnostic_image_dx_um(
         _dawes_frequency_cycles_per_mm(entrance_pupil_diameter_mm) * 1.12
     )
     max_dx_um = 1_000 / (2 * max_frequency_cycles_per_mm)
-    return min(focused_dx_um, max_dx_um)
+    return max_dx_um
 
 
 def _dawes_frequency_cycles_per_mm(entrance_pupil_diameter_mm: float) -> float:

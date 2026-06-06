@@ -1533,6 +1533,44 @@ def test_compute_simulation_mtf_sampling_reaches_dawes_limit_for_coarse_targets(
     )
 
 
+def test_compute_simulation_mtf_is_target_independent_for_unaberrated_aperture() -> None:
+    jupiter = compute_simulation(
+        6,
+        {},
+        "jupiter",
+        pupil_samples=32,
+        image_samples=512,
+        wavelength_nm=550,
+    )
+    logmar_chart = compute_simulation(
+        6,
+        {},
+        "logmar_chart",
+        pupil_samples=32,
+        image_samples=512,
+        wavelength_nm=550,
+    )
+    fno = (
+        jupiter.inputs.effective_focal_length_mm
+        / jupiter.inputs.entrance_pupil_diameter_mm
+    )
+    ideal_mtf = diffraction_limited_mtf(
+        fno,
+        jupiter.sampling.wavelength_nm / 1000,
+        jupiter.mtf.spatial_frequency_cycles_per_mm,
+    )
+
+    assert jupiter.mtf.spatial_frequency_cycles_per_mm == pytest.approx(
+        logmar_chart.mtf.spatial_frequency_cycles_per_mm
+    )
+    assert jupiter.mtf.x_mtf == pytest.approx(logmar_chart.mtf.x_mtf)
+    assert jupiter.mtf.y_mtf == pytest.approx(logmar_chart.mtf.y_mtf)
+    assert jupiter.mtf.azimuthal_average_mtf == pytest.approx(
+        logmar_chart.mtf.azimuthal_average_mtf
+    )
+    assert jupiter.mtf.azimuthal_average_mtf == pytest.approx(ideal_mtf, abs=0.08)
+
+
 def test_rgb_convolved_image_renderer_can_show_scale_bar() -> None:
     simulation = compute_simulation(
         10,

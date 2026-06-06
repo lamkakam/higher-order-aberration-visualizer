@@ -61,10 +61,12 @@ Supported target ids are defined in both [`src/types/domain.ts`](../src/types/do
 3. propagate the pupil to a fixed-sampling focal-plane PSF
 4. normalize the PSF energy
 5. build the requested target image
-6. compute X, Y, and azimuthal-average MTF slices from the representative PSF in cycles/mm
+6. compute X, Y, and azimuthal-average MTF slices from a representative diagnostic PSF in cycles/mm
 7. convolve the target with the PSF, or use the normalized PSF directly for `point_source` and `wide_point_source`
 
 For polychromatic runs, steps 2 through 6 are repeated for each RGB channel. Non-Jupiter image targets reuse the same grayscale target in each channel. `point_source` and `wide_point_source` return an RGB image built from the three display-normalized PSFs. Jupiter builds separate red, green, and blue target channels from the 658 nm, 502 nm, and 395 nm assets before convolution.
+
+MTF uses a representative diagnostic PSF sampled for the Dawes-limit frequency range of the current aperture. This diagnostic PSF is independent of the selected target's angular image scale, so changing from an eye chart to Jupiter does not change the optical MTF when aperture, wavelength, aberrations, and aperture mask are unchanged.
 
 The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, MTF data, pupil mask, sampling metadata, and normalized input metadata.
 
