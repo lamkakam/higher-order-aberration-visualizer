@@ -68,7 +68,7 @@
     "wavefrontDescription": "当前泽尼克像差值渲染出的波前误差图。",
     "wavefrontAlt": "渲染出的波前误差图",
     "mtf": "MTF",
-    "mtfDescription": "当前光学系统的调制传递函数。",
+    "mtfDescription": "当前光学系统的调制传递函数。x 轴表示相对于道威斯极限(Dawes' Limit)的空间频率。虚线表示具有相同口径、无中心遮挡的理想光学系统的 MTF 曲线。",
     "mtfAlt": "渲染出的调制传递函数图"
   },
   "opticalSystem": {
