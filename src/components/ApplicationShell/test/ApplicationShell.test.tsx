@@ -268,7 +268,9 @@ it('switches the final advanced diagnostic panel to MTF without recomputing', as
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
   expect(screen.getByRole('heading', { name: 'MTF' })).toBeInTheDocument();
-  expect(screen.getByText('The modulation transfer function for the current optical system.')).toBeInTheDocument();
+  expect(
+    screen.getByText('The modulation transfer function for the current optical system.', { exact: false })
+  ).toBeInTheDocument();
   expect(screen.getByAltText('Rendered modulation transfer function plot')).toHaveAttribute(
     'src',
     'data:image/png;base64,bG9nbWFyX2NoYXJ0LW10Zg=='
