@@ -16,10 +16,10 @@
     "light": "淺色",
     "system": "系統設定",
     "dark": "深色",
-    "display": "顯示",
+    "display": "影像顯示",
     "basic": "基本",
     "advanced": "進階",
-    "advancedDiagnosticImage": "進階診斷影像",
+    "advancedDiagnosticImage": "進階顯示中的分析影像",
     "wavefrontMap": "波前誤差圖",
     "mtf": "MTF",
     "showScaleBar": "顯示比例尺"

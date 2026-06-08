@@ -16,10 +16,10 @@
     "light": "浅色",
     "system": "跟随系统",
     "dark": "深色",
-    "display": "显示",
+    "display": "图像显示",
     "basic": "基础",
     "advanced": "高级",
-    "advancedDiagnosticImage": "高级诊断图像",
+    "advancedDiagnosticImage": "高级显示中的分析图像",
     "wavefrontMap": "波前误差图",
     "mtf": "MTF",
     "showScaleBar": "显示比例尺"

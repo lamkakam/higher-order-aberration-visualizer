@@ -19,7 +19,7 @@
     "display": "Display",
     "basic": "Basic",
     "advanced": "Advanced",
-    "advancedDiagnosticImage": "Advanced diagnostic image",
+    "advancedDiagnosticImage": "Analysis Image in Advanced Display",
     "wavefrontMap": "Wavefront Map",
     "mtf": "MTF",
     "showScaleBar": "Show scale bar"

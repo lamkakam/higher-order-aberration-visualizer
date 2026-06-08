@@ -223,23 +223,23 @@ it('renders the header and settings drawer theme controls', async () => {
   expect(screen.getByRole('checkbox', { name: 'Show scale bar' })).not.toBeChecked();
 });
 
-it('shows the advanced diagnostic image selector only in advanced mode', async () => {
+it('shows the analysis image in advanced display selector only in advanced mode', async () => {
   renderAtPath('/en/basic');
 
   await openSettingsDrawer();
   expect(
-    screen.queryByRole('combobox', { name: 'Advanced diagnostic image' })
+    screen.queryByRole('combobox', { name: 'Analysis Image in Advanced Display' })
   ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
 
-  expect(screen.getByRole('combobox', { name: 'Advanced diagnostic image' })).toHaveValue(
+  expect(screen.getByRole('combobox', { name: 'Analysis Image in Advanced Display' })).toHaveValue(
     'wavefront_map'
   );
   expect(screen.getByRole('option', { name: 'Wavefront Map' })).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'MTF' })).toBeInTheDocument();
 });
 
-it('switches the final advanced diagnostic panel to MTF without recomputing', async () => {
+it('switches the analysis image in advanced display to MTF without recomputing', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
     async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
@@ -262,7 +262,7 @@ it('switches the final advanced diagnostic panel to MTF without recomputing', as
 
   fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
-  fireEvent.change(screen.getByRole('combobox', { name: 'Advanced diagnostic image' }), {
+  fireEvent.change(screen.getByRole('combobox', { name: 'Analysis Image in Advanced Display' }), {
     target: { value: 'mtf' }
   });
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
