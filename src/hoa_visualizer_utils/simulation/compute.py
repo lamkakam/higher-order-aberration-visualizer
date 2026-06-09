@@ -9,6 +9,7 @@ import numpy as np
 
 from hoa_visualizer_utils.simulation.aperture import ApertureSpec
 from hoa_visualizer_utils.simulation.models import (
+    MtfData,
     OpticalSimulation,
     SimulationInputs,
     SimulationSampling,
@@ -182,12 +183,29 @@ def compute_simulation(
         )
         wavelength_nm = representative_wavelength_nm
 
+    mtf_psf, mtf_dx_um = _compute_mtf_diagnostic_psf(
+        psf,
+        focused_dx_um=focused_dx_um,
+        entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
+        amp=amp,
+        r=r,
+        t=t,
+        pupil_mask=pupil_mask,
+        coefficients=representative_coefficients,
+        wavelength_nm=representative_wavelength_nm,
+        aperture_radius_mm=aperture_radius_mm,
+        pupil_dx_mm=pupil_dx_mm,
+        image_samples=image_samples,
+        propagation=propagation,
+    )
+
     return OpticalSimulation(
         target_id=target_id,
         target=np.asarray(target, dtype=float),
         psf=psf,
         convolved_image=np.asarray(convolved_image, dtype=float),
         wavefront_nm=np.asarray(wavefront_nm, dtype=float),
+        mtf=_compute_mtf_data(mtf_psf, image_dx_um=mtf_dx_um),
         pupil_mask=np.asarray(pupil_mask, dtype=bool),
         sampling=SimulationSampling(
             wavelength_nm=wavelength_nm,
@@ -202,6 +220,45 @@ def compute_simulation(
             zernike_coefficients=dict(representative_coefficients),
             target_id=target_id,
             aperture=resolved_aperture,
+        ),
+    )
+
+
+def _compute_mtf_data(psf: np.ndarray, *, image_dx_um: float) -> MtfData:
+    """Compute one-sided X, Y, and azimuthal-average MTF slices."""
+
+    from prysm.otf import mtf_from_psf
+
+    mtf = mtf_from_psf(psf, dx=image_dx_um)
+    slices = mtf.slices(twosided=False)
+    spatial_frequency_cycles_per_mm, x_mtf = slices.x
+    y_spatial_frequency_cycles_per_mm, y_mtf = slices.y
+    azavg_spatial_frequency_cycles_per_mm, azimuthal_average_mtf = slices.azavg
+    spatial_frequency_cycles_per_mm = np.asarray(
+        spatial_frequency_cycles_per_mm,
+        dtype=float,
+    )
+    y_spatial_frequency_cycles_per_mm = np.asarray(
+        y_spatial_frequency_cycles_per_mm,
+        dtype=float,
+    )
+    azavg_spatial_frequency_cycles_per_mm = np.asarray(
+        azavg_spatial_frequency_cycles_per_mm,
+        dtype=float,
+    )
+
+    return MtfData(
+        spatial_frequency_cycles_per_mm=spatial_frequency_cycles_per_mm,
+        x_mtf=np.asarray(x_mtf, dtype=float),
+        y_mtf=np.interp(
+            spatial_frequency_cycles_per_mm,
+            y_spatial_frequency_cycles_per_mm,
+            np.asarray(y_mtf, dtype=float),
+        ),
+        azimuthal_average_mtf=np.interp(
+            spatial_frequency_cycles_per_mm,
+            azavg_spatial_frequency_cycles_per_mm,
+            np.asarray(azimuthal_average_mtf, dtype=float),
         ),
     )
 
@@ -321,6 +378,66 @@ def _compute_psf(
     if not np.isfinite(psf_sum) or psf_sum <= 0:
         raise ValueError("PSF energy must be finite and positive")
     return psf / psf_sum, np.asarray(wavefront_nm, dtype=float), float(focused.dx)
+
+
+def _compute_mtf_diagnostic_psf(
+    psf: np.ndarray,
+    *,
+    focused_dx_um: float,
+    entrance_pupil_diameter_mm: float,
+    amp: np.ndarray,
+    r: np.ndarray,
+    t: np.ndarray,
+    pupil_mask: np.ndarray,
+    coefficients: Mapping[tuple[int, int], float],
+    wavelength_nm: float,
+    aperture_radius_mm: float,
+    pupil_dx_mm: float,
+    image_samples: int,
+    propagation,
+) -> tuple[np.ndarray, float]:
+    mtf_dx_um = _mtf_diagnostic_image_dx_um(
+        focused_dx_um,
+        entrance_pupil_diameter_mm=entrance_pupil_diameter_mm,
+    )
+    if mtf_dx_um == focused_dx_um:
+        return psf, focused_dx_um
+
+    mtf_psf, _, actual_mtf_dx_um = _compute_psf(
+        amp,
+        r,
+        t,
+        pupil_mask,
+        coefficients,
+        wavelength_nm=wavelength_nm,
+        aperture_radius_mm=aperture_radius_mm,
+        pupil_dx_mm=pupil_dx_mm,
+        prysm_image_dx_um=mtf_dx_um,
+        image_samples=image_samples,
+        propagation=propagation,
+    )
+    return mtf_psf, actual_mtf_dx_um
+
+
+def _mtf_diagnostic_image_dx_um(
+    focused_dx_um: float,
+    *,
+    entrance_pupil_diameter_mm: float,
+) -> float:
+    max_frequency_cycles_per_mm = (
+        _dawes_frequency_cycles_per_mm(entrance_pupil_diameter_mm) * 1.12
+    )
+    max_dx_um = 1_000 / (2 * max_frequency_cycles_per_mm)
+    return max_dx_um
+
+
+def _dawes_frequency_cycles_per_mm(entrance_pupil_diameter_mm: float) -> float:
+    dawes_arcsec = 116 / entrance_pupil_diameter_mm
+    dawes_radians = math.radians(dawes_arcsec / 3600)
+    image_plane_separation_mm = DEFAULT_EFFECTIVE_FOCAL_LENGTH_MM * math.tan(
+        dawes_radians
+    )
+    return 1 / image_plane_separation_mm
 
 
 def _convolve_target(target: np.ndarray, psf: np.ndarray, target_id: str, convolution):

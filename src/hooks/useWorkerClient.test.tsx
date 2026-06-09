@@ -18,6 +18,7 @@ function createTestWorkerClient(
         imageUrl: 'data:image/png;base64,c2ltdWxhdGVk',
         psfImageUrl: 'data:image/png;base64,cHNm',
         wavefrontImageUrl: 'data:image/png;base64,d2F2ZWZyb250',
+        mtfImageUrl: 'data:image/png;base64,bXRm',
         diagnostics: {
           status: 'ready',
           message: 'Mock worker ready'

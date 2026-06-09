@@ -19,6 +19,9 @@
     "display": "Display",
     "basic": "Basic",
     "advanced": "Advanced",
+    "advancedDiagnosticImage": "Analysis Image in Advanced Display",
+    "wavefrontMap": "Wavefront Map",
+    "mtf": "MTF",
     "showScaleBar": "Show scale bar"
   },
   "termsOfUse": {
@@ -63,7 +66,10 @@
     "psfAlt": "Rendered point spread function",
     "wavefrontMap": "Wavefront Map",
     "wavefrontDescription": "The rendered wavefront map for the current Zernike aberration values.",
-    "wavefrontAlt": "Rendered wavefront map"
+    "wavefrontAlt": "Rendered wavefront map",
+    "mtf": "MTF",
+    "mtfDescription": "The modulation transfer function for the current optical system. The x-axis represents spatial frequency normalized to the Dawes' limit of the optical system. The dashed line shows the MTF curve for an ideal, unobstructed optical system with the same aperture.",
+    "mtfAlt": "Rendered modulation transfer function plot"
   },
   "opticalSystem": {
     "title": "Optical System Config",

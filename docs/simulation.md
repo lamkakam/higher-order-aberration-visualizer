@@ -8,7 +8,7 @@ The browser passes a [`ConvolvedImageInput`](../src/workers/types.ts) to the wor
 
 - `apertureDiameterMm`: entrance pupil diameter in millimeters
 - `apertureSettings`: [`ApertureSettings`](../src/types/domain.ts) for circle, square, or regular hexagon apertures, optional matching central obstructions, optional spider vanes, and optional Gaussian apodization
-- `diagnosticWavelengthNm`: wavelength used for representative PSF, Wavefront Map, sampling wavelength, and coefficient diagnostics; Basic Mode and Advanced Monochromatic send `550`, and Advanced Polychromatic sends the active wavelength tab
+- `diagnosticWavelengthNm`: wavelength used for representative PSF, Wavefront Map, MTF, sampling wavelength, and coefficient diagnostics; Basic Mode and Advanced Monochromatic send `550`, and Advanced Polychromatic sends the active wavelength tab
 - `showScaleBar`: whether Simulated Image and PSF PNG renders include burned-in scale bars; defaults to `false` in the UI
 - `spectralMode`: `monochromatic` or `polychromatic`; Basic Mode always sends `monochromatic`
 - `targetId`: one of the supported target ids defined in [`src/types/domain.ts`](../src/types/domain.ts)
@@ -33,7 +33,7 @@ compute_simulation(
 
 Callers must provide exactly one or exactly three `(wavelength_nm, weight)` pairs and the same number of matching Zernike coefficient mappings. Wavelengths must be finite and positive, and weights must be finite and non-negative. One channel preserves monochromatic behavior and returns a 2D `simulation.convolved_image`; its weight is applied after convolution. Three channels produce linear RGB with shape `(H, W, 3)`. The wavelength entries are sorted by wavelength before rendering: longest wavelength becomes red, the middle wavelength becomes green, and the shortest wavelength becomes blue. Each channel gets its own wavefront, PSF, target convolution, and linear post-convolution weight multiplier. Weights are not normalized by the simulation.
 
-For three-channel results, the simulated RGB image still uses all three wavelength channels. The representative `simulation.psf`, `simulation.wavefront_nm`, `simulation.sampling.wavelength_nm`, and `simulation.inputs.zernike_coefficients` diagnostics come from `diagnostic_wavelength_nm` when it is provided, so PSF and Wavefront Map render from the active wavelength tab. If no diagnostic wavelength is provided, these representative fields come from the middle/green channel.
+For three-channel results, the simulated RGB image still uses all three wavelength channels. The representative `simulation.psf`, `simulation.wavefront_nm`, `simulation.mtf`, `simulation.sampling.wavelength_nm`, and `simulation.inputs.zernike_coefficients` diagnostics come from `diagnostic_wavelength_nm` when it is provided, so PSF, Wavefront Map, and MTF render from the active wavelength tab. If no diagnostic wavelength is provided, these representative fields come from the middle/green channel.
 
 ## Supported Targets
 
@@ -61,11 +61,14 @@ Supported target ids are defined in both [`src/types/domain.ts`](../src/types/do
 3. propagate the pupil to a fixed-sampling focal-plane PSF
 4. normalize the PSF energy
 5. build the requested target image
-6. convolve the target with the PSF, or use the normalized PSF directly for `point_source` and `wide_point_source`
+6. compute X, Y, and azimuthal-average MTF slices from a representative diagnostic PSF in cycles/mm
+7. convolve the target with the PSF, or use the normalized PSF directly for `point_source` and `wide_point_source`
 
 For polychromatic runs, steps 2 through 6 are repeated for each RGB channel. Non-Jupiter image targets reuse the same grayscale target in each channel. `point_source` and `wide_point_source` return an RGB image built from the three display-normalized PSFs. Jupiter builds separate red, green, and blue target channels from the 658 nm, 502 nm, and 395 nm assets before convolution.
 
-The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, pupil mask, sampling metadata, and normalized input metadata.
+MTF uses a representative diagnostic PSF sampled for the Dawes-limit frequency range of the current aperture. This diagnostic PSF is independent of the selected target's angular image scale, so changing from an eye chart to Jupiter does not change the optical MTF when aperture, wavelength, aberrations, and aperture mask are unchanged.
+
+The result is an [`OpticalSimulation`](../src/hoa_visualizer_utils/simulation/models.py) containing the target, PSF, convolved image, wavefront map, MTF data, pupil mask, sampling metadata, and normalized input metadata.
 
 The computed `simulation.convolved_image` remains linear normalized intensity data. Display-only tone mapping is applied only by renderers that explicitly request it.
 
@@ -81,19 +84,22 @@ When `image_dx_arcmin` is omitted, some targets use target-specific angular samp
 
 ## Rendered Outputs
 
-The worker renders three PNG outputs from each `OpticalSimulation`:
+The worker renders four PNG outputs from each `OpticalSimulation`:
 
 - convolved target image from [`render_convolved_image`](../src/hoa_visualizer_utils/rendering/convolved_image.py)
 - log-scaled PSF image from [`render_psf`](../src/hoa_visualizer_utils/rendering/psf.py)
 - wavefront OPD map from [`render_wavefront`](../src/hoa_visualizer_utils/rendering/wavefront.py)
+- MTF plot from [`render_mtf`](../src/hoa_visualizer_utils/rendering/mtf.py)
+
+The MTF plot includes X, Y, and azimuthal-average simulated curves plus a dashed Ideal diffraction-limited reference curve computed from the current f-number, diagnostic wavelength, and plotted spatial-frequency samples.
 
 The PSF and wavefront Python renderers use a default 10 by 9 inch Matplotlib figure size, which produces approximately 1000 by 900 pixel PNG outputs at Matplotlib's default 100 DPI. Convolved target PNGs render borderless with a canvas matching the convolved array aspect ratio, so a square target renders as a square PNG without Matplotlib's default white figure padding.
 
 The web worker renders the convolved target image with `display_scale="perceptual"`, a fixed `log1p(10 * x) / log1p(10)` display transform applied after clipping to `[0, 1]`. This improves visibility of low-intensity detail in the PNG only; the underlying `simulation.convolved_image` data stays linear.
 
-By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`.
+By default, the convolved target image and PSF renderings omit scale bars. When `showScaleBar` is `true`, those two renders include burned-in angular scale bars derived from `simulation.sampling.image_dx_arcmin`. Wavefront and MTF renderings do not include scale bars. The Wavefront Map colorbar uses waves by default and can be switched to microns through `wavefrontLegendUnit`. Advanced Mode defaults the final diagnostic panel to Wavefront Map, and the Settings drawer can switch that panel to the MTF plot without another worker computation because both images are returned together.
 
-The worker returns these as `imageUrl`, `psfImageUrl`, and `wavefrontImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
+The worker returns these as `imageUrl`, `psfImageUrl`, `wavefrontImageUrl`, and `mtfImageUrl` fields in [`ConvolvedImageResult`](../src/workers/types.ts).
 
 The worker can also render a standalone aperture mask preview with `renderApertureMask`. That path validates the same `ApertureSpec` settings, including spider vanes and Gaussian apodization, and returns an `ApertureMaskResult` PNG data URL without running `compute_simulation`.
 

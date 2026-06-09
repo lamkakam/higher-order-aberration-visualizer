@@ -10,6 +10,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supportedLanguageCodes } from '../../i18n';
 import type { SupportedLanguageCode } from '../../i18n';
+import type { AdvancedDiagnosticImage } from '../../types/domain';
 
 export type ThemeMode = 'light' | 'system' | 'dark';
 export type DisplayMode = 'basic' | 'advanced';
@@ -19,11 +20,13 @@ interface SettingsDrawerProps {
   readonly selectedLanguage: SupportedLanguageCode;
   readonly mode: ThemeMode;
   readonly displayMode: DisplayMode;
+  readonly advancedDiagnosticImage: AdvancedDiagnosticImage;
   readonly showScaleBar: boolean;
   readonly onClose: () => void;
   readonly onLanguageChange: (language: SupportedLanguageCode) => void;
   readonly onModeChange: (mode: ThemeMode) => void;
   readonly onDisplayModeChange: (mode: DisplayMode) => void;
+  readonly onAdvancedDiagnosticImageChange: (image: AdvancedDiagnosticImage) => void;
   readonly onShowScaleBarChange: (showScaleBar: boolean) => void;
 }
 
@@ -38,20 +41,28 @@ const displayModeOptions = [
   { value: 'advanced', labelKey: 'settings.advanced' }
 ] as const;
 
+const advancedDiagnosticImageOptions = [
+  { value: 'wavefront_map', labelKey: 'settings.wavefrontMap' },
+  { value: 'mtf', labelKey: 'settings.mtf' }
+] as const;
+
 export function SettingsDrawer({
   open,
   selectedLanguage,
   mode,
   displayMode,
+  advancedDiagnosticImage,
   showScaleBar,
   onClose,
   onLanguageChange,
   onModeChange,
   onDisplayModeChange,
+  onAdvancedDiagnosticImageChange,
   onShowScaleBarChange
 }: SettingsDrawerProps) {
   const { t } = useTranslation();
   const languageSelectId = useId();
+  const advancedDiagnosticImageSelectId = useId();
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -116,6 +127,36 @@ export function SettingsDrawer({
             </Button>
           ))}
         </ButtonGroup>
+        {displayMode === 'advanced' ? (
+          <>
+            <Typography
+              component="label"
+              htmlFor={advancedDiagnosticImageSelectId}
+              variant="subtitle2"
+              sx={{ display: 'block', mb: 1, mt: 3 }}
+            >
+              {t('settings.advancedDiagnosticImage')}
+            </Typography>
+            <NativeSelect
+              fullWidth
+              value={advancedDiagnosticImage}
+              onChange={(event) => {
+                onAdvancedDiagnosticImageChange(
+                  event.target.value as AdvancedDiagnosticImage
+                );
+              }}
+              inputProps={{
+                id: advancedDiagnosticImageSelectId
+              }}
+            >
+              {advancedDiagnosticImageOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {t(option.labelKey)}
+                </option>
+              ))}
+            </NativeSelect>
+          </>
+        ) : undefined}
         <FormControlLabel
           sx={{ mt: 3 }}
           control={

@@ -107,6 +107,7 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
           selectedLanguage={selectedLanguage}
           mode={themeMode}
           displayMode={displayMode}
+          advancedDiagnosticImage={simulation.advancedDiagnosticImage}
           showScaleBar={simulation.showScaleBar}
           onClose={() => {
             setSettingsOpen(false);
@@ -114,6 +115,7 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
           onLanguageChange={updateSelectedLanguage}
           onModeChange={setThemeMode}
           onDisplayModeChange={updateDisplayMode}
+          onAdvancedDiagnosticImageChange={simulation.setAdvancedDiagnosticImage}
           onShowScaleBarChange={simulation.setShowScaleBar}
         />
         <TermsOfUseModal
@@ -140,6 +142,7 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
               isSmUp={isSmUp}
               result={simulation.result}
               targetId={simulation.targetId}
+              advancedDiagnosticImage={simulation.advancedDiagnosticImage}
               wavefrontLegendUnit={simulation.wavefrontLegendUnit}
               onWavefrontLegendUnitChange={simulation.setWavefrontLegendUnit}
             />

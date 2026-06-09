@@ -33,6 +33,16 @@ class SimulationSampling:
 
 
 @dataclass(frozen=True)
+class MtfData:
+    """MTF slices derived from the representative diagnostic PSF."""
+
+    spatial_frequency_cycles_per_mm: NDArray[np.float64]
+    x_mtf: NDArray[np.float64]
+    y_mtf: NDArray[np.float64]
+    azimuthal_average_mtf: NDArray[np.float64]
+
+
+@dataclass(frozen=True)
 class OpticalSimulation:
     """Computed optical simulation arrays and metadata."""
 
@@ -41,6 +51,7 @@ class OpticalSimulation:
     psf: NDArray[np.float64]
     convolved_image: NDArray[np.float64]
     wavefront_nm: NDArray[np.float64]
+    mtf: MtfData
     pupil_mask: NDArray[np.bool_]
     sampling: SimulationSampling
     inputs: SimulationInputs

@@ -30,6 +30,7 @@ export function createMockWorkerClient(
         imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
         psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
         wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+        mtfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-mtf`)}`,
         diagnostics
       };
     },
