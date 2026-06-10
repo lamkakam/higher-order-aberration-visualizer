@@ -80,6 +80,7 @@
     "editApertureMask": "設定光圈遮罩",
     "edit": "設定",
     "spectralMode": "光譜模式",
+    "fwhmSeeingArcsec": "FWHM 視寧度 (弧秒)",
     "monochromatic": "單色",
     "polychromatic": "多色",
     "polychromaticWavelength": "波長",

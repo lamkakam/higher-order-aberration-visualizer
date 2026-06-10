@@ -20,6 +20,8 @@ The worker converts the wavelength-scoped Zernike keys to Python `(n, m)` tuples
 
 The UI exposes the Zernike terms listed in [`src/components/lib/simulationConfig.ts`](../src/components/lib/simulationConfig.ts). Coefficient inputs can be displayed in waves or microns. Wave/micron conversion uses the active wavelength tab in Advanced Polychromatic Mode, and defaults to `550 nm` in Basic Mode and Advanced Monochromatic Mode. Values sent to the worker remain in waves. Basic Mode and Advanced Monochromatic Mode show a single aberration card backed by the `550 nm` coefficient state. Advanced Polychromatic Mode shows tabs for `550 nm`, `656 nm`, and `486 nm`; each tab has an independent aberration card and reset action, and the `550 nm` tab shares state with monochromatic mode. The Python simulation accepts any finite `(n, m)` coefficient key that `prysm.polynomials.zernike_nm` can evaluate.
 
+Advanced Mode also exposes `FWHM Seeing (arcsecond)`. This value is not part of the worker API and is not stored in user-editable Zernike coefficient state. Before `ApplicationShell` calls `computeConvolvedImage`, the browser mixes seeing into the outgoing wavelength-scoped Zernike RMS payload by root-sum-square using Noll 1976 atmospheric variance coefficients. Tilt terms `1,-1` and `1,1` are included in the payload even though they are not editable UI terms, and defocus `2,0` receives no seeing contribution. Basic Mode always sends `0` seeing.
+
 The internal Python API and the browser worker require wavelength-scoped channel inputs:
 
 ```python

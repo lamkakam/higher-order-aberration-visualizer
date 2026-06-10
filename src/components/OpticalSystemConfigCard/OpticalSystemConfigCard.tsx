@@ -19,6 +19,7 @@ import type {
   SupportedTargetId
 } from '../../types/domain';
 import type { ApertureMaskResult } from '../../workers/types';
+import { CommitSlider } from '../CommitSlider';
 import type { DisplayMode } from '../SettingsDrawer';
 import { NumberField } from '../NumberField';
 import { targetOptions } from '../lib/simulationConfig';
@@ -29,10 +30,12 @@ interface OpticalSystemConfigCardProps {
   readonly apertureDiameterMm: number;
   readonly apertureSettings: ApertureSettings;
   readonly displayMode: DisplayMode;
+  readonly fwhmSeeingArcsec: number;
   readonly spectralMode: SpectralMode;
   readonly targetId: SupportedTargetId;
   readonly onApertureChange: (value: number) => void;
   readonly onApertureSettingsChange: (value: ApertureSettings) => void;
+  readonly onFwhmSeeingArcsecChange: (value: number) => void;
   readonly onRenderApertureMask: (value: ApertureSettings) => Promise<ApertureMaskResult>;
   readonly onSpectralModeChange: (value: SpectralMode) => void;
   readonly onTargetChange: (value: SupportedTargetId) => void;
@@ -42,10 +45,12 @@ export function OpticalSystemConfigCard({
   apertureDiameterMm,
   apertureSettings,
   displayMode,
+  fwhmSeeingArcsec,
   spectralMode,
   targetId,
   onApertureChange,
   onApertureSettingsChange,
+  onFwhmSeeingArcsecChange,
   onRenderApertureMask,
   onSpectralModeChange,
   onTargetChange
@@ -173,6 +178,34 @@ export function OpticalSystemConfigCard({
                     {t('opticalSystem.polychromatic')}
                   </ToggleButton>
                 </ToggleButtonGroup>
+              </ControlRow>
+              <ControlRow
+                labelContent={
+                  <Typography id="fwhm-seeing-label" variant="subtitle2" component="p">
+                    {t('opticalSystem.fwhmSeeingArcsec')}
+                  </Typography>
+                }
+              >
+                <CommitSlider
+                  ariaLabel={t('opticalSystem.fwhmSeeingArcsec')}
+                  min={0}
+                  max={5}
+                  step={0.01}
+                  value={fwhmSeeingArcsec}
+                  input={{
+                    formatValue: (value) => value.toFixed(2),
+                    parseDraft: Number,
+                    isDraftAllowed: (draft) => /^\d*(?:\.\d{0,2})?$/.test(draft),
+                    isValidDraft: (_draft, parsedValue) =>
+                      Number.isFinite(parsedValue) && parsedValue >= 0 && parsedValue <= 5,
+                    inputMode: 'decimal',
+                    inputMin: 0,
+                    inputMax: 5,
+                    inputStep: 0.01
+                  }}
+                  roundValue={(value) => Math.round(value * 100) / 100}
+                  onCommit={onFwhmSeeingArcsecChange}
+                />
               </ControlRow>
             </Stack>
           ) : undefined}

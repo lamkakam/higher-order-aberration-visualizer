@@ -1595,6 +1595,7 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
   render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText('Spectral Mode')).not.toBeInTheDocument();
+  expect(screen.queryByText('FWHM Seeing (arcsecond)')).not.toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1602,6 +1603,20 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
 
   expect(screen.getByText('Spectral Mode')).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Spectral Mode' })).toBeInTheDocument();
+  expect(screen.getAllByText('FWHM Seeing (arcsecond)')).toHaveLength(2);
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
+    'min',
+    '0'
+  );
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
+    'max',
+    '5'
+  );
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
+    'step',
+    '0.01'
+  );
   expect(screen.getByRole('button', { name: 'Monochromatic' })).toHaveAttribute(
     'aria-pressed',
     'true'
@@ -1610,6 +1625,67 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
     'aria-pressed',
     'false'
   );
+});
+
+it('applies FWHM seeing only to the worker payload and keeps visible Zernike inputs unchanged', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
+    target: { value: '0.200' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }), {
+    target: { value: '1.25' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  const lastPayload = computeConvolvedImage.mock.calls.at(-1)?.[0];
+  expect(lastPayload).toEqual(
+    expect.objectContaining({
+      zernikeCoefficientsByWavelength: [
+        [
+          550,
+          expect.objectContaining({
+            '1,-1': expect.any(Number),
+            '1,1': expect.any(Number),
+            '2,0': 0,
+            '4,0': expect.any(Number)
+          })
+        ]
+      ]
+    })
+  );
+  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['1,1']).toBeGreaterThan(0);
+  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['4,0']).toBeGreaterThan(0.2);
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.200');
 });
 
 it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode', async () => {
