@@ -188,6 +188,7 @@ export function OpticalSystemConfigCard({
               >
                 <CommitSlider
                   ariaLabel={t('opticalSystem.fwhmSeeingArcsec')}
+                  label=""
                   min={0}
                   max={5}
                   step={0.01}

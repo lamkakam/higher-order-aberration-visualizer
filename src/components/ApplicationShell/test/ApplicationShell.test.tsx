@@ -1603,7 +1603,8 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
 
   expect(screen.getByText('Spectral Mode')).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Spectral Mode' })).toBeInTheDocument();
-  expect(screen.getAllByText('FWHM Seeing (arcsecond)')).toHaveLength(2);
+  expect(screen.getAllByText('FWHM Seeing (arcsecond)')).toHaveLength(1);
+  expect(screen.getByRole('slider', { name: 'FWHM Seeing (arcsecond)' })).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('0.00');
   expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
     'min',
