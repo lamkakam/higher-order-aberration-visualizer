@@ -233,6 +233,22 @@ export function createDefaultZernikeCoefficients(): Record<ZernikeCoefficientKey
   >;
 }
 
+export function calculateDOverR0FromFwhmSeeing({
+  apertureDiameterMm,
+  fwhmSeeingArcsec,
+  wavelengthNm
+}: {
+  readonly apertureDiameterMm: number;
+  readonly fwhmSeeingArcsec: number;
+  readonly wavelengthNm: number;
+}): number {
+  if (fwhmSeeingArcsec <= 0) {
+    return 0;
+  }
+
+  return (apertureDiameterMm * fwhmSeeingArcsec) / (0.20214 * wavelengthNm);
+}
+
 export function applyFwhmSeeingToZernikePayload({
   apertureDiameterMm,
   fwhmSeeingArcsec,
@@ -249,7 +265,11 @@ export function applyFwhmSeeingToZernikePayload({
   }
 
   return zernikeCoefficientsByWavelength.map(([wavelength, coefficients]) => {
-    const dOverR0 = (apertureDiameterMm * fwhmSeeingArcsec) / (0.20214 * wavelength);
+    const dOverR0 = calculateDOverR0FromFwhmSeeing({
+      apertureDiameterMm,
+      fwhmSeeingArcsec,
+      wavelengthNm: wavelength
+    });
     const nextCoefficients: Record<ZernikeCoefficientKey, number> = { ...coefficients };
 
     for (const key of Object.keys(

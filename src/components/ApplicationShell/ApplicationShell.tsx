@@ -152,6 +152,9 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
                 apertureSettings={simulation.apertureSettings}
                 displayMode={displayMode}
                 fwhmSeeingArcsec={simulation.fwhmSeeingArcsec}
+                selectedDisplayWavelengthNm={
+                  simulation.isPolychromatic ? simulation.selectedWavelength : 550
+                }
                 spectralMode={simulation.spectralMode}
                 targetId={simulation.targetId}
                 onApertureChange={simulation.setApertureDiameterMm}

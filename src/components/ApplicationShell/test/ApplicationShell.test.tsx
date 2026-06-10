@@ -1604,6 +1604,7 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
   expect(screen.getByText('Spectral Mode')).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Spectral Mode' })).toBeInTheDocument();
   expect(screen.getAllByText('FWHM Seeing (arcsecond)')).toHaveLength(1);
+  expect(screen.getByText('D/r₀ = 0.00')).toBeInTheDocument();
   expect(screen.getByRole('slider', { name: 'FWHM Seeing (arcsecond)' })).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('0.00');
   expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
@@ -1626,6 +1627,27 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
     'aria-pressed',
     'false'
   );
+});
+
+it('updates the displayed D/r0 value from aperture and FWHM seeing inputs', async () => {
+  const user = userEvent.setup();
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }), {
+    target: { value: '200' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }), {
+    target: { value: '1.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }));
+
+  expect(screen.getByText('D/r₀ = 1.80')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('1.00');
 });
 
 it('applies FWHM seeing only to the worker payload and keeps visible Zernike inputs unchanged', async () => {
@@ -1677,7 +1699,7 @@ it('applies FWHM seeing only to the worker payload and keeps visible Zernike inp
           expect.objectContaining({
             '1,-1': expect.any(Number),
             '1,1': expect.any(Number),
-            '2,0': 0,
+            '2,0': expect.any(Number),
             '4,0': expect.any(Number)
           })
         ]
@@ -1685,6 +1707,7 @@ it('applies FWHM seeing only to the worker payload and keeps visible Zernike inp
     })
   );
   expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['1,1']).toBeGreaterThan(0);
+  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['2,0']).toBeGreaterThan(0);
   expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['4,0']).toBeGreaterThan(0.2);
   expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.200');
 });
@@ -1723,6 +1746,35 @@ it('shows wavelength tabs and sync controls in Advanced Polychromatic mode', asy
   expect(screen.getByRole('tab', { name: '486 nm' })).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Sync wavelengths' })).toBeChecked();
   expect(screen.getByRole('button', { name: 'Reset all wavelengths' })).toBeInTheDocument();
+});
+
+it('updates the displayed D/r0 value for the selected polychromatic wavelength tab', async () => {
+  const user = userEvent.setup();
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }), {
+    target: { value: '200' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }), {
+    target: { value: '1.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }));
+
+  expect(screen.getByText('D/r₀ = 1.80')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+
+  expect(screen.getByText('D/r₀ = 2.04')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+
+  expect(screen.getByText('D/r₀ = 1.51')).toBeInTheDocument();
 });
 
 it('syncs changed polychromatic coefficient values across wavelength tabs by default', async () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   approximateStrehlRatio,
   applyFwhmSeeingToZernikePayload,
+  calculateDOverR0FromFwhmSeeing,
   computeRmsWavefrontError,
   createDefaultZernikeCoefficients,
   formatApproximateStrehlRatio
@@ -35,6 +36,26 @@ describe('Strehl ratio helpers', () => {
 });
 
 describe('FWHM seeing payload helper', () => {
+  it('calculates D/r0 from aperture, seeing, and wavelength', () => {
+    expect(
+      calculateDOverR0FromFwhmSeeing({
+        apertureDiameterMm: 6,
+        fwhmSeeingArcsec: 1,
+        wavelengthNm: 550
+      })
+    ).toBeCloseTo(6 / (0.20214 * 550));
+  });
+
+  it('returns zero D/r0 for zero seeing', () => {
+    expect(
+      calculateDOverR0FromFwhmSeeing({
+        apertureDiameterMm: 6,
+        fwhmSeeingArcsec: 0,
+        wavelengthNm: 550
+      })
+    ).toBe(0);
+  });
+
   it('returns cloned coefficient maps without mutating user coefficients when seeing is zero', () => {
     const coefficients = createDefaultZernikeCoefficients();
     coefficients['4,0'] = 0.2;

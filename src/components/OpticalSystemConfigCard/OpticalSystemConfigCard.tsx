@@ -22,7 +22,7 @@ import type { ApertureMaskResult } from '../../workers/types';
 import { CommitSlider } from '../CommitSlider';
 import type { DisplayMode } from '../SettingsDrawer';
 import { NumberField } from '../NumberField';
-import { targetOptions } from '../lib/simulationConfig';
+import { calculateDOverR0FromFwhmSeeing, targetOptions } from '../lib/simulationConfig';
 import { ApertureMaskModal } from './ApertureMaskModal';
 import { formatApertureSummary } from './apertureMaskRules';
 
@@ -31,6 +31,7 @@ interface OpticalSystemConfigCardProps {
   readonly apertureSettings: ApertureSettings;
   readonly displayMode: DisplayMode;
   readonly fwhmSeeingArcsec: number;
+  readonly selectedDisplayWavelengthNm: number;
   readonly spectralMode: SpectralMode;
   readonly targetId: SupportedTargetId;
   readonly onApertureChange: (value: number) => void;
@@ -46,6 +47,7 @@ export function OpticalSystemConfigCard({
   apertureSettings,
   displayMode,
   fwhmSeeingArcsec,
+  selectedDisplayWavelengthNm,
   spectralMode,
   targetId,
   onApertureChange,
@@ -59,6 +61,11 @@ export function OpticalSystemConfigCard({
   const apertureHasError = !Number.isFinite(apertureDiameterMm) || apertureDiameterMm < 0.5;
   const accordionId = useId();
   const [isApertureModalOpen, setIsApertureModalOpen] = useState(false);
+  const dOverR0 = calculateDOverR0FromFwhmSeeing({
+    apertureDiameterMm,
+    fwhmSeeingArcsec,
+    wavelengthNm: selectedDisplayWavelengthNm
+  });
 
   function handleTargetChange(event: ChangeEvent<HTMLSelectElement>) {
     onTargetChange(event.target.value as SupportedTargetId);
@@ -181,9 +188,14 @@ export function OpticalSystemConfigCard({
               </ControlRow>
               <ControlRow
                 labelContent={
-                  <Typography id="fwhm-seeing-label" variant="subtitle2" component="p">
-                    {t('opticalSystem.fwhmSeeingArcsec')}
-                  </Typography>
+                  <Stack spacing={0.5}>
+                    <Typography id="fwhm-seeing-label" variant="subtitle2" component="p">
+                      {t('opticalSystem.fwhmSeeingArcsec')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('opticalSystem.dOverR0', { value: dOverR0.toFixed(2) })}
+                    </Typography>
+                  </Stack>
                 }
               >
                 <CommitSlider

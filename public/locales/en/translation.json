@@ -81,6 +81,7 @@
     "edit": "Edit",
     "spectralMode": "Spectral Mode",
     "fwhmSeeingArcsec": "FWHM Seeing (arcsecond)",
+    "dOverR0": "D/r₀ = {{value}}",
     "monochromatic": "Monochromatic",
     "polychromatic": "Polychromatic",
     "polychromaticWavelength": "Wavelengths",

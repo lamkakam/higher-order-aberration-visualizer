@@ -81,6 +81,7 @@
     "edit": "编辑",
     "spectralMode": "光谱模式",
     "fwhmSeeingArcsec": "FWHM 视宁度 (角秒)",
+    "dOverR0": "D/r₀ = {{value}}",
     "monochromatic": "单色",
     "polychromatic": "多色",
     "polychromaticWavelength": "波长",
