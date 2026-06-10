@@ -80,7 +80,7 @@
     "editApertureMask": "编辑孔径遮挡",
     "edit": "编辑",
     "spectralMode": "光谱模式",
-    "fwhmSeeingArcsec": "FWHM 视宁度 (角秒)",
+    "fwhmSeeingArcsec": "视宁度半峰全宽(FWHM) (角秒)",
     "dOverR0": "D/r₀ = {{value}}",
     "monochromatic": "单色",
     "polychromatic": "多色",
