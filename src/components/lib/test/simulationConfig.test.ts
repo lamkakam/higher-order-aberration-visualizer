@@ -66,7 +66,7 @@ describe('FWHM seeing payload helper', () => {
     expect(coefficients['1,1']).toBeUndefined();
   });
 
-  it('does not add seeing contribution to defocus', () => {
+  it('combines defocus with seeing by root-sum-square', () => {
     const coefficients = createDefaultZernikeCoefficients();
     coefficients['2,0'] = 0.125;
 
@@ -75,8 +75,17 @@ describe('FWHM seeing payload helper', () => {
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [[550, coefficients]]
     });
+    const seeingOnlyPayload = applyFwhmSeeingToZernikePayload({
+      apertureDiameterMm: 6,
+      fwhmSeeingArcsec: 1,
+      zernikeCoefficientsByWavelength: [[550, createDefaultZernikeCoefficients()]]
+    });
+    const seeingOnlyDefocus = seeingOnlyPayload[0][1]['2,0'];
 
-    expect(mixedPayload[0][1]['2,0']).toBe(0.125);
+    expect(mixedPayload[0][1]['2,0']).toBeCloseTo(
+      Math.sqrt(0.125 ** 2 + seeingOnlyDefocus ** 2)
+    );
+    expect(mixedPayload[0][1]['2,0']).toBeGreaterThan(0.125);
   });
 
   it('combines existing user coefficients with seeing by root-sum-square', () => {
