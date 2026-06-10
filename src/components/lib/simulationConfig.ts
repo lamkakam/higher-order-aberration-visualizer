@@ -249,7 +249,7 @@ export function calculateDOverR0FromFwhmSeeing({
   return (apertureDiameterMm * fwhmSeeingArcsec) / (0.20214 * wavelengthNm);
 }
 
-export function applyFwhmSeeingToZernikePayload({
+export function createFwhmSeeingZernikeSigmaPayload({
   apertureDiameterMm,
   fwhmSeeingArcsec,
   zernikeCoefficientsByWavelength
@@ -260,17 +260,17 @@ export function applyFwhmSeeingToZernikePayload({
 }): ZernikePayloadByWavelength {
   if (fwhmSeeingArcsec <= 0) {
     return zernikeCoefficientsByWavelength.map(
-      ([wavelength, coefficients]) => [wavelength, { ...coefficients }] as const
+      ([wavelength]) => [wavelength, {} as Record<ZernikeCoefficientKey, number>] as const
     );
   }
 
-  return zernikeCoefficientsByWavelength.map(([wavelength, coefficients]) => {
+  return zernikeCoefficientsByWavelength.map(([wavelength]) => {
     const dOverR0 = calculateDOverR0FromFwhmSeeing({
       apertureDiameterMm,
       fwhmSeeingArcsec,
       wavelengthNm: wavelength
     });
-    const nextCoefficients: Record<ZernikeCoefficientKey, number> = { ...coefficients };
+    const seeingSigmas = {} as Record<ZernikeCoefficientKey, number>;
 
     for (const key of Object.keys(
       atmosphericVarianceCoefficientsByZernikeKey
@@ -278,10 +278,9 @@ export function applyFwhmSeeingToZernikePayload({
       const varianceCoefficient = atmosphericVarianceCoefficientsByZernikeKey[key];
       const seeingSigma =
         (Math.sqrt(varianceCoefficient) / (2 * Math.PI)) * dOverR0 ** (5 / 6);
-      const userCoefficient = coefficients[key] ?? 0;
-      nextCoefficients[key] = Math.sqrt(userCoefficient ** 2 + seeingSigma ** 2);
+      seeingSigmas[key] = seeingSigma;
     }
 
-    return [wavelength, nextCoefficients] as const;
+    return [wavelength, seeingSigmas] as const;
   });
 }

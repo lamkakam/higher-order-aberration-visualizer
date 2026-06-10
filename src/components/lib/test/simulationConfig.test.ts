@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   approximateStrehlRatio,
-  applyFwhmSeeingToZernikePayload,
   calculateDOverR0FromFwhmSeeing,
   computeRmsWavefrontError,
+  createFwhmSeeingZernikeSigmaPayload,
   createDefaultZernikeCoefficients,
   formatApproximateStrehlRatio
 } from '../simulationConfig';
@@ -56,26 +56,27 @@ describe('FWHM seeing payload helper', () => {
     ).toBe(0);
   });
 
-  it('returns cloned coefficient maps without mutating user coefficients when seeing is zero', () => {
+  it('returns empty sigma maps without mutating user coefficients when seeing is zero', () => {
     const coefficients = createDefaultZernikeCoefficients();
     coefficients['4,0'] = 0.2;
     const payload = [[550, coefficients]] as const;
 
-    const mixedPayload = applyFwhmSeeingToZernikePayload({
+    const mixedPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 0,
       zernikeCoefficientsByWavelength: payload
     });
 
-    expect(mixedPayload).toEqual(payload);
+    expect(mixedPayload).toEqual([[550, {}]]);
     expect(mixedPayload).not.toBe(payload);
     expect(mixedPayload[0][1]).not.toBe(coefficients);
+    expect(coefficients['4,0']).toBe(0.2);
   });
 
   it('adds tilt terms for nonzero seeing while keeping user state separate', () => {
     const coefficients = createDefaultZernikeCoefficients();
 
-    const mixedPayload = applyFwhmSeeingToZernikePayload({
+    const mixedPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [[550, coefficients]]
@@ -87,53 +88,50 @@ describe('FWHM seeing payload helper', () => {
     expect(coefficients['1,1']).toBeUndefined();
   });
 
-  it('combines defocus with seeing by root-sum-square', () => {
+  it('returns sigma-only defocus without root-sum-square mixing', () => {
     const coefficients = createDefaultZernikeCoefficients();
     coefficients['2,0'] = 0.125;
 
-    const mixedPayload = applyFwhmSeeingToZernikePayload({
+    const sigmaPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [[550, coefficients]]
     });
-    const seeingOnlyPayload = applyFwhmSeeingToZernikePayload({
+    const seeingOnlyPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [[550, createDefaultZernikeCoefficients()]]
     });
     const seeingOnlyDefocus = seeingOnlyPayload[0][1]['2,0'];
 
-    expect(mixedPayload[0][1]['2,0']).toBeCloseTo(
-      Math.sqrt(0.125 ** 2 + seeingOnlyDefocus ** 2)
-    );
-    expect(mixedPayload[0][1]['2,0']).toBeGreaterThan(0.125);
+    expect(sigmaPayload[0][1]['2,0']).toBeCloseTo(seeingOnlyDefocus);
+    expect(sigmaPayload[0][1]['2,0']).toBeLessThan(0.125);
+    expect(coefficients['2,0']).toBe(0.125);
   });
 
-  it('combines existing user coefficients with seeing by root-sum-square', () => {
+  it('does not mutate or mix existing user coefficients into seeing sigmas', () => {
     const coefficients = createDefaultZernikeCoefficients();
     coefficients['4,0'] = 0.2;
 
-    const mixedPayload = applyFwhmSeeingToZernikePayload({
+    const sigmaPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [[550, coefficients]]
     });
 
-    const seeingOnlyPayload = applyFwhmSeeingToZernikePayload({
+    const seeingOnlyPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [[550, createDefaultZernikeCoefficients()]]
     });
     const seeingOnlySpherical = seeingOnlyPayload[0][1]['4,0'];
 
-    expect(mixedPayload[0][1]['4,0']).toBeCloseTo(
-      Math.sqrt(0.2 ** 2 + seeingOnlySpherical ** 2)
-    );
-    expect(mixedPayload[0][1]['4,0']).toBeLessThan(0.2 + seeingOnlySpherical);
+    expect(sigmaPayload[0][1]['4,0']).toBeCloseTo(seeingOnlySpherical);
+    expect(coefficients['4,0']).toBe(0.2);
   });
 
   it('scales seeing contribution by each wavelength channel', () => {
-    const mixedPayload = applyFwhmSeeingToZernikePayload({
+    const mixedPayload = createFwhmSeeingZernikeSigmaPayload({
       apertureDiameterMm: 6,
       fwhmSeeingArcsec: 1,
       zernikeCoefficientsByWavelength: [

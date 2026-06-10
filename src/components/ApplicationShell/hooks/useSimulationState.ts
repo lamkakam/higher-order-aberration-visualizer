@@ -23,7 +23,7 @@ import {
   type SpectralWavelength
 } from '../lib/defaults';
 import {
-  applyFwhmSeeingToZernikePayload,
+  createFwhmSeeingZernikeSigmaPayload,
   createDefaultZernikeCoefficients
 } from '../../lib/simulationConfig';
 
@@ -78,9 +78,9 @@ export function useSimulationState({
       ),
     [simulationWavelengths, zernikeCoefficientsByWavelength]
   );
-  const workerCoefficientsByWavelength = useMemo(
+  const seeingZernikeSigmasByWavelength = useMemo(
     () =>
-      applyFwhmSeeingToZernikePayload({
+      createFwhmSeeingZernikeSigmaPayload({
         apertureDiameterMm,
         fwhmSeeingArcsec: displayMode === 'advanced' ? fwhmSeeingArcsec : 0,
         zernikeCoefficientsByWavelength: simulationCoefficientsByWavelength
@@ -105,7 +105,10 @@ export function useSimulationState({
           targetId,
           wavelengthWeights,
           wavefrontLegendUnit,
-          zernikeCoefficientsByWavelength: workerCoefficientsByWavelength
+          ...(displayMode === 'advanced' && fwhmSeeingArcsec > 0
+            ? { seeingZernikeSigmasByWavelength }
+            : {}),
+          zernikeCoefficientsByWavelength: simulationCoefficientsByWavelength
         }),
         computeTimeoutMs,
         t('status.computeTimedOut')
@@ -138,13 +141,16 @@ export function useSimulationState({
     apertureSettings,
     client,
     diagnosticWavelengthNm,
+    displayMode,
     effectiveSpectralMode,
+    fwhmSeeingArcsec,
     showScaleBar,
     setDiagnostics,
     t,
     targetId,
     wavefrontLegendUnit,
-    workerCoefficientsByWavelength,
+    seeingZernikeSigmasByWavelength,
+    simulationCoefficientsByWavelength,
     wavelengthWeights
   ]);
 

@@ -1650,7 +1650,7 @@ it('updates the displayed D/r0 value from aperture and FWHM seeing inputs', asyn
   expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('1.00');
 });
 
-it('applies FWHM seeing only to the worker payload and keeps visible Zernike inputs unchanged', async () => {
+it('sends FWHM seeing as separate sigma payload and keeps visible Zernike inputs unchanged', async () => {
   vi.useFakeTimers();
   const computeConvolvedImage = vi.fn(
     async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
@@ -1697,6 +1697,14 @@ it('applies FWHM seeing only to the worker payload and keeps visible Zernike inp
         [
           550,
           expect.objectContaining({
+            '4,0': 0.2
+          })
+        ]
+      ],
+      seeingZernikeSigmasByWavelength: [
+        [
+          550,
+          expect.objectContaining({
             '1,-1': expect.any(Number),
             '1,1': expect.any(Number),
             '2,0': expect.any(Number),
@@ -1706,9 +1714,12 @@ it('applies FWHM seeing only to the worker payload and keeps visible Zernike inp
       ]
     })
   );
-  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['1,1']).toBeGreaterThan(0);
-  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['2,0']).toBeGreaterThan(0);
-  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['4,0']).toBeGreaterThan(0.2);
+  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['1,1']).toBeUndefined();
+  expect(lastPayload?.seeingZernikeSigmasByWavelength).toBeDefined();
+  const seeingSigmas = lastPayload?.seeingZernikeSigmasByWavelength;
+  expect(seeingSigmas?.[0][1]['1,1']).toBeGreaterThan(0);
+  expect(seeingSigmas?.[0][1]['2,0']).toBeGreaterThan(0);
+  expect(seeingSigmas?.[0][1]['4,0']).toBeGreaterThan(0);
   expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.200');
 });
 

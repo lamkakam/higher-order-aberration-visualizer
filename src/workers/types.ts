@@ -35,6 +35,10 @@ export interface ConvolvedImageInput {
   targetId: SupportedTargetId;
   wavelengthWeights: readonly (readonly [number, number])[];
   wavefrontLegendUnit: WavefrontLegendUnit;
+  seeingZernikeSigmasByWavelength?: readonly (readonly [
+    number,
+    Partial<Record<ZernikeCoefficientKey, number>>
+  ])[];
   zernikeCoefficientsByWavelength: readonly (readonly [
     number,
     Record<ZernikeCoefficientKey, number>
