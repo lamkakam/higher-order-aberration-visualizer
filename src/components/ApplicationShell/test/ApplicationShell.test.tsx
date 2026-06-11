@@ -1595,6 +1595,7 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
   render(<ApplicationShell workerClient={createMockWorkerClient()} />);
 
   expect(screen.queryByText('Spectral Mode')).not.toBeInTheDocument();
+  expect(screen.queryByText('FWHM Seeing (arcsecond)')).not.toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'Settings' }));
   await user.click(screen.getByRole('button', { name: 'Advanced' }));
@@ -1602,6 +1603,22 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
 
   expect(screen.getByText('Spectral Mode')).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Spectral Mode' })).toBeInTheDocument();
+  expect(screen.getAllByText('FWHM Seeing (arcsecond)')).toHaveLength(1);
+  expect(screen.getByText('D/r₀ = 0.00')).toBeInTheDocument();
+  expect(screen.getByRole('slider', { name: 'FWHM Seeing (arcsecond)' })).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('0.00');
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
+    'min',
+    '0'
+  );
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
+    'max',
+    '5'
+  );
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveAttribute(
+    'step',
+    '0.01'
+  );
   expect(screen.getByRole('button', { name: 'Monochromatic' })).toHaveAttribute(
     'aria-pressed',
     'true'
@@ -1610,6 +1627,100 @@ it('shows the spectral selector only in Advanced Mode defaulting to monochromati
     'aria-pressed',
     'false'
   );
+});
+
+it('updates the displayed D/r0 value from aperture and FWHM seeing inputs', async () => {
+  const user = userEvent.setup();
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }), {
+    target: { value: '200' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }), {
+    target: { value: '1.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }));
+
+  expect(screen.getByText('D/r₀ = 1.80')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('1.00');
+});
+
+it('sends FWHM seeing as separate sigma payload and keeps visible Zernike inputs unchanged', async () => {
+  vi.useFakeTimers();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  computeConvolvedImage.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  const sphericalName = 'Primary Spherical Aberration Z(4,0) coefficient';
+  fireEvent.change(screen.getByRole('textbox', { name: sphericalName }), {
+    target: { value: '0.200' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: sphericalName }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }), {
+    target: { value: '1.25' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }));
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  const lastPayload = computeConvolvedImage.mock.calls.at(-1)?.[0];
+  expect(lastPayload).toEqual(
+    expect.objectContaining({
+      zernikeCoefficientsByWavelength: [
+        [
+          550,
+          expect.objectContaining({
+            '4,0': 0.2
+          })
+        ]
+      ],
+      seeingZernikeSigmasByWavelength: [
+        [
+          550,
+          expect.objectContaining({
+            '1,-1': expect.any(Number),
+            '1,1': expect.any(Number),
+            '2,0': expect.any(Number),
+            '4,0': expect.any(Number)
+          })
+        ]
+      ]
+    })
+  );
+  expect(lastPayload?.zernikeCoefficientsByWavelength[0][1]['1,1']).toBeUndefined();
+  expect(lastPayload?.seeingZernikeSigmasByWavelength).toBeDefined();
+  const seeingSigmas = lastPayload?.seeingZernikeSigmasByWavelength;
+  expect(seeingSigmas?.[0][1]['1,1']).toBeGreaterThan(0);
+  expect(seeingSigmas?.[0][1]['2,0']).toBeGreaterThan(0);
+  expect(seeingSigmas?.[0][1]['4,0']).toBeGreaterThan(0);
+  expect(screen.getByRole('textbox', { name: sphericalName })).toHaveValue('0.200');
 });
 
 it('does not show wavelength tabs in Basic Mode or Advanced Monochromatic mode', async () => {
@@ -1646,6 +1757,35 @@ it('shows wavelength tabs and sync controls in Advanced Polychromatic mode', asy
   expect(screen.getByRole('tab', { name: '486 nm' })).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Sync wavelengths' })).toBeChecked();
   expect(screen.getByRole('button', { name: 'Reset all wavelengths' })).toBeInTheDocument();
+});
+
+it('updates the displayed D/r0 value for the selected polychromatic wavelength tab', async () => {
+  const user = userEvent.setup();
+  render(<ApplicationShell workerClient={createMockWorkerClient()} />);
+
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }), {
+    target: { value: '200' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'Aperture Diameter (mm)' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }), {
+    target: { value: '1.00' }
+  });
+  fireEvent.blur(screen.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' }));
+
+  expect(screen.getByText('D/r₀ = 1.80')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Polychromatic' }));
+  await user.click(screen.getByRole('tab', { name: '486 nm' }));
+
+  expect(screen.getByText('D/r₀ = 2.04')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('tab', { name: '656 nm' }));
+
+  expect(screen.getByText('D/r₀ = 1.51')).toBeInTheDocument();
 });
 
 it('syncs changed polychromatic coefficient values across wavelength tabs by default', async () => {

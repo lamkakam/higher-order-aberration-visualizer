@@ -177,6 +177,9 @@ async function computeConvolvedImage(
     target_id: input.targetId,
     spectral_mode: input.spectralMode,
     wavelength_weights: input.wavelengthWeights,
+    seeing_zernike_sigmas_by_wavelength_input:
+      input.seeingZernikeSigmasByWavelength ??
+      input.wavelengthWeights.map(([wavelength]) => [wavelength, {}]),
     zernike_coefficients_by_wavelength_input: input.zernikeCoefficientsByWavelength,
     wavefront_legend_unit: input.wavefrontLegendUnit,
   });
@@ -191,6 +194,13 @@ zernike_coefficients_by_wavelength = [
         for key, value in scoped_coefficients.items()
     }
     for _wavelength, scoped_coefficients in zernike_coefficients_by_wavelength_input
+]
+seeing_zernike_sigmas_by_wavelength = [
+    {
+        tuple(int(index) for index in key.split(",")): float(value)
+        for key, value in scoped_coefficients.items()
+    }
+    for _wavelength, scoped_coefficients in seeing_zernike_sigmas_by_wavelength_input
 ]
 aperture = ApertureSpec(
     shape=str(aperture_settings["shape"]),
@@ -213,6 +223,9 @@ simulation = compute_simulation(
     image_samples=512,
     aperture=aperture,
     diagnostic_wavelength_nm=float(diagnostic_wavelength_nm),
+    seeing_zernike_sigmas_by_wavelength=seeing_zernike_sigmas_by_wavelength,
+    seeing_sample_count=10,
+    random_seed=0,
 )
 `;
 

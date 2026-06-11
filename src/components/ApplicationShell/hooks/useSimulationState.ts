@@ -22,7 +22,10 @@ import {
   spectralWavelengths,
   type SpectralWavelength
 } from '../lib/defaults';
-import { createDefaultZernikeCoefficients } from '../../lib/simulationConfig';
+import {
+  createFwhmSeeingZernikeSigmaPayload,
+  createDefaultZernikeCoefficients
+} from '../../lib/simulationConfig';
 
 interface UseSimulationStateOptions {
   readonly displayMode: DisplayMode;
@@ -44,6 +47,7 @@ export function useSimulationState({
   const [advancedDiagnosticImage, setAdvancedDiagnosticImage] =
     useState<AdvancedDiagnosticImage>('wavefront_map');
   const [apertureDiameterMm, setApertureDiameterMm] = useState(defaultApertureDiameterMm);
+  const [fwhmSeeingArcsec, setFwhmSeeingArcsec] = useState(0);
   const [apertureSettings, setApertureSettings] = useState(defaultApertureSettings);
   const [targetId, setTargetId] = useState<SupportedTargetId>(defaultTargetId);
   const [zernikeCoefficientsByWavelength, setZernikeCoefficientsByWavelength] = useState(
@@ -74,6 +78,15 @@ export function useSimulationState({
       ),
     [simulationWavelengths, zernikeCoefficientsByWavelength]
   );
+  const seeingZernikeSigmasByWavelength = useMemo(
+    () =>
+      createFwhmSeeingZernikeSigmaPayload({
+        apertureDiameterMm,
+        fwhmSeeingArcsec: displayMode === 'advanced' ? fwhmSeeingArcsec : 0,
+        zernikeCoefficientsByWavelength: simulationCoefficientsByWavelength
+      }),
+    [apertureDiameterMm, displayMode, fwhmSeeingArcsec, simulationCoefficientsByWavelength]
+  );
   const diagnosticWavelengthNm = isPolychromatic ? selectedWavelength : 550;
 
   useEffect(() => {
@@ -92,6 +105,9 @@ export function useSimulationState({
           targetId,
           wavelengthWeights,
           wavefrontLegendUnit,
+          ...(displayMode === 'advanced' && fwhmSeeingArcsec > 0
+            ? { seeingZernikeSigmasByWavelength }
+            : {}),
           zernikeCoefficientsByWavelength: simulationCoefficientsByWavelength
         }),
         computeTimeoutMs,
@@ -125,12 +141,15 @@ export function useSimulationState({
     apertureSettings,
     client,
     diagnosticWavelengthNm,
+    displayMode,
     effectiveSpectralMode,
+    fwhmSeeingArcsec,
     showScaleBar,
     setDiagnostics,
     t,
     targetId,
     wavefrontLegendUnit,
+    seeingZernikeSigmasByWavelength,
     simulationCoefficientsByWavelength,
     wavelengthWeights
   ]);
@@ -201,6 +220,7 @@ export function useSimulationState({
     isImageLoading,
     isPolychromatic,
     isWorkerInitializing,
+    fwhmSeeingArcsec,
     renderApertureMask,
     resetAllZernikeCoefficientsByWavelength,
     resetZernikeCoefficients,
@@ -210,6 +230,7 @@ export function useSimulationState({
     setApertureSettings,
     setAdvancedDiagnosticImage,
     setSelectedWavelength,
+    setFwhmSeeingArcsec,
     setShowScaleBar,
     setSyncWavelengthCoefficients,
     setTargetId,

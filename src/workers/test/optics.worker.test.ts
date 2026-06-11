@@ -51,6 +51,7 @@ describe('optics worker', () => {
   const defaultMonochromaticChannels = {
     diagnosticWavelengthNm: 550,
     wavelengthWeights: [[550, 1]],
+    seeingZernikeSigmasByWavelength: [[550, {}]],
     zernikeCoefficientsByWavelength: [[550, {}]]
   } as const;
 
@@ -284,6 +285,9 @@ describe('optics worker', () => {
       targetId: 'siemensstar',
       wavefrontLegendUnit: 'micron',
       wavelengthWeights: [[550, 1]],
+      seeingZernikeSigmasByWavelength: [[550, {
+        '1,1': 0.12
+      }]],
       zernikeCoefficientsByWavelength: [[550, {
         '2,0': 0.25,
         '4,0': 0
@@ -386,6 +390,7 @@ describe('optics worker', () => {
       expect.objectContaining({
         globals: expect.objectContaining({
           wavelength_weights: [[550, 1]],
+          seeing_zernike_sigmas_by_wavelength_input: [[550, {}]],
           zernike_coefficients_by_wavelength_input: [[550, {}]]
         })
       })
@@ -398,6 +403,20 @@ describe('optics worker', () => {
       expect.stringContaining(
         'zernike_coefficients_by_wavelength=zernike_coefficients_by_wavelength'
       ),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'seeing_zernike_sigmas_by_wavelength=seeing_zernike_sigmas_by_wavelength'
+      ),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('seeing_sample_count=10'),
+      expect.any(Object)
+    );
+    expect(runPythonAsync).toHaveBeenCalledWith(
+      expect.stringContaining('random_seed=0'),
       expect.any(Object)
     );
   });
@@ -418,6 +437,11 @@ describe('optics worker', () => {
         [550, 1],
         [656, 1],
         [486, 1]
+      ],
+      seeingZernikeSigmasByWavelength: [
+        [550, {}],
+        [656, {}],
+        [486, {}]
       ],
       wavefrontLegendUnit: 'wave',
       zernikeCoefficientsByWavelength: [

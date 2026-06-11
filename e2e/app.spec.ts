@@ -189,6 +189,8 @@ test('app loads the simulator controls', async ({ page }) => {
   await expect(page.getByLabel('Target')).toContainText('Eye Chart (logMAR)');
   await expectOpticalConfigLabelIsLeftOfControl(page, 'Aperture Diameter (mm)');
   await expectOpticalConfigLabelIsLeftOfControl(page, 'Target');
+  await expect(page.getByText('D/r₀ = 0.00')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'FWHM Seeing (arcsecond)' })).toHaveValue('0.00');
   await expect(page.getByRole('heading', { name: 'Optical Aberrations (Zernike)' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset aberrations' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Simulated Image' })).toBeVisible();

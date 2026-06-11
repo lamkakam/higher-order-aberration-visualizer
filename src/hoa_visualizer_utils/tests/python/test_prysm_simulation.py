@@ -148,6 +148,133 @@ def test_compute_simulation_normalizes_psf_and_records_metadata() -> None:
     assert simulation.inputs.aperture == ApertureSpec()
 
 
+def test_compute_simulation_zero_seeing_sigma_matches_single_psf_behavior() -> None:
+    baseline = compute_simulation(
+        10,
+        {(4, 0): 0.1},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    sampled = _compute_simulation(
+        10,
+        [(550, 1)],
+        [{(4, 0): 0.1}],
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        seeing_zernike_sigmas_by_wavelength=[{(4, 0): 0}],
+        seeing_sample_count=10,
+        random_seed=0,
+    )
+
+    np.testing.assert_allclose(sampled.psf, baseline.psf)
+    np.testing.assert_allclose(sampled.wavefront_nm, baseline.wavefront_nm)
+
+
+def test_compute_simulation_sampled_seeing_is_deterministic_for_seed() -> None:
+    kwargs = {
+        "pupil_samples": 32,
+        "image_samples": 64,
+        "seeing_zernike_sigmas_by_wavelength": [{(4, 0): 0.2}],
+        "seeing_sample_count": 3,
+        "random_seed": 123,
+    }
+
+    first = _compute_simulation(10, [(550, 1)], [{}], "siemensstar", **kwargs)
+    second = _compute_simulation(10, [(550, 1)], [{}], "siemensstar", **kwargs)
+
+    np.testing.assert_allclose(first.psf, second.psf)
+    np.testing.assert_allclose(first.wavefront_nm, second.wavefront_nm)
+
+
+def test_compute_simulation_sampled_seeing_changes_with_seed() -> None:
+    first = _compute_simulation(
+        10,
+        [(550, 1)],
+        [{}],
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        seeing_zernike_sigmas_by_wavelength=[{(4, 0): 0.2}],
+        seeing_sample_count=3,
+        random_seed=123,
+    )
+    second = _compute_simulation(
+        10,
+        [(550, 1)],
+        [{}],
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        seeing_zernike_sigmas_by_wavelength=[{(4, 0): 0.2}],
+        seeing_sample_count=3,
+        random_seed=456,
+    )
+
+    assert not np.allclose(first.psf, second.psf)
+
+
+def test_compute_simulation_rejects_non_positive_seeing_sample_count() -> None:
+    with pytest.raises(ValueError, match="seeing_sample_count"):
+        _compute_simulation(
+            10,
+            [(550, 1)],
+            [{}],
+            "siemensstar",
+            pupil_samples=32,
+            image_samples=64,
+            seeing_sample_count=0,
+        )
+
+
+def test_sampled_seeing_keeps_psf_normalized_and_convolved_output_valid() -> None:
+    simulation = _compute_simulation(
+        10,
+        [(550, 1)],
+        [{}],
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        seeing_zernike_sigmas_by_wavelength=[{(4, 0): 0.2}],
+        seeing_sample_count=4,
+        random_seed=123,
+    )
+
+    assert np.isclose(simulation.psf.sum(), 1.0)
+    assert simulation.psf.min() >= 0
+    assert simulation.convolved_image.min() >= 0
+    assert simulation.convolved_image.max() <= 1
+
+
+def test_sampled_seeing_wavefront_is_average_total_wavefront() -> None:
+    telescope_coefficients = {(4, 0): 0.1}
+    seeing_sigmas = {(4, 0): 0.2}
+    simulation = _compute_simulation(
+        10,
+        [(550, 1)],
+        [telescope_coefficients],
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+        seeing_zernike_sigmas_by_wavelength=[seeing_sigmas],
+        seeing_sample_count=3,
+        random_seed=123,
+    )
+    rng = np.random.default_rng(123)
+    average_draw = float(rng.standard_normal(3).mean())
+    expected = compute_simulation(
+        10,
+        {(4, 0): telescope_coefficients[(4, 0)] + seeing_sigmas[(4, 0)] * average_draw},
+        "siemensstar",
+        pupil_samples=32,
+        image_samples=64,
+    )
+
+    np.testing.assert_allclose(simulation.wavefront_nm, expected.wavefront_nm)
+
+
 def test_compute_simulation_monochrome_contract_stays_2d() -> None:
     simulation = compute_simulation(
         10,

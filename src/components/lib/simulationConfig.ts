@@ -154,6 +154,41 @@ export const zernikeCoefficientMax = 5;
 export const zernikeCoefficientStep = 0.001;
 export const wavelengthNm = 550;
 
+type ZernikePayloadByWavelength = readonly (readonly [
+  number,
+  Record<ZernikeCoefficientKey, number>
+])[];
+
+const atmosphericVarianceCoefficientsByZernikeKey: Record<ZernikeCoefficientKey, number> = {
+  '1,-1': 0.448,
+  '1,1': 0.448,
+  '2,-2': 0.0232,
+  '2,0': 0.023,
+  '2,2': 0.0232,
+  '3,-3': 0.00619,
+  '3,-1': 0.00619,
+  '3,1': 0.00619,
+  '3,3': 0.00619,
+  '4,-4': 0.00254,
+  '4,-2': 0.00254,
+  '4,0': 0.00254,
+  '4,2': 0.00254,
+  '4,4': 0.00254,
+  '5,-5': 0.00129,
+  '5,-3': 0.00129,
+  '5,-1': 0.00129,
+  '5,1': 0.00129,
+  '5,3': 0.00129,
+  '5,5': 0.00129,
+  '6,-6': 0.00074,
+  '6,-4': 0.00074,
+  '6,-2': 0.00074,
+  '6,0': 0.00074,
+  '6,2': 0.00074,
+  '6,4': 0.00074,
+  '6,6': 0.00074
+};
+
 export function roundToThreeDecimals(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
@@ -196,4 +231,56 @@ export function createDefaultZernikeCoefficients(): Record<ZernikeCoefficientKey
     ZernikeCoefficientKey,
     number
   >;
+}
+
+export function calculateDOverR0FromFwhmSeeing({
+  apertureDiameterMm,
+  fwhmSeeingArcsec,
+  wavelengthNm
+}: {
+  readonly apertureDiameterMm: number;
+  readonly fwhmSeeingArcsec: number;
+  readonly wavelengthNm: number;
+}): number {
+  if (fwhmSeeingArcsec <= 0) {
+    return 0;
+  }
+
+  return (apertureDiameterMm * fwhmSeeingArcsec) / (0.20214 * wavelengthNm);
+}
+
+export function createFwhmSeeingZernikeSigmaPayload({
+  apertureDiameterMm,
+  fwhmSeeingArcsec,
+  zernikeCoefficientsByWavelength
+}: {
+  readonly apertureDiameterMm: number;
+  readonly fwhmSeeingArcsec: number;
+  readonly zernikeCoefficientsByWavelength: ZernikePayloadByWavelength;
+}): ZernikePayloadByWavelength {
+  if (fwhmSeeingArcsec <= 0) {
+    return zernikeCoefficientsByWavelength.map(
+      ([wavelength]) => [wavelength, {} as Record<ZernikeCoefficientKey, number>] as const
+    );
+  }
+
+  return zernikeCoefficientsByWavelength.map(([wavelength]) => {
+    const dOverR0 = calculateDOverR0FromFwhmSeeing({
+      apertureDiameterMm,
+      fwhmSeeingArcsec,
+      wavelengthNm: wavelength
+    });
+    const seeingSigmas = {} as Record<ZernikeCoefficientKey, number>;
+
+    for (const key of Object.keys(
+      atmosphericVarianceCoefficientsByZernikeKey
+    ) as ZernikeCoefficientKey[]) {
+      const varianceCoefficient = atmosphericVarianceCoefficientsByZernikeKey[key];
+      const seeingSigma =
+        (Math.sqrt(varianceCoefficient) / (2 * Math.PI)) * dOverR0 ** (5 / 6);
+      seeingSigmas[key] = seeingSigma;
+    }
+
+    return [wavelength, seeingSigmas] as const;
+  });
 }

@@ -47,6 +47,12 @@ def compute_simulation(
     ),
     aperture: ApertureSpec | None = None,
     diagnostic_wavelength_nm: float | None = None,
+    seeing_zernike_sigmas_by_wavelength: Sequence[
+        Mapping[tuple[int, int], float]
+    ]
+    | None = None,
+    seeing_sample_count: int = 10,
+    random_seed: int = 0,
 ) -> OpticalSimulation:
     """Compute target, PSF, convolved image, and wavefront data."""
 
@@ -55,6 +61,12 @@ def compute_simulation(
         wavelength_weights,
         zernike_coefficients_by_wavelength,
     )
+    validated_seeing_sigmas = _validate_seeing_sigmas_by_wavelength(
+        wavelength_weights,
+        seeing_zernike_sigmas_by_wavelength,
+        channel_count=len(validated_channels),
+    )
+    _validate_positive_int(seeing_sample_count, "seeing_sample_count")
     is_rgb = len(validated_channels) == 3
     default_representative_index = 1 if is_rgb else 0
     sampling_wavelength_nm = validated_channels[default_representative_index][0]
@@ -85,41 +97,46 @@ def compute_simulation(
     amp = resolved_aperture.amplitude(aperture_radius_mm, xi, eta, r)
     pupil_mask = amp > 0
 
-    channels = [
-        (
-            channel_wavelength_nm,
-            channel_weight,
-            _validate_inputs(
-                entrance_pupil_diameter_mm,
-                channel_coefficients,
-                target_id,
+    channels = []
+    for index, (
+        channel_wavelength_nm,
+        channel_weight,
+        channel_coefficients,
+    ) in enumerate(validated_channels):
+        channels.append(
+            (
                 channel_wavelength_nm,
-                pupil_samples,
-                image_samples,
-                resolved_image_dx_arcmin,
-            ),
+                channel_weight,
+                _validate_inputs(
+                    entrance_pupil_diameter_mm,
+                    channel_coefficients,
+                    target_id,
+                    channel_wavelength_nm,
+                    pupil_samples,
+                    image_samples,
+                    resolved_image_dx_arcmin,
+                ),
+                _validate_zernike_mapping(validated_seeing_sigmas[index]),
+            )
         )
-        for (
-            channel_wavelength_nm,
-            channel_weight,
-            channel_coefficients,
-        ) in validated_channels
-    ]
 
     if not is_rgb:
-        wavelength_nm, channel_weight, coefficients = channels[0]
-        psf, wavefront_nm, focused_dx_um = _compute_psf(
+        wavelength_nm, channel_weight, coefficients, seeing_sigmas = channels[0]
+        psf, wavefront_nm, focused_dx_um = _compute_averaged_psf(
             amp,
             r,
             t,
             pupil_mask,
             coefficients,
+            seeing_sigmas,
             wavelength_nm=wavelength_nm,
             aperture_radius_mm=aperture_radius_mm,
             pupil_dx_mm=pupil_dx_mm,
             prysm_image_dx_um=prysm_image_dx_um,
             image_samples=image_samples,
             propagation=propagation,
+            seeing_sample_count=seeing_sample_count,
+            rng=np.random.default_rng(random_seed),
         )
         x, y = coordinates.make_xy_grid(psf.shape, dx=focused_dx_um)
         target = _make_target(
@@ -133,26 +150,31 @@ def compute_simulation(
         )
         representative_coefficients = coefficients
     else:
+        rng = np.random.default_rng(random_seed)
         channel_results = [
-            _compute_psf(
+            _compute_averaged_psf(
                 amp,
                 r,
                 t,
                 pupil_mask,
                 channel_coefficients,
+                channel_seeing_sigmas,
                 wavelength_nm=channel_wavelength_nm,
                 aperture_radius_mm=aperture_radius_mm,
                 pupil_dx_mm=pupil_dx_mm,
                 prysm_image_dx_um=prysm_image_dx_um,
                 image_samples=image_samples,
                 propagation=propagation,
+                seeing_sample_count=seeing_sample_count,
+                rng=rng,
             )
-            for channel_wavelength_nm, _, channel_coefficients in channels
+            for channel_wavelength_nm, _, channel_coefficients, channel_seeing_sigmas in channels
         ]
         psf = channel_results[representative_index][0]
         wavefront_nm = channel_results[representative_index][1]
         focused_dx_um = channel_results[representative_index][2]
         representative_coefficients = channels[representative_index][2]
+        representative_seeing_sigmas = channels[representative_index][3]
         x, y = coordinates.make_xy_grid(psf.shape, dx=focused_dx_um)
         if target_id == "jupiter":
             target = _make_jupiter_rgb_target(
@@ -173,7 +195,7 @@ def compute_simulation(
             [
                 _convolve_target(channel_target, channel_psf, target_id, convolution)
                 * channel_weight
-                for channel_target, (channel_psf, _, _), (_, channel_weight, _) in zip(
+                for channel_target, (channel_psf, _, _), (_, channel_weight, _, _) in zip(
                     target_channels,
                     channel_results,
                     channels,
@@ -192,11 +214,14 @@ def compute_simulation(
         t=t,
         pupil_mask=pupil_mask,
         coefficients=representative_coefficients,
+        seeing_sigmas=representative_seeing_sigmas if is_rgb else seeing_sigmas,
         wavelength_nm=representative_wavelength_nm,
         aperture_radius_mm=aperture_radius_mm,
         pupil_dx_mm=pupil_dx_mm,
         image_samples=image_samples,
         propagation=propagation,
+        seeing_sample_count=seeing_sample_count,
+        random_seed=random_seed,
     )
 
     return OpticalSimulation(
@@ -300,6 +325,38 @@ def _validate_wavelength_channels(
     return sorted(channels, key=lambda channel: channel[0], reverse=True)
 
 
+def _validate_seeing_sigmas_by_wavelength(
+    wavelength_weights: Sequence[tuple[float, float]],
+    seeing_zernike_sigmas_by_wavelength: Sequence[Mapping[tuple[int, int], float]]
+    | None,
+    *,
+    channel_count: int,
+) -> list[Mapping[tuple[int, int], float]]:
+    if seeing_zernike_sigmas_by_wavelength is None:
+        return [{} for _ in range(channel_count)]
+    if len(seeing_zernike_sigmas_by_wavelength) != channel_count:
+        raise ValueError(
+            "seeing_zernike_sigmas_by_wavelength must match wavelength_weights length"
+        )
+    if channel_count == 1:
+        return list(seeing_zernike_sigmas_by_wavelength)
+    wavelength_sigmas = [
+        (float(wavelength_weight[0]), sigmas)
+        for wavelength_weight, sigmas in zip(
+            wavelength_weights,
+            seeing_zernike_sigmas_by_wavelength,
+        )
+    ]
+    return [
+        sigmas
+        for _, sigmas in sorted(
+            wavelength_sigmas,
+            key=lambda wavelength_sigmas_pair: wavelength_sigmas_pair[0],
+            reverse=True,
+        )
+    ]
+
+
 def _resolve_diagnostic_channel_index(
     channels: Sequence[tuple[float, float, Mapping[tuple[int, int], float]]],
     *,
@@ -323,6 +380,67 @@ def _resolve_diagnostic_channel_index(
     raise ValueError(
         "diagnostic_wavelength_nm must match a configured wavelength "
         f"({available_wavelengths})"
+    )
+
+
+def _compute_averaged_psf(
+    amp: np.ndarray,
+    r: np.ndarray,
+    t: np.ndarray,
+    pupil_mask: np.ndarray,
+    coefficients: Mapping[tuple[int, int], float],
+    seeing_sigmas: Mapping[tuple[int, int], float],
+    *,
+    wavelength_nm: float,
+    aperture_radius_mm: float,
+    pupil_dx_mm: float,
+    prysm_image_dx_um: float,
+    image_samples: int,
+    propagation,
+    seeing_sample_count: int,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    psf_sum: np.ndarray | None = None
+    wavefront_sum: np.ndarray | None = None
+    focused_dx_um = 0.0
+    has_seeing = any(sigma != 0 for sigma in seeing_sigmas.values())
+    sample_count = seeing_sample_count if has_seeing else 1
+
+    for _ in range(sample_count):
+        total_coefficients = dict(coefficients)
+        if has_seeing:
+            for key, sigma in seeing_sigmas.items():
+                total_coefficients[key] = total_coefficients.get(key, 0) + sigma * float(
+                    rng.standard_normal()
+                )
+        psf, wavefront_nm, focused_dx_um = _compute_psf(
+            amp,
+            r,
+            t,
+            pupil_mask,
+            total_coefficients,
+            wavelength_nm=wavelength_nm,
+            aperture_radius_mm=aperture_radius_mm,
+            pupil_dx_mm=pupil_dx_mm,
+            prysm_image_dx_um=prysm_image_dx_um,
+            image_samples=image_samples,
+            propagation=propagation,
+        )
+        psf_sum = psf if psf_sum is None else psf_sum + psf
+        wavefront_sum = (
+            wavefront_nm if wavefront_sum is None else wavefront_sum + wavefront_nm
+        )
+
+    if psf_sum is None or wavefront_sum is None:
+        raise ValueError("seeing_sample_count must be a positive integer")
+    averaged_psf = psf_sum / sample_count
+    averaged_psf_sum = averaged_psf.sum()
+    if not np.isfinite(averaged_psf_sum) or averaged_psf_sum <= 0:
+        raise ValueError("PSF energy must be finite and positive")
+    return (
+        averaged_psf / averaged_psf_sum,
+        np.asarray(wavefront_sum / sample_count, dtype=float),
+        focused_dx_um,
     )
 
 
@@ -390,11 +508,14 @@ def _compute_mtf_diagnostic_psf(
     t: np.ndarray,
     pupil_mask: np.ndarray,
     coefficients: Mapping[tuple[int, int], float],
+    seeing_sigmas: Mapping[tuple[int, int], float],
     wavelength_nm: float,
     aperture_radius_mm: float,
     pupil_dx_mm: float,
     image_samples: int,
     propagation,
+    seeing_sample_count: int,
+    random_seed: int,
 ) -> tuple[np.ndarray, float]:
     mtf_dx_um = _mtf_diagnostic_image_dx_um(
         focused_dx_um,
@@ -403,18 +524,21 @@ def _compute_mtf_diagnostic_psf(
     if mtf_dx_um == focused_dx_um:
         return psf, focused_dx_um
 
-    mtf_psf, _, actual_mtf_dx_um = _compute_psf(
+    mtf_psf, _, actual_mtf_dx_um = _compute_averaged_psf(
         amp,
         r,
         t,
         pupil_mask,
         coefficients,
+        seeing_sigmas,
         wavelength_nm=wavelength_nm,
         aperture_radius_mm=aperture_radius_mm,
         pupil_dx_mm=pupil_dx_mm,
         prysm_image_dx_um=mtf_dx_um,
         image_samples=image_samples,
         propagation=propagation,
+        seeing_sample_count=seeing_sample_count,
+        rng=np.random.default_rng(random_seed),
     )
     return mtf_psf, actual_mtf_dx_um
 
@@ -469,6 +593,12 @@ def _validate_inputs(
     if target_id not in SUPPORTED_TARGET_IDS:
         raise ValueError(f"target_id must be one of {sorted(SUPPORTED_TARGET_IDS)}")
 
+    return _validate_zernike_mapping(zernike_coefficients)
+
+
+def _validate_zernike_mapping(
+    zernike_coefficients: Mapping[tuple[int, int], float],
+) -> dict[tuple[int, int], float]:
     coefficients: dict[tuple[int, int], float] = {}
     for key, value in zernike_coefficients.items():
         if (
