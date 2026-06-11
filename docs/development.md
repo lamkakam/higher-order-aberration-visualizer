@@ -62,9 +62,11 @@ Playwright configuration is in [`playwright.config.ts`](../playwright.config.ts)
 
 ## CI/CD
 
-GitHub Actions runs the repository quality gates for pull requests to `main`, pushes to `main`, and manual `workflow_dispatch` runs. The workflow runs `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, and `npm run e2e` with Node.js 22, Python 3.11, npm caching, and Playwright Chromium installed.
+GitHub Actions runs the repository quality gates for pull requests to `main`, pushes to `main`, and manual `workflow_dispatch` runs. The workflow runs `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, and `npm run e2e` with Node.js 24, Python 3.11, npm caching, and Playwright Chromium installed.
 
 Pushes to `main` also deploy the static Vite build in `dist` to GitHub Pages after the checks pass. Pull requests and manual runs run checks only. Markdown-only pull requests, meaning changes where every file matches `**/*.md`, run a lightweight `Quality gates` check that skips full CI. Markdown-only pushes to `main` remain ignored so documentation-only merges do not deploy.
+
+Pushing a tag that matches `v*` runs the release workflow with the same quality gates, then creates a GitHub Release for that tag with generated release notes.
 
 Repository Settings → Pages must use `GitHub Actions` as the Pages source. The GitHub Pages build uses `/higher-order-aberration-visualizer/` as the Vite base path and writes `dist/404.html` from `dist/index.html` so direct visits to client routes such as `/higher-order-aberration-visualizer/en/basic` load the app shell.
 
