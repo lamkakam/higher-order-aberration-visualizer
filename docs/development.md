@@ -66,7 +66,7 @@ GitHub Actions runs the repository quality gates for pull requests to `main`, pu
 
 Pushes to `main` also deploy the static Vite build in `dist` to GitHub Pages after the checks pass. Pull requests and manual runs run checks only. Markdown-only pull requests, meaning changes where every file matches `**/*.md`, run a lightweight `Quality gates` check that skips full CI. Markdown-only pushes to `main` remain ignored so documentation-only merges do not deploy.
 
-Pushing a tag that matches `v*` runs the release workflow with the same quality gates, then creates a GitHub Release for that tag with generated release notes.
+Pushing a tag that matches `v*` runs the release workflow with the same quality gates, builds `dist` in GitHub Actions, packages it as a zip archive, then creates a GitHub Release for that tag with generated release notes and the packaged build attached.
 
 Repository Settings → Pages must use `GitHub Actions` as the Pages source. The GitHub Pages build uses `/higher-order-aberration-visualizer/` as the Vite base path and writes `dist/404.html` from `dist/index.html` so direct visits to client routes such as `/higher-order-aberration-visualizer/en/basic` load the app shell.
 
