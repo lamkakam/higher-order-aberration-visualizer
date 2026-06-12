@@ -186,6 +186,22 @@ export function useSimulationState({
     [effectiveSpectralMode, syncWavelengthCoefficients]
   );
 
+  const patchZernikeCoefficientsForWavelength = useCallback(
+    (
+      wavelength: SpectralWavelength,
+      coefficients: Partial<Record<ZernikeCoefficientKey, number>>
+    ) => {
+      setZernikeCoefficientsByWavelength((currentValues) => ({
+        ...currentValues,
+        [wavelength]: {
+          ...currentValues[wavelength],
+          ...coefficients
+        }
+      }));
+    },
+    []
+  );
+
   const resetZernikeCoefficients = useCallback((wavelength: SpectralWavelength) => {
     setZernikeCoefficientsByWavelength((currentValues) => ({
       ...currentValues,
@@ -222,6 +238,7 @@ export function useSimulationState({
     isWorkerInitializing,
     fwhmSeeingArcsec,
     renderApertureMask,
+    patchZernikeCoefficientsForWavelength,
     resetAllZernikeCoefficientsByWavelength,
     resetZernikeCoefficients,
     result,

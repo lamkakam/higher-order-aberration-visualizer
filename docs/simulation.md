@@ -23,6 +23,8 @@ The UI exposes the Zernike terms listed in [`src/components/lib/simulationConfig
 
 Advanced Mode also exposes `FWHM Seeing (arcsecond)`. This value is not stored in user-editable Zernike coefficient state and does not modify `zernikeCoefficientsByWavelength`. Before `ApplicationShell` calls `computeConvolvedImage`, the browser computes a separate wavelength-scoped seeing sigma payload from Noll 1976 atmospheric variance coefficients. Tilt terms `1,-1` and `1,1` are included in the sigma payload even though they are not editable UI terms, and defocus `2,0` is included. Basic Mode omits the seeing sigma payload, which the worker treats as empty sigma maps.
 
+WebMCP coefficient patches use the same editable Zernike term list and coefficient bounds as the UI. Basic route tool calls patch the shared `550 nm` coefficient map. Advanced route tool calls must include `wavelengthNm` as `550`, `656`, or `486`, and patch only that wavelength map even when `Sync wavelengths` is enabled.
+
 The internal Python API and the browser worker require wavelength-scoped channel inputs:
 
 ```python
