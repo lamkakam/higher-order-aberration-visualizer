@@ -3484,8 +3484,20 @@ it('keeps advanced result panels in separate cards on extra-small screens', asyn
 
 interface RegisteredWebMcpTool {
   readonly name: string;
+  readonly inputSchema: {
+    readonly properties?: Record<string, WebMcpJsonSchema>;
+  };
   readonly execute: (input: unknown) => unknown;
   readonly signal: AbortSignal;
+}
+
+interface WebMcpJsonSchema {
+  readonly type?: string;
+  readonly enum?: readonly number[];
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly properties?: Record<string, WebMcpJsonSchema>;
+  readonly additionalProperties?: boolean | WebMcpJsonSchema;
 }
 
 function installWebMcpRecorder() {
@@ -3526,6 +3538,21 @@ it('registers only the basic WebMCP zernike coefficient tool on basic routes', (
   expect(registrations[0].signal.aborted).toBe(false);
 });
 
+it('registers a closed basic WebMCP zernike coefficient schema', () => {
+  const registrations = installWebMcpRecorder();
+
+  renderAtPath('/en/basic');
+
+  const coefficientsSchema = registrations[0].inputSchema.properties?.coefficients;
+  expect(coefficientsSchema?.additionalProperties).toBe(false);
+  expect(coefficientsSchema?.properties).toEqual(
+    expect.objectContaining({
+      '2,-2': { type: 'number', minimum: -5, maximum: 5 },
+      '4,0': { type: 'number', minimum: -5, maximum: 5 }
+    })
+  );
+});
+
 it('registers only the advanced WebMCP zernike coefficient tool on advanced routes', () => {
   const registrations = installWebMcpRecorder();
 
@@ -3534,6 +3561,21 @@ it('registers only the advanced WebMCP zernike coefficient tool on advanced rout
   expect(registrations).toHaveLength(1);
   expect(registrations[0].name).toBe('set-advanced-zernike-coefficients');
   expect(registrations[0].signal.aborted).toBe(false);
+});
+
+it('registers a closed advanced WebMCP zernike coefficient schema', () => {
+  const registrations = installWebMcpRecorder();
+
+  renderAtPath('/en/advanced');
+
+  const coefficientsSchema = registrations[0].inputSchema.properties?.coefficients;
+  expect(coefficientsSchema?.additionalProperties).toBe(false);
+  expect(coefficientsSchema?.properties).toEqual(
+    expect.objectContaining({
+      '2,-2': { type: 'number', minimum: -5, maximum: 5 },
+      '4,0': { type: 'number', minimum: -5, maximum: 5 }
+    })
+  );
 });
 
 it('replaces the active WebMCP tool when the route mode changes', async () => {
