@@ -27,6 +27,7 @@ import { SimulatorResults } from './SimulatorResults';
 import { WorkerInitializationMask } from './WorkerInitializationMask';
 import { createAppPath, isDisplayMode, isSupportedLanguageCode } from '../../routing';
 import { useSimulationState } from './hooks/useSimulationState';
+import { useZernikeWebMcpTools } from './hooks/useZernikeWebMcpTools';
 
 interface ApplicationShellProps {
   readonly workerClient?: WorkerClient;
@@ -50,6 +51,11 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
   const theme = useAppTheme(themeMode);
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
   const simulation = useSimulationState({ displayMode, workerClient });
+  useZernikeWebMcpTools({
+    displayMode,
+    patchZernikeCoefficientsForWavelength:
+      simulation.patchZernikeCoefficientsForWavelength
+  });
   const diagnosticsMessage =
     simulation.diagnostics.messageKey !== undefined
       ? t(simulation.diagnostics.messageKey, { defaultValue: simulation.diagnostics.message })

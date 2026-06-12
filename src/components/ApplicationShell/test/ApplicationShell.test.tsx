@@ -3481,3 +3481,190 @@ it('keeps advanced result panels in separate cards on extra-small screens', asyn
     'true'
   );
 });
+
+interface RegisteredWebMcpTool {
+  readonly name: string;
+  readonly execute: (input: unknown) => unknown;
+  readonly signal: AbortSignal;
+}
+
+function installWebMcpRecorder() {
+  const registrations: RegisteredWebMcpTool[] = [];
+
+  Object.defineProperty(document, 'modelContext', {
+    configurable: true,
+    value: {
+      registerTool: vi.fn((tool: RegisteredWebMcpTool, options: { readonly signal: AbortSignal }) => {
+        registrations.push({
+          ...tool,
+          signal: options.signal
+        });
+      })
+    }
+  });
+
+  return registrations;
+}
+
+function getLastWorkerPayload(computeConvolvedImage: ReturnType<typeof vi.fn>) {
+  return computeConvolvedImage.mock.calls.at(-1)?.[0] as ConvolvedImageInput | undefined;
+}
+
+async function settleInitialWorkerCall() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+}
+
+it('registers only the basic WebMCP zernike coefficient tool on basic routes', () => {
+  const registrations = installWebMcpRecorder();
+
+  renderAtPath('/en/basic');
+
+  expect(registrations).toHaveLength(1);
+  expect(registrations[0].name).toBe('set-basic-zernike-coefficients');
+  expect(registrations[0].signal.aborted).toBe(false);
+});
+
+it('registers only the advanced WebMCP zernike coefficient tool on advanced routes', () => {
+  const registrations = installWebMcpRecorder();
+
+  renderAtPath('/en/advanced');
+
+  expect(registrations).toHaveLength(1);
+  expect(registrations[0].name).toBe('set-advanced-zernike-coefficients');
+  expect(registrations[0].signal.aborted).toBe(false);
+});
+
+it('replaces the active WebMCP tool when the route mode changes', async () => {
+  const registrations = installWebMcpRecorder();
+  const user = userEvent.setup();
+
+  renderAtPath('/en/basic');
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  await user.click(screen.getByRole('button', { name: 'Advanced' }));
+
+  expect(registrations).toHaveLength(2);
+  expect(registrations[0].name).toBe('set-basic-zernike-coefficients');
+  expect(registrations[0].signal.aborted).toBe(true);
+  expect(registrations[1].name).toBe('set-advanced-zernike-coefficients');
+  expect(registrations[1].signal.aborted).toBe(false);
+});
+
+it('applies basic WebMCP coefficient patches to the 550 nm worker payload', async () => {
+  vi.useFakeTimers();
+  const registrations = installWebMcpRecorder();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  setPath('/en/basic');
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  await settleInitialWorkerCall();
+  computeConvolvedImage.mockClear();
+
+  let result: unknown;
+  act(() => {
+    result = registrations[0].execute({ coefficients: { '4,0': 1.25, '2,0': -0.5 } });
+  });
+
+  expect(result).toEqual({
+    appliedKeys: ['4,0', '2,0'],
+    wavelengthNm: 550
+  });
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(getLastWorkerPayload(computeConvolvedImage)?.zernikeCoefficientsByWavelength).toEqual([
+    [550, expect.objectContaining({ '4,0': 1.25, '2,0': -0.5 })]
+  ]);
+});
+
+it('applies advanced WebMCP coefficient patches only to the requested wavelength', async () => {
+  vi.useFakeTimers();
+  const registrations = installWebMcpRecorder();
+  const computeConvolvedImage = vi.fn(
+    async (input: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(input.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${input.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  setPath('/en/advanced');
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  await settleInitialWorkerCall();
+  computeConvolvedImage.mockClear();
+  act(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
+  });
+
+  let result: unknown;
+  act(() => {
+    result = registrations[0].execute({ wavelengthNm: 656, coefficients: { '4,0': 2 } });
+  });
+
+  expect(result).toEqual({
+    appliedKeys: ['4,0'],
+    wavelengthNm: 656
+  });
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+
+  expect(getLastWorkerPayload(computeConvolvedImage)?.zernikeCoefficientsByWavelength).toEqual([
+    [550, expect.objectContaining({ '4,0': 0 })],
+    [656, expect.objectContaining({ '4,0': 2 })],
+    [486, expect.objectContaining({ '4,0': 0 })]
+  ]);
+});
+
+it.each([
+  ['invalid coefficient key', { coefficients: { '1,1': 1 } }],
+  ['out-of-range coefficient value', { coefficients: { '4,0': 5.001 } }],
+  ['invalid advanced wavelength', { wavelengthNm: 589, coefficients: { '4,0': 1 } }]
+] as const)('rejects %s WebMCP inputs without changing worker payloads', async (_, input) => {
+  vi.useFakeTimers();
+  const registrations = installWebMcpRecorder();
+  const computeConvolvedImage = vi.fn(
+    async (workerInput: ConvolvedImageInput): Promise<ConvolvedImageResult> => ({
+      imageUrl: `data:image/png;base64,${window.btoa(workerInput.targetId)}`,
+      psfImageUrl: `data:image/png;base64,${window.btoa(`${workerInput.targetId}-psf`)}`,
+      wavefrontImageUrl: `data:image/png;base64,${window.btoa(`${workerInput.targetId}-wavefront`)}`,
+      mtfImageUrl: 'data:image/png;base64,bXRm',
+      diagnostics: {
+        status: 'ready',
+        message: 'Mock worker ready'
+      }
+    })
+  );
+
+  setPath('/en/advanced');
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  await settleInitialWorkerCall();
+  computeConvolvedImage.mockClear();
+
+  expect(() => registrations[0].execute(input)).toThrow();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+});
