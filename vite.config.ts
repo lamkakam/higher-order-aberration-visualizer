@@ -6,6 +6,11 @@ import { defineConfig, type Plugin, type ResolvedConfig } from 'vite';
 
 const pyodideReadmePath = '/pyodide/README.md';
 const githubPagesBasePath = '/higher-order-aberration-visualizer/';
+const crossOriginPolicyHeaders = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Permissions-Policy': 'tools=(self)'
+};
 
 export function excludePyodideReadmePlugin(): Plugin {
   let resolvedConfig: ResolvedConfig | undefined;
@@ -62,6 +67,12 @@ export function pagesSpaFallbackPlugin(): Plugin {
 export default defineConfig({
   base: process.env.GITHUB_PAGES === 'true' ? githubPagesBasePath : '/',
   plugins: [excludePyodideReadmePlugin(), pagesSpaFallbackPlugin(), react(), tailwindcss()],
+  server: {
+    headers: crossOriginPolicyHeaders
+  },
+  preview: {
+    headers: crossOriginPolicyHeaders
+  },
   worker: {
     format: 'es'
   },
