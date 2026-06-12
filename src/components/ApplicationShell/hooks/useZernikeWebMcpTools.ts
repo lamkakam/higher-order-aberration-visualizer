@@ -35,6 +35,21 @@ const editableZernikeKeys = new Set<ZernikeCoefficientKey>(
   zernikeTerms.map((term) => term.key)
 );
 const supportedWavelengths = new Set<SpectralWavelength>(spectralWavelengths);
+const zernikeCoefficientValueSchema = {
+  type: 'number',
+  minimum: zernikeCoefficientMin,
+  maximum: zernikeCoefficientMax
+} as const;
+
+function createZernikeCoefficientPatchSchema() {
+  return {
+    type: 'object',
+    properties: Object.fromEntries(
+      zernikeTerms.map((term) => [term.key, zernikeCoefficientValueSchema])
+    ),
+    additionalProperties: false
+  };
+}
 
 export function useZernikeWebMcpTools({
   displayMode,
@@ -61,14 +76,7 @@ export function useZernikeWebMcpTools({
               wavelengthNm: {
                 enum: spectralWavelengths
               },
-              coefficients: {
-                type: 'object',
-                additionalProperties: {
-                  type: 'number',
-                  minimum: zernikeCoefficientMin,
-                  maximum: zernikeCoefficientMax
-                }
-              }
+              coefficients: createZernikeCoefficientPatchSchema()
             }
           },
           execute(input: AdvancedZernikeToolInput): ZernikeToolResult {
@@ -95,14 +103,7 @@ export function useZernikeWebMcpTools({
             type: 'object',
             required: ['coefficients'],
             properties: {
-              coefficients: {
-                type: 'object',
-                additionalProperties: {
-                  type: 'number',
-                  minimum: zernikeCoefficientMin,
-                  maximum: zernikeCoefficientMax
-                }
-              }
+              coefficients: createZernikeCoefficientPatchSchema()
             }
           },
           execute(input: BasicZernikeToolInput): ZernikeToolResult {
