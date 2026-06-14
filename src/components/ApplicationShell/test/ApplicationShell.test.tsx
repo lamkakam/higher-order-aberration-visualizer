@@ -101,6 +101,8 @@ afterEach(async () => {
   await i18n.changeLanguage('en');
   setPath('/');
   window.localStorage.clear();
+  Object.defineProperty(document, 'modelContext', { configurable: true, value: undefined });
+  Object.defineProperty(navigator, 'modelContext', { configurable: true, value: undefined });
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -3500,10 +3502,10 @@ interface WebMcpJsonSchema {
   readonly additionalProperties?: boolean | WebMcpJsonSchema;
 }
 
-function installWebMcpRecorder() {
+function installWebMcpRecorder(target: Document | Navigator = document) {
   const registrations: RegisteredWebMcpTool[] = [];
 
-  Object.defineProperty(document, 'modelContext', {
+  Object.defineProperty(target, 'modelContext', {
     configurable: true,
     value: {
       registerTool: vi.fn((tool: RegisteredWebMcpTool, options: { readonly signal: AbortSignal }) => {
@@ -3530,6 +3532,16 @@ async function settleInitialWorkerCall() {
 
 it('registers only the basic WebMCP zernike coefficient tool on basic routes', () => {
   const registrations = installWebMcpRecorder();
+
+  renderAtPath('/en/basic');
+
+  expect(registrations).toHaveLength(1);
+  expect(registrations[0].name).toBe('set-basic-zernike-coefficients');
+  expect(registrations[0].signal.aborted).toBe(false);
+});
+
+it('registers the basic WebMCP zernike coefficient tool through navigator fallback', () => {
+  const registrations = installWebMcpRecorder(navigator);
 
   renderAtPath('/en/basic');
 

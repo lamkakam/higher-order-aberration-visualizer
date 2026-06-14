@@ -26,4 +26,8 @@ declare global {
   interface Document {
     readonly modelContext?: DocumentModelContext;
   }
+
+  interface Navigator {
+    readonly modelContext?: DocumentModelContext;
+  }
 }

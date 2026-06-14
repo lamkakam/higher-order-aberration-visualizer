@@ -56,7 +56,7 @@ export function useZernikeWebMcpTools({
   patchZernikeCoefficientsForWavelength
 }: UseZernikeWebMcpToolsOptions) {
   useEffect(() => {
-    const modelContext = document.modelContext;
+    const modelContext = document.modelContext ?? navigator.modelContext;
 
     if (modelContext === undefined) {
       return undefined;
