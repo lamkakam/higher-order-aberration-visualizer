@@ -4,11 +4,18 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Connect, Plugin, ResolvedConfig, ViteDevServer } from 'vite';
+import type {
+  Connect,
+  MinimalPluginContextWithoutEnvironment,
+  Plugin,
+  ResolvedConfig,
+  ViteDevServer
+} from 'vite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { excludePyodideReadmePlugin, pagesSpaFallbackPlugin } from '../../vite.config';
 
 const tempDirs: string[] = [];
+const pluginContext = {} as MinimalPluginContextWithoutEnvironment;
 
 afterEach(async () => {
   await Promise.all(tempDirs.map((dir) => rm(dir, { force: true, recursive: true })));
@@ -42,22 +49,22 @@ function runConfigureServerHook(plugin: Plugin, server: ViteDevServer) {
   const hook = plugin.configureServer;
 
   if (typeof hook === 'function') {
-    hook(server);
+    hook.call(pluginContext, server);
     return;
   }
 
-  hook?.handler(server);
+  hook?.handler.call(pluginContext, server);
 }
 
 function runConfigResolvedHook(plugin: Plugin, config: ResolvedConfig) {
   const hook = plugin.configResolved;
 
   if (typeof hook === 'function') {
-    hook(config);
+    hook.call(pluginContext, config);
     return;
   }
 
-  hook?.handler(config);
+  hook?.handler.call(pluginContext, config);
 }
 
 async function runCloseBundleHook(plugin: Plugin) {
