@@ -3658,6 +3658,17 @@ it('registers a closed advanced WebMCP zernike coefficient schema', () => {
   );
 });
 
+it('registers the advanced WebMCP wavelength as a numeric enum', () => {
+  const registrations = installWebMcpRecorder();
+
+  renderAtPath('/en/advanced');
+
+  expect(registrations[0].inputSchema.properties?.wavelengthNm).toEqual({
+    type: 'number',
+    enum: [550, 656, 486]
+  });
+});
+
 it('replaces the active WebMCP tool when the route mode changes', async () => {
   const registrations = installWebMcpRecorder();
   const user = userEvent.setup();
@@ -3761,7 +3772,8 @@ it('applies advanced WebMCP coefficient patches only to the requested wavelength
 it.each([
   ['invalid coefficient key', { coefficients: { '1,1': 1 } }],
   ['out-of-range coefficient value', { coefficients: { '4,0': 5.001 } }],
-  ['invalid advanced wavelength', { wavelengthNm: 589, coefficients: { '4,0': 1 } }]
+  ['invalid advanced wavelength', { wavelengthNm: 589, coefficients: { '4,0': 1 } }],
+  ['string advanced wavelength', { wavelengthNm: '656', coefficients: { '4,0': 1 } }]
 ] as const)('rejects %s WebMCP inputs without changing worker payloads', async (_, input) => {
   vi.useFakeTimers();
   const registrations = installWebMcpRecorder();

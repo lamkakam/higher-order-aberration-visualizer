@@ -77,6 +77,7 @@ export function useZernikeWebMcpTools({
             required: ['wavelengthNm', 'coefficients'],
             properties: {
               wavelengthNm: {
+                type: 'number',
                 enum: spectralWavelengths
               },
               coefficients: createZernikeCoefficientPatchSchema()
