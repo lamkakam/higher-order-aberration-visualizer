@@ -38,6 +38,20 @@ Run TypeScript type checking:
 npm run typecheck
 ```
 
+Run Biome lint checks for JavaScript and TypeScript files:
+
+```sh
+npm run lint
+```
+
+Apply Biome's safe lint fixes:
+
+```sh
+npm run lint:fix
+```
+
+Biome is configured for linting only. It does not format files or organize imports.
+
 Run Vitest once:
 
 ```sh

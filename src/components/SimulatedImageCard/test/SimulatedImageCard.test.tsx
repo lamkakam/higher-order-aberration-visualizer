@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { ImageResultDetailsAccordion, SimulatedImageCard } from '../SimulatedImageCard';
 
@@ -23,21 +23,19 @@ describe('SimulatedImageCard', () => {
     ];
 
     renderWithAppTheme(
-      <>
-        {panels.map((panel) => (
-          <ImageResultDetailsAccordion
-            key={panel.key}
-            imageUrl={imageUrl}
-            isLoading={false}
-            error={undefined}
-            title={panel.title}
-            description={`${panel.key} description`}
-            supplementalDescription={undefined}
-            aboveAccordionContent={undefined}
-            bottomContent={undefined}
-          />
-        ))}
-      </>
+      panels.map((panel) => (
+        <ImageResultDetailsAccordion
+          key={panel.key}
+          imageUrl={imageUrl}
+          isLoading={false}
+          error={undefined}
+          title={panel.title}
+          description={`${panel.key} description`}
+          supplementalDescription={undefined}
+          aboveAccordionContent={undefined}
+          bottomContent={undefined}
+        />
+      ))
     );
 
     for (const title of ['Simulated Image', 'PSF', 'Wavefront Map']) {

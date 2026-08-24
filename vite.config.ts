@@ -2,7 +2,7 @@ import { copyFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { type Plugin, type ResolvedConfig } from 'vite';
+import type { Plugin, ResolvedConfig } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const pyodideReadmePath = '/pyodide/README.md';
