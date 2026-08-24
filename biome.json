@@ -1,0 +1,31 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
+  "files": {
+    "includes": [
+      "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+      "!!build",
+      "!!dist",
+      "!!node_modules",
+      "!!.venv",
+      "!!public/pyodide",
+      "!!src/hoa_visualizer_utils",
+      "!!test-results"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    },
+    "domains": {
+      "react": "recommended",
+      "test": "recommended"
+    }
+  },
+  "assist": {
+    "enabled": false
+  }
+}

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { expect, it } from 'vitest';
 import { AdvancedResultCard } from '../AdvancedResultCard';
 

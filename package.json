@@ -10,8 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint . --write",
     "test": "vitest run && scripts/test-python.sh",
     "test:watch": "vitest",
     "e2e": "playwright test"
@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.60.0",
+    "@biomejs/biome": "2.5.9",
     "@tailwindcss/vite": "4.3.2",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
@@ -43,9 +44,6 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.3",
-    "eslint": "10.9.0",
-    "eslint-config-airbnb-extended": "3.2.0",
-    "globals": "17.6.0",
     "jsdom": "26.1.0",
     "tailwindcss": "4.2.4",
     "typescript": "5.9.3",
