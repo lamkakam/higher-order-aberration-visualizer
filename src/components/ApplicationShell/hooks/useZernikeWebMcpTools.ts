@@ -63,11 +63,14 @@ export function useZernikeWebMcpTools({
     }
 
     const abortController = new AbortController();
+    let registration: Promise<void>;
+    let toolName: string;
 
     if (displayMode === 'advanced') {
-      modelContext.registerTool(
+      toolName = 'set-advanced-zernike-coefficients';
+      registration = modelContext.registerTool(
         {
-          name: 'set-advanced-zernike-coefficients',
+          name: toolName,
           description: 'Patch editable Zernike coefficients for an explicit spectral wavelength.',
           inputSchema: {
             type: 'object',
@@ -95,9 +98,10 @@ export function useZernikeWebMcpTools({
         { signal: abortController.signal }
       );
     } else {
-      modelContext.registerTool(
+      toolName = 'set-basic-zernike-coefficients';
+      registration = modelContext.registerTool(
         {
-          name: 'set-basic-zernike-coefficients',
+          name: toolName,
           description: 'Patch editable Zernike coefficients for the shared 550 nm wavelength.',
           inputSchema: {
             type: 'object',
@@ -119,6 +123,18 @@ export function useZernikeWebMcpTools({
         { signal: abortController.signal }
       );
     }
+
+    void registration.catch((error: unknown) => {
+      if (
+        abortController.signal.aborted &&
+        error instanceof DOMException &&
+        error.name === 'AbortError'
+      ) {
+        return;
+      }
+
+      console.error(`Failed to register WebMCP tool: ${toolName}`, error);
+    });
 
     return () => {
       abortController.abort();

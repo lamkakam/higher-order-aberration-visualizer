@@ -19,7 +19,7 @@ interface DocumentModelContext {
   registerTool<TInput, TResult>(
     tool: WebMcpToolDefinition<TInput, TResult>,
     options: WebMcpRegisterToolOptions
-  ): void;
+  ): Promise<void>;
 }
 
 declare global {

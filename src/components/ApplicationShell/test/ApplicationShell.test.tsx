@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -3490,6 +3491,7 @@ interface RegisteredWebMcpTool {
     readonly properties?: Record<string, WebMcpJsonSchema>;
   };
   readonly execute: (input: unknown) => unknown;
+  readonly rejectRegistration?: (error: unknown) => void;
   readonly signal: AbortSignal;
 }
 
@@ -3513,6 +3515,39 @@ function installWebMcpRecorder(target: Document | Navigator = document) {
           ...tool,
           signal: options.signal
         });
+
+        return Promise.resolve();
+      })
+    }
+  });
+
+  return registrations;
+}
+
+function installAsyncWebMcpRecorder() {
+  const registrations: RegisteredWebMcpTool[] = [];
+
+  Object.defineProperty(document, 'modelContext', {
+    configurable: true,
+    value: {
+      registerTool: vi.fn((tool: RegisteredWebMcpTool, options: { readonly signal: AbortSignal }) => {
+        let rejectRegistration: (error: unknown) => void = () => undefined;
+        const registration = new Promise<void>((_resolve, reject) => {
+          rejectRegistration = reject;
+        });
+        void registration.catch(() => undefined);
+        options.signal.addEventListener(
+          'abort',
+          () => rejectRegistration(new DOMException('signal is aborted without reason', 'AbortError')),
+          { once: true }
+        );
+        registrations.push({
+          ...tool,
+          rejectRegistration,
+          signal: options.signal
+        });
+
+        return registration;
       })
     }
   });
@@ -3538,6 +3573,39 @@ it('registers only the basic WebMCP zernike coefficient tool on basic routes', (
   expect(registrations).toHaveLength(1);
   expect(registrations[0].name).toBe('set-basic-zernike-coefficients');
   expect(registrations[0].signal.aborted).toBe(false);
+});
+
+it('keeps the second WebMCP registration active after Strict Mode cleanup', async () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const registrations = installAsyncWebMcpRecorder();
+
+  render(
+    <StrictMode>
+      <ApplicationShell workerClient={createMockWorkerClient()} />
+    </StrictMode>
+  );
+
+  await waitFor(() => expect(registrations).toHaveLength(2));
+  expect(registrations[0].signal.aborted).toBe(true);
+  expect(registrations[1].signal.aborted).toBe(false);
+  expect(consoleError).not.toHaveBeenCalled();
+  consoleError.mockRestore();
+});
+
+it('reports unexpected WebMCP registration failures with the tool name', async () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const registrations = installAsyncWebMcpRecorder();
+
+  renderAtPath('/en/basic');
+  registrations[0].rejectRegistration?.(new DOMException('schema rejected', 'NotSupportedError'));
+
+  await waitFor(() =>
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to register WebMCP tool: set-basic-zernike-coefficients',
+      expect.objectContaining({ name: 'NotSupportedError' })
+    )
+  );
+  consoleError.mockRestore();
 });
 
 it('registers the basic WebMCP zernike coefficient tool through navigator fallback', () => {
