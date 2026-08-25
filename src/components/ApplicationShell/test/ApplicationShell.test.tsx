@@ -3488,7 +3488,9 @@ it('keeps advanced result panels in separate cards on extra-small screens', asyn
 interface RegisteredWebMcpTool {
   readonly name: string;
   readonly inputSchema: {
+    readonly required?: readonly string[];
     readonly properties?: Record<string, WebMcpJsonSchema>;
+    readonly additionalProperties?: boolean;
   };
   readonly execute: (input: unknown) => unknown;
   readonly rejectRegistration?: (error: unknown) => void;
@@ -3497,9 +3499,11 @@ interface RegisteredWebMcpTool {
 
 interface WebMcpJsonSchema {
   readonly type?: string;
-  readonly enum?: readonly number[];
+  readonly enum?: readonly (number | string)[];
   readonly minimum?: number;
   readonly maximum?: number;
+  readonly minProperties?: number;
+  readonly required?: readonly string[];
   readonly properties?: Record<string, WebMcpJsonSchema>;
   readonly additionalProperties?: boolean | WebMcpJsonSchema;
 }
@@ -3557,6 +3561,19 @@ function installAsyncWebMcpRecorder() {
 
 function getLastWorkerPayload(computeConvolvedImage: ReturnType<typeof vi.fn>) {
   return computeConvolvedImage.mock.calls.at(-1)?.[0] as ConvolvedImageInput | undefined;
+}
+
+function createMockConvolvedImageResult(): ConvolvedImageResult {
+  return {
+    imageUrl: 'data:image/png;base64,aW1hZ2U=',
+    psfImageUrl: 'data:image/png;base64,cHNm',
+    wavefrontImageUrl: 'data:image/png;base64,d2F2ZWZyb250',
+    mtfImageUrl: 'data:image/png;base64,bXRm',
+    diagnostics: {
+      status: 'ready',
+      message: 'Mock worker ready'
+    }
+  };
 }
 
 async function settleInitialWorkerCall() {
@@ -3623,7 +3640,23 @@ it('registers a closed basic WebMCP zernike coefficient schema', () => {
 
   renderAtPath('/en/basic');
 
-  const coefficientsSchema = registrations[0].inputSchema.properties?.coefficients;
+  const inputSchema = registrations[0].inputSchema;
+  expect(inputSchema.required).toEqual([
+    'apertureDiameterMm',
+    'coefficientUnit',
+    'coefficients'
+  ]);
+  expect(inputSchema.additionalProperties).toBe(false);
+  expect(inputSchema.properties?.apertureDiameterMm).toEqual({
+    type: 'number',
+    minimum: 0.5
+  });
+  expect(inputSchema.properties?.coefficientUnit).toEqual({
+    type: 'string',
+    enum: ['wave', 'micron']
+  });
+  const coefficientsSchema = inputSchema.properties?.coefficients;
+  expect(coefficientsSchema?.minProperties).toBe(1);
   expect(coefficientsSchema?.additionalProperties).toBe(false);
   expect(coefficientsSchema?.properties).toEqual(
     expect.objectContaining({
@@ -3648,25 +3681,41 @@ it('registers a closed advanced WebMCP zernike coefficient schema', () => {
 
   renderAtPath('/en/advanced');
 
-  const coefficientsSchema = registrations[0].inputSchema.properties?.coefficients;
-  expect(coefficientsSchema?.additionalProperties).toBe(false);
-  expect(coefficientsSchema?.properties).toEqual(
-    expect.objectContaining({
-      '2,-2': { type: 'number', minimum: -5, maximum: 5 },
-      '4,0': { type: 'number', minimum: -5, maximum: 5 }
-    })
-  );
-});
-
-it('registers the advanced WebMCP wavelength as a numeric enum', () => {
-  const registrations = installWebMcpRecorder();
-
-  renderAtPath('/en/advanced');
-
-  expect(registrations[0].inputSchema.properties?.wavelengthNm).toEqual({
+  const inputSchema = registrations[0].inputSchema;
+  expect(inputSchema.required).toEqual([
+    'apertureDiameterMm',
+    'coefficientUnit',
+    'coefficientsByWavelength'
+  ]);
+  expect(inputSchema.additionalProperties).toBe(false);
+  expect(inputSchema.properties?.apertureDiameterMm).toEqual({
     type: 'number',
-    enum: [550, 656, 486]
+    minimum: 0.5
   });
+  expect(inputSchema.properties?.coefficientUnit).toEqual({
+    type: 'string',
+    enum: ['wave', 'micron']
+  });
+
+  const wavelengthMapSchema = inputSchema.properties?.coefficientsByWavelength;
+  expect(wavelengthMapSchema?.minProperties).toBe(1);
+  expect(wavelengthMapSchema?.additionalProperties).toBe(false);
+  expect(Object.keys(wavelengthMapSchema?.properties ?? {}).sort()).toEqual([
+    '486',
+    '550',
+    '656'
+  ]);
+  for (const wavelength of ['550', '656', '486']) {
+    const patchSchema = wavelengthMapSchema?.properties?.[wavelength];
+    expect(patchSchema?.minProperties).toBe(1);
+    expect(patchSchema?.additionalProperties).toBe(false);
+    expect(patchSchema?.properties).toEqual(
+      expect.objectContaining({
+        '2,-2': { type: 'number', minimum: -5, maximum: 5 },
+        '4,0': { type: 'number', minimum: -5, maximum: 5 }
+      })
+    );
+  }
 });
 
 it('replaces the active WebMCP tool when the route mode changes', async () => {
@@ -3684,7 +3733,7 @@ it('replaces the active WebMCP tool when the route mode changes', async () => {
   expect(registrations[1].signal.aborted).toBe(false);
 });
 
-it('applies basic WebMCP coefficient patches to the 550 nm worker payload', async () => {
+it('applies basic WebMCP aperture and micron coefficient patches to 550 nm', async () => {
   vi.useFakeTimers();
   const registrations = installWebMcpRecorder();
   const computeConvolvedImage = vi.fn(
@@ -3707,7 +3756,11 @@ it('applies basic WebMCP coefficient patches to the 550 nm worker payload', asyn
 
   let result: unknown;
   act(() => {
-    result = registrations[0].execute({ coefficients: { '4,0': 1.25, '2,0': -0.5 } });
+    result = registrations[0].execute({
+      apertureDiameterMm: 8,
+      coefficientUnit: 'micron',
+      coefficients: { '4,0': 0.55, '2,0': -0.275 }
+    });
   });
 
   expect(result).toEqual({
@@ -3719,12 +3772,17 @@ it('applies basic WebMCP coefficient patches to the 550 nm worker payload', asyn
     await vi.advanceTimersByTimeAsync(300);
   });
 
-  expect(getLastWorkerPayload(computeConvolvedImage)?.zernikeCoefficientsByWavelength).toEqual([
-    [550, expect.objectContaining({ '4,0': 1.25, '2,0': -0.5 })]
-  ]);
+  expect(getLastWorkerPayload(computeConvolvedImage)).toEqual(
+    expect.objectContaining({
+      apertureDiameterMm: 8,
+      zernikeCoefficientsByWavelength: [
+        [550, expect.objectContaining({ '4,0': 1, '2,0': -0.5 })]
+      ]
+    })
+  );
 });
 
-it('applies advanced WebMCP coefficient patches only to the requested wavelength', async () => {
+it('applies independent multi-wavelength Advanced patches and preserves other values', async () => {
   vi.useFakeTimers();
   const registrations = installWebMcpRecorder();
   const computeConvolvedImage = vi.fn(
@@ -3744,37 +3802,116 @@ it('applies advanced WebMCP coefficient patches only to the requested wavelength
   render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
   await settleInitialWorkerCall();
   computeConvolvedImage.mockClear();
-  act(() => {
-    fireEvent.click(screen.getByRole('button', { name: 'Polychromatic' }));
-  });
-
   let result: unknown;
   act(() => {
-    result = registrations[0].execute({ wavelengthNm: 656, coefficients: { '4,0': 2 } });
+    registrations[0].execute({
+      apertureDiameterMm: 6,
+      coefficientUnit: 'wave',
+      coefficientsByWavelength: { 550: { '2,-2': 0.75 } }
+    });
+    result = registrations[0].execute({
+      apertureDiameterMm: 7,
+      coefficientUnit: 'micron',
+      coefficientsByWavelength: {
+        550: { '4,0': 0.55, '2,0': 0.1375 },
+        656: { '4,0': 1.312 },
+        486: { '2,0': -0.243 }
+      }
+    });
   });
 
   expect(result).toEqual({
-    appliedKeys: ['4,0'],
-    wavelengthNm: 656
+    appliedKeysByWavelength: {
+      550: ['4,0', '2,0'],
+      656: ['4,0'],
+      486: ['2,0']
+    }
   });
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(300);
   });
 
-  expect(getLastWorkerPayload(computeConvolvedImage)?.zernikeCoefficientsByWavelength).toEqual([
-    [550, expect.objectContaining({ '4,0': 0 })],
-    [656, expect.objectContaining({ '4,0': 2 })],
-    [486, expect.objectContaining({ '4,0': 0 })]
-  ]);
+  expect(getLastWorkerPayload(computeConvolvedImage)).toEqual(
+    expect.objectContaining({
+      apertureDiameterMm: 7,
+      spectralMode: 'polychromatic',
+      diagnosticWavelengthNm: 550,
+      zernikeCoefficientsByWavelength: [
+        [550, expect.objectContaining({ '4,0': 1, '2,0': 0.25, '2,-2': 0.75 })],
+        [656, expect.objectContaining({ '4,0': 2, '2,0': 0 })],
+        [486, expect.objectContaining({ '4,0': 0, '2,0': -0.5 })]
+      ]
+    })
+  );
+});
+
+it.each([656, 486] as const)(
+  'enables polychromatic mode for an Advanced %i nm-only patch',
+  async (wavelengthNm) => {
+    vi.useFakeTimers();
+    const registrations = installWebMcpRecorder();
+    const computeConvolvedImage = vi.fn(async (_input: ConvolvedImageInput) =>
+      createMockConvolvedImageResult()
+    );
+
+    setPath('/en/advanced');
+    render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+    await settleInitialWorkerCall();
+    computeConvolvedImage.mockClear();
+
+    act(() => {
+      registrations[0].execute({
+        apertureDiameterMm: 5,
+        coefficientUnit: 'wave',
+        coefficientsByWavelength: { [wavelengthNm]: { '4,0': 1 } }
+      });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(getLastWorkerPayload(computeConvolvedImage)).toEqual(
+      expect.objectContaining({ spectralMode: 'polychromatic', diagnosticWavelengthNm: 550 })
+    );
+  }
+);
+
+it('keeps the current spectral mode for an Advanced 550 nm-only patch', async () => {
+  vi.useFakeTimers();
+  const registrations = installWebMcpRecorder();
+  const computeConvolvedImage = vi.fn(async (_input: ConvolvedImageInput) =>
+    createMockConvolvedImageResult()
+  );
+
+  setPath('/en/advanced');
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  await settleInitialWorkerCall();
+  computeConvolvedImage.mockClear();
+
+  act(() => {
+    registrations[0].execute({
+      apertureDiameterMm: 5,
+      coefficientUnit: 'wave',
+      coefficientsByWavelength: { 550: { '4,0': 1 } }
+    });
+  });
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(getLastWorkerPayload(computeConvolvedImage)?.spectralMode).toBe('monochromatic');
 });
 
 it.each([
-  ['invalid coefficient key', { coefficients: { '1,1': 1 } }],
-  ['out-of-range coefficient value', { coefficients: { '4,0': 5.001 } }],
-  ['invalid advanced wavelength', { wavelengthNm: 589, coefficients: { '4,0': 1 } }],
-  ['string advanced wavelength', { wavelengthNm: '656', coefficients: { '4,0': 1 } }]
-] as const)('rejects %s WebMCP inputs without changing worker payloads', async (_, input) => {
+  ['missing required field', { apertureDiameterMm: 5, coefficients: { '4,0': 1 } }],
+  ['invalid aperture', { apertureDiameterMm: 0.49, coefficientUnit: 'wave', coefficients: { '4,0': 1 } }],
+  ['non-finite aperture', { apertureDiameterMm: Number.POSITIVE_INFINITY, coefficientUnit: 'wave', coefficients: { '4,0': 1 } }],
+  ['invalid unit', { apertureDiameterMm: 5, coefficientUnit: 'nm', coefficients: { '4,0': 1 } }],
+  ['empty patch', { apertureDiameterMm: 5, coefficientUnit: 'wave', coefficients: {} }],
+  ['invalid coefficient key', { apertureDiameterMm: 5, coefficientUnit: 'wave', coefficients: { '1,1': 1 } }],
+  ['out-of-range converted coefficient', { apertureDiameterMm: 5, coefficientUnit: 'micron', coefficients: { '4,0': 2.751 } }]
+] as const)('rejects Basic %s without changing state', async (_, input) => {
   vi.useFakeTimers();
   const registrations = installWebMcpRecorder();
   const computeConvolvedImage = vi.fn(
@@ -3788,6 +3925,31 @@ it.each([
         message: 'Mock worker ready'
       }
     })
+  );
+
+  setPath('/en/basic');
+  render(<ApplicationShell workerClient={createMockWorkerClient({ computeConvolvedImage })} />);
+  await settleInitialWorkerCall();
+  computeConvolvedImage.mockClear();
+
+  expect(() => registrations[0].execute(input)).toThrow();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(computeConvolvedImage).not.toHaveBeenCalled();
+});
+
+it.each([
+  ['empty wavelength map', { apertureDiameterMm: 8, coefficientUnit: 'wave', coefficientsByWavelength: {} }],
+  ['unsupported wavelength', { apertureDiameterMm: 8, coefficientUnit: 'wave', coefficientsByWavelength: { 589: { '4,0': 1 } } }],
+  ['empty wavelength patch', { apertureDiameterMm: 8, coefficientUnit: 'wave', coefficientsByWavelength: { 656: {} } }],
+  ['partially invalid call', { apertureDiameterMm: 8, coefficientUnit: 'wave', coefficientsByWavelength: { 550: { '4,0': 1 }, 656: { '4,0': 5.001 } } }]
+] as const)('rejects Advanced %s atomically', async (_, input) => {
+  vi.useFakeTimers();
+  const registrations = installWebMcpRecorder();
+  const computeConvolvedImage = vi.fn(async (_workerInput: ConvolvedImageInput) =>
+    createMockConvolvedImageResult()
   );
 
   setPath('/en/advanced');

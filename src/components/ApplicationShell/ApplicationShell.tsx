@@ -52,9 +52,8 @@ export function ApplicationShell({ workerClient }: ApplicationShellProps) {
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
   const simulation = useSimulationState({ displayMode, workerClient });
   useZernikeWebMcpTools({
-    displayMode,
-    patchZernikeCoefficientsForWavelength:
-      simulation.patchZernikeCoefficientsForWavelength
+    applyZernikeWebMcpUpdate: simulation.applyZernikeWebMcpUpdate,
+    displayMode
   });
   const diagnosticsMessage =
     simulation.diagnostics.messageKey !== undefined

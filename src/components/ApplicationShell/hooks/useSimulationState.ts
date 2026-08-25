@@ -32,6 +32,14 @@ interface UseSimulationStateOptions {
   readonly workerClient?: WorkerClient;
 }
 
+interface ZernikeWebMcpUpdate {
+  readonly apertureDiameterMm: number;
+  readonly coefficientsByWavelength: Partial<
+    Record<SpectralWavelength, Partial<Record<ZernikeCoefficientKey, number>>>
+  >;
+  readonly enablePolychromatic: boolean;
+}
+
 export function useSimulationState({
   displayMode,
   workerClient
@@ -186,21 +194,29 @@ export function useSimulationState({
     [effectiveSpectralMode, syncWavelengthCoefficients]
   );
 
-  const patchZernikeCoefficientsForWavelength = useCallback(
-    (
-      wavelength: SpectralWavelength,
-      coefficients: Partial<Record<ZernikeCoefficientKey, number>>
-    ) => {
-      setZernikeCoefficientsByWavelength((currentValues) => ({
-        ...currentValues,
-        [wavelength]: {
-          ...currentValues[wavelength],
-          ...coefficients
+  const applyZernikeWebMcpUpdate = useCallback((update: ZernikeWebMcpUpdate) => {
+    setApertureDiameterMm(update.apertureDiameterMm);
+    setZernikeCoefficientsByWavelength((currentValues) => {
+      const nextValues = { ...currentValues };
+
+      for (const wavelength of spectralWavelengths) {
+        const coefficients = update.coefficientsByWavelength[wavelength];
+        if (coefficients !== undefined) {
+          nextValues[wavelength] = {
+            ...currentValues[wavelength],
+            ...coefficients
+          } as (typeof currentValues)[typeof wavelength];
         }
-      }));
-    },
-    []
-  );
+      }
+
+      return nextValues;
+    });
+
+    if (update.enablePolychromatic) {
+      setSpectralMode('polychromatic');
+      setSelectedWavelength(550);
+    }
+  }, []);
 
   const resetZernikeCoefficients = useCallback((wavelength: SpectralWavelength) => {
     setZernikeCoefficientsByWavelength((currentValues) => ({
@@ -227,6 +243,7 @@ export function useSimulationState({
   );
 
   return {
+    applyZernikeWebMcpUpdate,
     apertureDiameterMm,
     apertureSettings,
     advancedDiagnosticImage,
@@ -238,7 +255,6 @@ export function useSimulationState({
     isWorkerInitializing,
     fwhmSeeingArcsec,
     renderApertureMask,
-    patchZernikeCoefficientsForWavelength,
     resetAllZernikeCoefficientsByWavelength,
     resetZernikeCoefficients,
     result,
