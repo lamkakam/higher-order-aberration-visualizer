@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  deployments: write
   pages: write
   id-token: write
 
@@ -65,10 +64,6 @@ jobs:
       - name: End-to-end tests
         run: npm run e2e
 
-      - name: Prepare Cloudflare Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: npm run prepare:cloudflare
-
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
@@ -78,14 +73,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-
-      - name: Upload Cloudflare Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: cloudflare-pages
-          path: cloudflare-pages
-          retention-days: 1
 
   deploy:
     name: Deploy GitHub Pages
@@ -99,29 +86,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  deploy-cloudflare:
-    name: Deploy Cloudflare Pages
-    needs: ci
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: cloudflare-pages
-      url: https://vestibulum.xyz/higher-order-aberration-visualizer/
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Download Cloudflare Pages artifact
-        uses: actions/download-artifact@v5
-        with:
-          name: cloudflare-pages
-          path: cloudflare-pages
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy cloudflare-pages --project-name=higher-order-aberration-visualizer --branch=main
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

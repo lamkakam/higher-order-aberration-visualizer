@@ -77,7 +77,9 @@ The `dev` and `build` scripts automatically build the app's internal Python whee
 
 ## Deployment
 
-Pushes to `main` run all quality gates and produce one Vite build with the base path `/higher-order-aberration-visualizer/`. GitHub Actions deploys `dist` unchanged to the existing GitHub Pages site. For Cloudflare Pages, `npm run prepare:cloudflare` creates a separate `cloudflare-pages` upload directory whose layout is:
+Pushes to `main` run all quality gates, build with the base path `/higher-order-aberration-visualizer/`, and deploy `dist` unchanged to the existing GitHub Pages site. They do not deploy Cloudflare Pages. Pushing a tag that matches `v*` runs the release workflow and promotes that exact tagged commit to Cloudflare, regardless of which branch contains the commit. Pull requests and manual workflow runs do not deploy Cloudflare.
+
+The release workflow first keeps the root-based Vite build used for the GitHub Release ZIP, then rebuilds with the static subpath. For Cloudflare Pages, `npm run prepare:cloudflare` creates a separate `cloudflare-pages` upload directory whose layout is:
 
 ```text
 cloudflare-pages/
@@ -106,7 +108,7 @@ One-time Cloudflare setup:
 1. Ensure the `vestibulum.xyz` zone is active in the intended Cloudflare account.
 2. Create a Direct Upload Pages project named `higher-order-aberration-visualizer` with production branch `main`. With Wrangler authenticated outside this repository, the recommended explicit command is `npx wrangler pages project create higher-order-aberration-visualizer --production-branch=main`. If the project is instead created through Workers & Pages → Create application → Pages → Direct Upload, note that Cloudflare currently does not expose production-branch controls for Direct Upload projects in the dashboard; use the Pages Update Project API to set `production_branch` to `main` before CI deploys.
 3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository or `cloudflare-pages` environment secrets in GitHub Actions.
-4. Allow the first push-to-`main` workflow to deploy, then open the Pages project in Cloudflare and add `vestibulum.xyz` under Custom domains. Complete Cloudflare's ownership validation if prompted.
+4. Allow the first `v*` tag workflow to deploy, then open the Pages project in Cloudflare and add `vestibulum.xyz` under Custom domains. Complete Cloudflare's ownership validation if prompted.
 5. Optionally create a GitHub Actions environment named `cloudflare-pages`, set its deployment URL to `https://vestibulum.xyz/higher-order-aberration-visualizer/`, and add any desired protection rules. The workflow already targets that environment name and URL.
 
 This design assumes the Pages project owns the entire `vestibulum.xyz` hostname. If `vestibulum.xyz` must serve a different origin or application outside `/higher-order-aberration-visualizer/`, this hostname-dedicated Pages approach is not appropriate. That configuration needs separately designed edge routing, such as a Cloudflare Worker/router or eligible Cloudflare Origin Rules; do not silently adapt this deployment to share the hostname.
