@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "scripts/build-pyodide-wheel.sh",
     "build": "vite build",
+    "prepare:cloudflare": "node scripts/prepare-cloudflare-pages.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",

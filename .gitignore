@@ -1,5 +1,7 @@
 node_modules/
 dist/
+cloudflare-pages/
+.wrangler/
 test-results/
 playwright-report/
 .venv/

@@ -12,7 +12,11 @@ import type {
   ViteDevServer
 } from 'vite';
 import { afterEach, describe, expect, it } from 'vitest';
-import { excludePyodideReadmePlugin, pagesSpaFallbackPlugin } from '../../vite.config';
+import {
+  excludePyodideReadmePlugin,
+  pagesSpaFallbackPlugin,
+  resolveViteBase
+} from '../../vite.config';
 
 const tempDirs: string[] = [];
 const pluginContext = {} as MinimalPluginContextWithoutEnvironment;
@@ -130,5 +134,15 @@ describe('pagesSpaFallbackPlugin', () => {
     await expect(readFile(join(root, 'dist/404.html'), 'utf8')).resolves.toBe(
       '<main>app shell</main>'
     );
+  });
+});
+
+describe('resolveViteBase', () => {
+  it('uses the static deployment subpath for production hosting', () => {
+    expect(resolveViteBase('true')).toBe('/higher-order-aberration-visualizer/');
+  });
+
+  it('uses root for local development and ordinary builds', () => {
+    expect(resolveViteBase(undefined)).toBe('/');
   });
 });

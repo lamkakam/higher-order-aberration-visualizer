@@ -26,6 +26,15 @@ npm run build
 
 `npm run build` first builds the internal Python wheel into `public/pyodide` through the `prebuild` npm lifecycle hook.
 
+Prepare the Cloudflare Pages upload directory after a static-subpath production build:
+
+```sh
+STATIC_SUBPATH_DEPLOYMENT=true npm run build
+npm run prepare:cloudflare
+```
+
+The preparation command removes any existing `cloudflare-pages` directory, copies `dist` to `cloudflare-pages/higher-order-aberration-visualizer`, and writes Cloudflare `_headers` and `_redirects` files at `cloudflare-pages` root.
+
 Preview the production bundle locally:
 
 ```sh
@@ -78,11 +87,13 @@ Playwright configuration is in [`playwright.config.ts`](../playwright.config.ts)
 
 GitHub Actions runs the repository quality gates for pull requests to `main`, pushes to `main`, and manual `workflow_dispatch` runs. The workflow runs `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, and `npm run e2e` with Node.js 24, Python 3.11, npm caching, and Playwright Chromium installed.
 
-Pushes to `main` also deploy the static Vite build in `dist` to GitHub Pages after the checks pass. Pull requests and manual runs run checks only. Markdown-only pull requests, meaning changes where every file matches `**/*.md`, run a lightweight `Quality gates` check that skips full CI. Markdown-only pushes to `main` remain ignored so documentation-only merges do not deploy.
+Pushes to `main` also build with `STATIC_SUBPATH_DEPLOYMENT=true` and deploy the static Vite build in `dist` to GitHub Pages after the checks pass. The same successful build is packaged separately and deployed to the `higher-order-aberration-visualizer` Cloudflare Pages Direct Upload project with Wrangler. Pull requests and manual runs run checks only. Markdown-only pull requests, meaning changes where every file matches `**/*.md`, run a lightweight `Quality gates` check that skips full CI. Markdown-only pushes to `main` remain ignored so documentation-only merges do not deploy.
 
 Pushing a tag that matches `v*` runs the release workflow with the same quality gates, builds `dist` in GitHub Actions, packages it as a zip archive, then creates a GitHub Release for that tag with generated release notes and the packaged build attached.
 
 Repository Settings → Pages must use `GitHub Actions` as the Pages source. The GitHub Pages build uses `/higher-order-aberration-visualizer/` as the Vite base path and writes `dist/404.html` from `dist/index.html` so direct visits to client routes such as `/higher-order-aberration-visualizer/en/basic` load the app shell.
+
+Cloudflare Pages uses the same Vite base and generated fallback, but the upload artifact physically nests the build at `cloudflare-pages/higher-order-aberration-visualizer`. GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; see the root README for the one-time Direct Upload project, production branch, custom-domain, zone, and token-scope setup.
 
 ## Translations
 

@@ -4,6 +4,7 @@
     "includes": [
       "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
       "!!build",
+      "!!cloudflare-pages",
       "!!dist",
       "!!node_modules",
       "!!.venv",
