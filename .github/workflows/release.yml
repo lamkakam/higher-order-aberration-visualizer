@@ -54,7 +54,7 @@ jobs:
         run: npm run prepare:cloudflare
 
       - name: Upload Cloudflare Pages artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cloudflare-pages
           path: cloudflare-pages
@@ -83,13 +83,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download Cloudflare Pages artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: cloudflare-pages
           path: cloudflare-pages
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
