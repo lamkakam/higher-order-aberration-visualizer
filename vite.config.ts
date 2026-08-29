@@ -4,14 +4,19 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin, ResolvedConfig } from 'vite';
 import { defineConfig } from 'vitest/config';
+import deploymentPaths from './scripts/deployment-paths.json' with { type: 'json' };
 
 const pyodideReadmePath = '/pyodide/README.md';
-const githubPagesBasePath = '/higher-order-aberration-visualizer/';
+const { staticDeploymentBasePath } = deploymentPaths;
 const crossOriginPolicyHeaders = {
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Embedder-Policy': 'require-corp',
   'Permissions-Policy': 'tools=(self)'
 };
+
+export function resolveViteBase(staticSubpathDeployment: string | undefined) {
+  return staticSubpathDeployment === 'true' ? staticDeploymentBasePath : '/';
+}
 
 export function excludePyodideReadmePlugin(): Plugin {
   let resolvedConfig: ResolvedConfig | undefined;
@@ -66,7 +71,7 @@ export function pagesSpaFallbackPlugin(): Plugin {
 }
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? githubPagesBasePath : '/',
+  base: resolveViteBase(process.env.STATIC_SUBPATH_DEPLOYMENT),
   plugins: [excludePyodideReadmePlugin(), pagesSpaFallbackPlugin(), react(), tailwindcss()],
   server: {
     headers: crossOriginPolicyHeaders

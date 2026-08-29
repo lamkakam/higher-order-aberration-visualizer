@@ -20,6 +20,23 @@ describe('registerServiceWorker', () => {
     expect(register).toHaveBeenCalledWith('/sw.js', { scope: '/', updateViaCache: 'none' });
   });
 
+  it('retains the static deployment subpath in the worker URL and scope', () => {
+    const registration = Promise.resolve({} as ServiceWorkerRegistration);
+    const register = vi.fn(() => registration);
+
+    vi.stubGlobal('navigator', {
+      serviceWorker: {
+        register
+      }
+    });
+
+    expect(registerServiceWorker('/higher-order-aberration-visualizer/')).toBe(registration);
+    expect(register).toHaveBeenCalledWith('/higher-order-aberration-visualizer/sw.js', {
+      scope: '/higher-order-aberration-visualizer/',
+      updateViaCache: 'none'
+    });
+  });
+
   it('does nothing when service workers are unsupported', () => {
     vi.stubGlobal('navigator', {});
 

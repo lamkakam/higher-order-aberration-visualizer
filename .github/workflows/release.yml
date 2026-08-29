@@ -5,13 +5,12 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
-
 jobs:
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -51,7 +50,53 @@ jobs:
       - name: Package dist
         run: zip -r "higher-order-aberration-visualizer-${GITHUB_REF_NAME}-dist.zip" dist
 
+      - name: Build for Cloudflare Pages
+        run: npm run build
+        env:
+          STATIC_SUBPATH_DEPLOYMENT: 'true'
+
+      - name: Prepare Cloudflare Pages artifact
+        run: npm run prepare:cloudflare
+
+      - name: Upload Cloudflare Pages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-pages
+          path: cloudflare-pages
+          retention-days: 1
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" "higher-order-aberration-visualizer-${GITHUB_REF_NAME}-dist.zip" --generate-notes
+
+  deploy-cloudflare:
+    name: Deploy Cloudflare Pages
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    concurrency:
+      group: cloudflare-pages-production
+      cancel-in-progress: true
+    environment:
+      name: cloudflare-pages
+      url: https://vestibulum.xyz/higher-order-aberration-visualizer/
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Download Cloudflare Pages artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: cloudflare-pages
+          path: cloudflare-pages
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy cloudflare-pages --project-name=higher-order-aberration-visualizer --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

@@ -59,7 +59,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          GITHUB_PAGES: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
+          STATIC_SUBPATH_DEPLOYMENT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
 
       - name: End-to-end tests
         run: npm run e2e

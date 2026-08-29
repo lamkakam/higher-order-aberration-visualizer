@@ -27,9 +27,13 @@ The header language selector always shows a concrete supported language. On firs
 
 The app uses client-side `wouter` routing for bookmarkable language and display-mode state. Supported app routes are `/:lang/:mode`, where `lang` is `en`, `zh-Hant`, or `zh-Hans`, and `mode` is `basic` or `advanced`. The browser entry point passes Vite's base path to Wouter, so local development uses paths such as `/en/basic`, while the GitHub Pages deployment uses paths such as `/higher-order-aberration-visualizer/en/basic`. Missing or invalid route state is normalized with history replacement to the detected supported language and `basic`; i18next remains responsible for loading and applying translations.
 
+Production static deployments use the shared `/higher-order-aberration-visualizer/` Vite base path. GitHub Pages receives `dist` directly. Cloudflare Pages receives the same build copied under a physical `higher-order-aberration-visualizer/` directory, with `_headers` and `_redirects` alongside that directory at the upload root. The nested generated `404.html` supplies Cloudflare's closest custom not-found response for direct SPA routes, while the root redirect sends only `/` to the canonical application subpath.
+
 ## Public Asset Cache
 
 [`src/main.tsx`](../src/main.tsx) registers [`public/sw.js`](../public/sw.js) when the browser supports service workers. The service worker uses a versioned cache for selected same-origin `public/` runtime assets: supported translation JSON files and the committed `prysm` wheel. Locale JSON fetches are network-first with cached fallback so translation updates can land promptly; the `prysm` wheel remains cache-first for startup stability. Vite dev server, HMR, source module, HTML, API-like, generated internal wheel, and cross-origin requests are left to the browser without service worker response handling.
+
+The registration URL and scope both derive from Vite's base path. In production, `sw.js`, locale JSON, the committed `prysm` wheel, and generated static assets therefore remain under `/higher-order-aberration-visualizer/` on both static hosts.
 
 ## Worker Boundary
 
