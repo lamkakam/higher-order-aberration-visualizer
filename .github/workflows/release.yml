@@ -50,11 +50,6 @@ jobs:
       - name: Package dist
         run: zip -r "higher-order-aberration-visualizer-${GITHUB_REF_NAME}-dist.zip" dist
 
-      - name: Build for Cloudflare Pages
-        run: npm run build
-        env:
-          STATIC_SUBPATH_DEPLOYMENT: 'true'
-
       - name: Prepare Cloudflare Pages artifact
         run: npm run prepare:cloudflare
 
@@ -82,7 +77,7 @@ jobs:
       cancel-in-progress: true
     environment:
       name: cloudflare-pages
-      url: https://vestibulum.xyz/higher-order-aberration-visualizer/
+      url: https://higher-order-aberration-visualizer.vestibulum.xyz/
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
