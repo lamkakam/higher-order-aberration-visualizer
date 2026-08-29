@@ -73,6 +73,14 @@ npm run e2e
 
 The `dev` and `build` scripts automatically build the app's internal Python wheel for Pyodide before starting Vite or producing the production bundle.
 
+## Deployment
+
+Pushes to `main` run the quality gates and deploy the application to the [GitHub Pages demo](https://lamkakam.github.io/higher-order-aberration-visualizer/). Pull requests and manual workflow runs run checks only. Pushing a tag matching `v*` creates a GitHub Release and deploys that tagged commit to the maintainer-operated Cloudflare Pages site at [https://higher-order-aberration-visualizer.vestibulum.xyz/](https://higher-order-aberration-visualizer.vestibulum.xyz/).
+
+The Cloudflare account, Pages project, deployment credentials, and custom-domain configuration are maintained outside this public repository.
+
+If you fork this repository, replace `jobs.deploy-cloudflare.environment.url` in `.github/workflows/release.yml` with your own deployment URL before enabling tag releases. Configure your own Cloudflare account, Pages project, project name, and repository secrets; do not use the existing hostname as your fork’s deployment target. If the fork will not use Cloudflare Pages, remove or disable the Cloudflare deployment job.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](https://github.com/lamkakam/higher-order-aberration-visualizer/blob/main/LICENSE) file.
