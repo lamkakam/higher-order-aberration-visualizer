@@ -50,16 +50,11 @@ jobs:
       - name: Package dist
         run: zip -r "higher-order-aberration-visualizer-${GITHUB_REF_NAME}-dist.zip" dist
 
-      - name: Build for Cloudflare Pages
-        run: npm run build
-        env:
-          STATIC_SUBPATH_DEPLOYMENT: 'true'
-
       - name: Prepare Cloudflare Pages artifact
         run: npm run prepare:cloudflare
 
       - name: Upload Cloudflare Pages artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cloudflare-pages
           path: cloudflare-pages
@@ -82,19 +77,19 @@ jobs:
       cancel-in-progress: true
     environment:
       name: cloudflare-pages
-      url: https://vestibulum.xyz/higher-order-aberration-visualizer/
+      url: https://higher-order-aberration-visualizer.vestibulum.xyz/
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
       - name: Download Cloudflare Pages artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: cloudflare-pages
           path: cloudflare-pages
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

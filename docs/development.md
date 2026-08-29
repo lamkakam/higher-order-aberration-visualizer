@@ -26,14 +26,14 @@ npm run build
 
 `npm run build` first builds the internal Python wheel into `public/pyodide` through the `prebuild` npm lifecycle hook.
 
-Prepare the Cloudflare Pages upload directory after a static-subpath production build:
+Prepare the Cloudflare Pages upload directory after a root-based production build:
 
 ```sh
-STATIC_SUBPATH_DEPLOYMENT=true npm run build
+npm run build
 npm run prepare:cloudflare
 ```
 
-The preparation command removes any existing `cloudflare-pages` directory, copies `dist` to `cloudflare-pages/higher-order-aberration-visualizer`, and writes Cloudflare `_headers` and `_redirects` files at `cloudflare-pages` root.
+The preparation command removes any existing `cloudflare-pages` directory, copies the contents of `dist` directly to `cloudflare-pages`, and writes a root-wide Cloudflare `_headers` file. It does not create a redirect or SPA fallback.
 
 Preview the production bundle locally:
 
@@ -89,11 +89,11 @@ GitHub Actions runs the repository quality gates for pull requests to `main`, pu
 
 Pushes to `main` also build with `STATIC_SUBPATH_DEPLOYMENT=true` and deploy the static Vite build in `dist` to GitHub Pages after the checks pass. They do not deploy Cloudflare Pages. Pull requests and manual runs run checks only. Markdown-only pull requests, meaning changes where every file matches `**/*.md`, run a lightweight `Quality gates` check that skips full CI. Markdown-only pushes to `main` remain ignored so documentation-only merges do not deploy.
 
-Pushing a tag that matches `v*` runs the release workflow with the same quality gates. It builds root-based `dist`, packages that build as a zip archive, then rebuilds with `STATIC_SUBPATH_DEPLOYMENT=true`, prepares the `cloudflare-pages` artifact, and creates the GitHub Release with generated release notes and the root-based build attached. After that release job succeeds, a dependent environment job deploys the artifact to the `higher-order-aberration-visualizer` Cloudflare Pages Direct Upload project with Wrangler. The tag promotes its exact commit to Cloudflare even when that commit is not on `main`; branch pushes, pull requests, and `workflow_dispatch` runs cannot trigger this deployment.
+Pushing a tag that matches `v*` runs the release workflow with the same quality gates. It builds root-based `dist`, packages that build as a zip archive, prepares the same build as the `cloudflare-pages` artifact, and creates the GitHub Release with generated release notes and the root-based build attached. After that release job succeeds, a dependent environment job deploys the artifact to the `higher-order-aberration-visualizer` Cloudflare Pages Direct Upload project with Wrangler. The tag promotes its exact commit to Cloudflare even when that commit is not on `main`; branch pushes, pull requests, and `workflow_dispatch` runs cannot trigger this deployment.
 
 Repository Settings → Pages must use `GitHub Actions` as the Pages source. The GitHub Pages build uses `/higher-order-aberration-visualizer/` as the Vite base path and writes `dist/404.html` from `dist/index.html` so direct visits to client routes such as `/higher-order-aberration-visualizer/en/basic` load the app shell.
 
-Cloudflare Pages uses the same Vite base and generated fallback, but the upload artifact physically nests the build at `cloudflare-pages/higher-order-aberration-visualizer`. Wrangler deploys the tagged commit with `--branch=main` because `main` is the Pages project's configured production branch. GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; see the root README for the one-time Direct Upload project, production branch, custom-domain, zone, and token-scope setup.
+Cloudflare Pages uses the root-based Vite build and serves routes such as `/en/basic` from `cloudflare-pages` without a generated `404.html` or `_redirects` file. Wrangler deploys the tagged commit with `--branch=main` because `main` is the Pages project's configured production branch. GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; see the root README for the one-time Direct Upload project, production branch, custom-domain, zone, and token-scope setup.
 
 ## Translations
 
@@ -103,7 +103,7 @@ The app uses [`src/i18n.ts`](../src/i18n.ts) for client-side i18next setup. Loca
 
 Supported languages are English (`en`), Traditional Chinese (`zh-Hant`, labelled `繁體中文`), and Simplified Chinese (`zh-Hans`, labelled `简体中文`). The resolver maps `en-*` locales to English; maps `zh-Hant`, `zh-TW`, `zh-HK`, and `zh-MO` to Traditional Chinese; and maps `zh-Hans`, `zh-CN`, `zh-SG`, and generic `zh` to Simplified Chinese.
 
-Language and display mode are also represented in the client URL as `/:lang/:mode`, for example `/en/basic` or `/zh-Hans/advanced` in local development. Production client routes include the GitHub Pages base path, for example `/higher-order-aberration-visualizer/en/basic`. Tests that depend on a specific language or display mode should render the app at the matching route instead of changing i18next directly.
+Language and display mode are also represented in the client URL as `/:lang/:mode`, for example `/en/basic` or `/zh-Hans/advanced` in local development and on Cloudflare Pages. GitHub Pages client routes include its base path, for example `/higher-order-aberration-visualizer/en/basic`. Tests that depend on a specific language or display mode should render the app at the matching route instead of changing i18next directly.
 
 To add a future language, add a matching `public/locales/<language>/translation.json`, add the language code to `supportedLngs` in `src/i18n.ts`, and expose it through `language.options.<language>` in each locale file. Keep translation keys stable and update React/Vitest and Playwright coverage when user-visible labels or accessible names change.
 
