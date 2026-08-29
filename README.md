@@ -75,38 +75,11 @@ The `dev` and `build` scripts automatically build the app's internal Python whee
 
 ## Deployment
 
-Pushes to `main` run all quality gates, build with the base path `/higher-order-aberration-visualizer/`, and deploy `dist` unchanged to the existing GitHub Pages site. They do not deploy Cloudflare Pages. Pushing a tag that matches `v*` runs the release workflow and promotes that exact tagged commit to Cloudflare, regardless of which branch contains the commit. Pull requests and manual workflow runs do not deploy Cloudflare.
+Pushes to `main` run the quality gates and deploy the application to the [GitHub Pages demo](https://lamkakam.github.io/higher-order-aberration-visualizer/). Pull requests and manual workflow runs run checks only. Pushing a tag matching `v*` creates a GitHub Release and deploys that tagged commit to the maintainer-operated Cloudflare Pages site at [https://higher-order-aberration-visualizer.vestibulum.xyz/](https://higher-order-aberration-visualizer.vestibulum.xyz/).
 
-The release workflow uses one root-based Vite build for both the GitHub Release ZIP and Cloudflare Pages. `npm run prepare:cloudflare` creates a separate `cloudflare-pages` upload directory whose layout is:
+The Cloudflare account, Pages project, deployment credentials, and custom-domain configuration are maintained outside this public repository.
 
-```text
-cloudflare-pages/
-├── _headers
-├── index.html
-├── assets/
-├── locales/
-├── pyodide/
-└── sw.js
-```
-
-The Cloudflare build uses `/` as its Vite base, so client routes, generated assets, locales, the service worker, and Pyodide files are served directly from `https://higher-order-aberration-visualizer.vestibulum.xyz/`. The root `_headers` file applies the app's cross-origin and permissions policies throughout the hostname. GitHub Pages separately retains the `/higher-order-aberration-visualizer/` base path and its generated `404.html` SPA fallback.
-
-The Cloudflare deployment job uses these GitHub Actions secrets:
-
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-
-Create a custom Cloudflare API token restricted to the target account with only `Account` → `Cloudflare Pages` → `Edit`. DNS permissions are not needed by the deployment workflow because custom-domain and DNS setup are one-time external operations.
-
-One-time Cloudflare setup:
-
-1. Ensure the `vestibulum.xyz` zone is active in the intended Cloudflare account.
-2. Create a Direct Upload Pages project named `higher-order-aberration-visualizer` with production branch `main`. With Wrangler authenticated outside this repository, the recommended explicit command is `npx wrangler pages project create higher-order-aberration-visualizer --production-branch=main`. If the project is instead created through Workers & Pages → Create application → Pages → Direct Upload, note that Cloudflare currently does not expose production-branch controls for Direct Upload projects in the dashboard; use the Pages Update Project API to set `production_branch` to `main` before CI deploys.
-3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository or `cloudflare-pages` environment secrets in GitHub Actions.
-4. Allow the first `v*` tag workflow to deploy, then open the Pages project in Cloudflare and add `higher-order-aberration-visualizer.vestibulum.xyz` under Custom domains. Complete Cloudflare's ownership validation if prompted.
-5. Optionally create a GitHub Actions environment named `cloudflare-pages`, set its deployment URL to `https://higher-order-aberration-visualizer.vestibulum.xyz/`, and add any desired protection rules. The workflow already targets that environment name and URL.
-
-This design assumes the Pages project owns the entire `higher-order-aberration-visualizer.vestibulum.xyz` hostname. Sharing that hostname with another origin or application needs separately designed edge routing, such as a Cloudflare Worker/router or eligible Cloudflare Origin Rules; do not silently adapt this deployment to share the hostname.
+If you fork this repository, replace `jobs.deploy-cloudflare.environment.url` in `.github/workflows/release.yml` with your own deployment URL before enabling tag releases. Configure your own Cloudflare account, Pages project, project name, and repository secrets; do not use the existing hostname as your fork’s deployment target. If the fork will not use Cloudflare Pages, remove or disable the Cloudflare deployment job.
 
 ## License
 

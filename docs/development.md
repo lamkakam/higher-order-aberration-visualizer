@@ -93,7 +93,7 @@ Pushing a tag that matches `v*` runs the release workflow with the same quality 
 
 Repository Settings → Pages must use `GitHub Actions` as the Pages source. The GitHub Pages build uses `/higher-order-aberration-visualizer/` as the Vite base path and writes `dist/404.html` from `dist/index.html` so direct visits to client routes such as `/higher-order-aberration-visualizer/en/basic` load the app shell.
 
-Cloudflare Pages uses the root-based Vite build and serves routes such as `/en/basic` from `cloudflare-pages` without a generated `404.html` or `_redirects` file. Wrangler deploys the tagged commit with `--branch=main` because `main` is the Pages project's configured production branch. GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; see the root README for the one-time Direct Upload project, production branch, custom-domain, zone, and token-scope setup.
+Cloudflare Pages uses the root-based Vite build and serves routes such as `/en/basic` from `cloudflare-pages` without a generated `404.html` or `_redirects` file. Wrangler deploys the tagged commit with `--branch=main` because `main` is the Pages project's configured production branch. GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Forks must provide their own Cloudflare account, Pages project, project name, repository secrets, custom-domain configuration, and deployment URL.
 
 ## Translations
 
