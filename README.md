@@ -75,7 +75,7 @@ The `dev` and `build` scripts automatically build the app's internal Python whee
 
 ## Deployment
 
-Pushes to `main` run the quality gates and deploy the application to the [GitHub Pages demo](https://lamkakam.github.io/higher-order-aberration-visualizer/). Pull requests and manual workflow runs run checks only. Pushing a tag matching `v*` creates a GitHub Release and deploys that tagged commit to the maintainer-operated Cloudflare Pages site at [https://higher-order-aberration-visualizer.vestibulum.xyz/](https://higher-order-aberration-visualizer.vestibulum.xyz/).
+Pushes to `main`, pull requests, and manual workflow runs run quality gates without deploying. Pushing a tag matching `v*` creates a GitHub Release and deploys that tagged commit to both the [GitHub Pages demo](https://lamkakam.github.io/higher-order-aberration-visualizer/) and the maintainer-operated Cloudflare Pages site at [https://higher-order-aberration-visualizer.vestibulum.xyz/](https://higher-order-aberration-visualizer.vestibulum.xyz/).
 
 The Cloudflare account, Pages project, deployment credentials, and custom-domain configuration are maintained outside this public repository.
 
