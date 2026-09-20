@@ -93,6 +93,8 @@ Pushing a tag that matches `v*` runs the release workflow with the same quality 
 
 Repository Settings → Pages must use `GitHub Actions` as the Pages source. The GitHub Pages build uses `/higher-order-aberration-visualizer/` as the Vite base path and writes `dist/404.html` from `dist/index.html` so direct visits to client routes such as `/higher-order-aberration-visualizer/en/basic` load the app shell.
 
+Repository Settings → Environments → `github-pages` → Deployment branches and tags must allow version tags: keep deployment restrictions enabled and add a **tag** rule matching `v*`, preserving the existing `main` branch rule and other environment settings. A branch rule does not authorize tags pointing to that branch, so allowing `main` alone still blocks version-tag deployments.
+
 Cloudflare Pages uses the root-based Vite build and serves routes such as `/en/basic` from `cloudflare-pages` without a generated `404.html` or `_redirects` file. Wrangler deploys the tagged commit with `--branch=main` because `main` is the Pages project's configured production branch. GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Forks must provide their own Cloudflare account, Pages project, project name, repository secrets, custom-domain configuration, and deployment URL.
 
 ## Translations
